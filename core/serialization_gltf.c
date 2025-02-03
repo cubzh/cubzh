@@ -18,6 +18,7 @@
 #include "light.h"
 #include "camera.h"
 #include "mesh.h"
+#include "material.h"
 
 bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_MASK_T filter, DoublyLinkedList **out) {
     vx_assert_d(*out == NULL);
@@ -294,6 +295,51 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                 break;
                         }
                     }
+
+                    Material* material = NULL;
+                    if (node->mesh->primitives[j].material != NULL) {
+                        const cgltf_material* gltf_material = node->mesh->primitives[j].material;
+                        material = material_new();
+
+                        if (gltf_material->has_pbr_metallic_roughness) {
+                            const cgltf_pbr_metallic_roughness* pbr = &gltf_material->pbr_metallic_roughness;
+                            material_set_diffuse(material, 
+                                utils_float_to_rgba(
+                                    pbr->base_color_factor[0],
+                                    pbr->base_color_factor[1], 
+                                    pbr->base_color_factor[2],
+                                    pbr->base_color_factor[3]));
+                                
+                            material_set_metallic(material, pbr->metallic_factor);
+                            material_set_roughness(material, pbr->roughness_factor);
+                        }
+
+                        const float emissiveStrength = gltf_material->has_emissive_strength ? gltf_material->emissive_strength.emissive_strength : 0.0f;
+                        material_set_emissive(material,
+                            utils_float_to_rgba(
+                                gltf_material->emissive_factor[0] * emissiveStrength,
+                                gltf_material->emissive_factor[1] * emissiveStrength,
+                                gltf_material->emissive_factor[2] * emissiveStrength,
+                                0.0f));
+
+                        switch (gltf_material->alpha_mode) {
+                            case cgltf_alpha_mode_opaque:
+                                material_set_opaque(material, true);
+                                material_set_alpha_cutout(material, -1.0f);
+                                break;
+                            case cgltf_alpha_mode_mask:
+                                material_set_opaque(material, true);
+                                material_set_alpha_cutout(material, gltf_material->alpha_cutoff);
+                                break;
+                            case cgltf_alpha_mode_blend:
+                                material_set_opaque(material, false);
+                                material_set_alpha_cutout(material, -1.0f);
+                                break;
+                        }
+
+                        material_set_double_sided(material, gltf_material->double_sided);
+                        material_set_unlit(material, gltf_material->unlit);
+                    }
                     
                     Mesh* mesh = mesh_new();
                     mesh_set_vertex_buffer(mesh, vertices, posAccessor->count);
@@ -301,6 +347,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     mesh_set_primitive_type(mesh, primitiveType);
                     mesh_set_front_ccw(mesh, false);
                     mesh_reset_model_aabb(mesh);
+                    mesh_reset_pivot_to_center(mesh);
+                    mesh_set_material(mesh, material);
                     
                     Transform* meshTransform = mesh_get_transform(mesh);
                     if (j == 0) {
@@ -309,6 +357,10 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                         transform_set_parent(meshTransform, transforms[i], false);
                     }
                     transform_set_name(meshTransform, node->name);
+
+                    if (material != NULL) {
+                        material_release(material);
+                    }
                 }
             }
         } else if (node->light != NULL) {

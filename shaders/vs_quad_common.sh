@@ -35,10 +35,11 @@ $output v_color0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/quad_lib.sh"
+#if QUAD_VARIANT_MRT_LIGHTING == 0
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
+#endif
 
 #if QUAD_VARIANT_MRT_TRANSPARENCY && QUAD_VARIANT_CUTOUT
 uniform vec4 u_color1;
@@ -72,7 +73,7 @@ void main() {
 	float cutout = meta[2];
 	vec4 srgb = vec4(meta[3], meta[4], meta[5], meta[6]);
 
-	color = mix(getNonVolumeVertexLitColor(color, srgb.x * u_bakedIntensity, srgb.yzw, u_sunColor.xyz, clip.z), color, unlit);
+	color = mix(getNonVoxelVertexLitColor(color, srgb.x * u_bakedIntensity, srgb.yzw, u_sunColor.xyz, clip.z), color, unlit);
 #elif QUAD_VARIANT_MRT_TRANSPARENCY && QUAD_VARIANT_CUTOUT
 	float cutout = unpackQuadMetadata_Cutout(a_position.w);
 #endif
