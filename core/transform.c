@@ -1231,6 +1231,15 @@ void transform_utils_set_mtx(Transform *t, const Matrix4x4 *mtx) {
     _transform_reset_dirty(t, TRANSFORM_DIRTY_MTX);
 }
 
+bool transform_utils_has_shadow(const Transform *t) {
+    switch(t->type) {
+        case ShapeTransform: return shape_has_shadow((Shape*)t->ptr);
+        case QuadTransform: return quad_has_shadow((Quad*)t->ptr);
+        case MeshTransform: return mesh_has_shadow((Mesh*)t->ptr);
+        default: return false;
+    }
+}
+
 // MARK: - Misc. -
 
 void transform_set_animations_enabled(Transform *const t, const bool enabled) {

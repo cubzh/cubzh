@@ -39,9 +39,14 @@ void main() {
 	gl_FragData[2] = vec4(v_lighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, v_lighting.x);
 	gl_FragData[3] = vec4(v_lighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, LIGHTING_LIT_FLAG);
 #endif // VOXEL_VARIANT_UNLIT
-#if VOXEL_VARIANT_MRT_LINEAR_DEPTH
-	gl_FragData[4] = vec4_splat(v_linearDepth);
-#endif // VOXEL_VARIANT_MRT_LINEAR_DEPTH
+#if VOXEL_VARIANT_MRT_PBR && VOXEL_VARIANT_MRT_LINEAR_DEPTH
+    gl_FragData[4] = vec4_splat(0.0);
+    gl_FragData[5] = vec4_splat(v_linearDepth);
+#elif VOXEL_VARIANT_MRT_PBR
+    gl_FragData[4] = vec4_splat(0.0);
+#elif VOXEL_VARIANT_MRT_LINEAR_DEPTH
+    gl_FragData[4] = vec4_splat(v_linearDepth);
+#endif // VOXEL_VARIANT_MRT_PBR + VOXEL_VARIANT_MRT_LINEAR_DEPTH
 #else
 	gl_FragColor = color;
 #endif // VOXEL_VARIANT_MRT_LIGHTING

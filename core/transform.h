@@ -235,6 +235,7 @@ void transform_utils_box_fit_recurse(Transform *t,
                                      Box *inout_box,
                                      bool applyTransaction);
 void transform_utils_set_mtx(Transform *t, const Matrix4x4 *mtx);
+bool transform_utils_has_shadow(const Transform *t);
 
 // MARK: - Misc. -
 void transform_set_animations_enabled(Transform *const t, const bool enabled);

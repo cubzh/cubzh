@@ -56,7 +56,7 @@ void main() {
 	vec4 color = vec4(base.rgb, v_color0.a * base.a);
 
 #if FONT_VARIANT_LIGHTING_UNIFORM && FONT_VARIANT_MRT_LIGHTING == 0 && FONT_VARIANT_UNLIT == 0
-	color = getNonVolumeVertexLitColor(color, lightValue, emissive, ambient, v_clipZ);
+	color = getNonVoxelVertexLitColor(color, lightValue, emissive, ambient, v_clipZ);
 #endif
 
 #if FONT_VARIANT_MRT_LIGHTING
@@ -75,9 +75,14 @@ void main() {
 	gl_FragData[3] = vec4(0.0, 0.0, 0.0, LIGHTING_LIT_FLAG);
 #endif // FONT_VARIANT_LIGHTING_UNIFORM
 #endif // FONT_VARIANT_UNLIT
-#if FONT_VARIANT_MRT_LINEAR_DEPTH
-	gl_FragData[4] = vec4_splat(v_linearDepth);
-#endif // FONT_VARIANT_MRT_LINEAR_DEPTH
+#if FONT_VARIANT_MRT_PBR && FONT_VARIANT_MRT_LINEAR_DEPTH
+    gl_FragData[4] = vec4_splat(0.0);
+    gl_FragData[5] = vec4_splat(v_linearDepth);
+#elif FONT_VARIANT_MRT_PBR
+    gl_FragData[4] = vec4_splat(0.0);
+#elif FONT_VARIANT_MRT_LINEAR_DEPTH
+    gl_FragData[4] = vec4_splat(v_linearDepth);
+#endif // FONT_VARIANT_MRT_PBR + FONT_VARIANT_MRT_LINEAR_DEPTH
 #else
 	gl_FragColor = color;
 #endif // FONT_VARIANT_MRT_LIGHTING

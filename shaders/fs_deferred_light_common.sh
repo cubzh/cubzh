@@ -4,15 +4,62 @@ $input v_texcoord0, v_texcoord1
 $input v_texcoord0
 #endif
 
+#define HAS_SHADOWS LIGHT_VARIANT_SHADOW_PACK || LIGHT_VARIANT_SHADOW_SAMPLE
+
 #include "./include/bgfx.sh"
 #include "./include/utils_lib.sh"
 #include "./include/config.sh"
 #include "./include/game_uniforms.sh"
-
-#define HAS_SHADOWS LIGHT_VARIANT_SHADOW_PACK || LIGHT_VARIANT_SHADOW_SAMPLE
+#if LIGHT_VARIANT_PBR
+#include "./include/lighting_lib.sh"
+#endif
 
 SAMPLER2D(s_fb1, 0);
 SAMPLER2D(s_fb2, 1);
+
+#if LIGHT_VARIANT_PBR
+
+SAMPLER2D(s_fb3, 2);
+SAMPLER2D(s_fb4, 3);
+#if LIGHT_VARIANT_SHADOW_SAMPLE
+SAMPLER2DSHADOW(s_fb5, 4);
+#if LIGHT_VARIANT_TYPE_DIRECTIONAL
+#if LIGHT_VARIANT_SHADOW_CSM >= 2
+SAMPLER2DSHADOW(s_fb6, 5);
+#endif
+#if LIGHT_VARIANT_SHADOW_CSM >= 3
+SAMPLER2DSHADOW(s_fb7, 6);
+#endif
+#if LIGHT_VARIANT_SHADOW_CSM >= 4
+SAMPLER2DSHADOW(s_fb8, 7);
+#endif
+#endif // LIGHT_VARIANT_TYPE_DIRECTIONAL
+	#define Sampler sampler2DShadow
+#elif LIGHT_VARIANT_SHADOW_PACK
+SAMPLER2D(s_fb5, 4);
+#if LIGHT_VARIANT_TYPE_DIRECTIONAL
+#if LIGHT_VARIANT_SHADOW_CSM >= 2
+SAMPLER2D(s_fb6, 5);
+#endif
+#if LIGHT_VARIANT_SHADOW_CSM >= 3
+SAMPLER2D(s_fb7, 6);
+#endif
+#if LIGHT_VARIANT_SHADOW_CSM >= 4
+SAMPLER2D(s_fb8, 7);
+#endif
+#endif // LIGHT_VARIANT_TYPE_DIRECTIONAL
+	#define Sampler sampler2D
+#endif
+#if HAS_SHADOWS
+	#include "./include/shadow_lib.sh"
+	#define s_sm1 s_fb5
+	#define s_sm2 s_fb6
+	#define s_sm3 s_fb7
+	#define s_sm4 s_fb8
+#endif
+
+#else // LIGHT_VARIANT_PBR
+
 #if LIGHT_VARIANT_SHADOW_SAMPLE
 SAMPLER2DSHADOW(s_fb3, 2);
 #if LIGHT_VARIANT_TYPE_DIRECTIONAL
@@ -27,7 +74,6 @@ SAMPLER2DSHADOW(s_fb6, 5);
 #endif
 #endif // LIGHT_VARIANT_TYPE_DIRECTIONAL
 	#define Sampler sampler2DShadow
-	#include "./include/shadow_lib.sh"
 #elif LIGHT_VARIANT_SHADOW_PACK
 SAMPLER2D(s_fb3, 2);
 #if LIGHT_VARIANT_TYPE_DIRECTIONAL
@@ -42,8 +88,16 @@ SAMPLER2D(s_fb6, 5);
 #endif
 #endif // LIGHT_VARIANT_TYPE_DIRECTIONAL
 	#define Sampler sampler2D
-	#include "./include/shadow_lib.sh"
 #endif
+#if HAS_SHADOWS
+	#include "./include/shadow_lib.sh"
+	#define s_sm1 s_fb3
+	#define s_sm2 s_fb4
+	#define s_sm3 s_fb5
+	#define s_sm4 s_fb6
+#endif
+
+#endif // LIGHT_VARIANT_PBR
 
 uniform vec4 u_lightParams[5];
 #if LIGHT_VARIANT_LINEAR_DEPTH == 0
@@ -111,26 +165,26 @@ void main() {
 	vec3 L = -u_lightForward;
 	float attn = 1.0;
 
-#if HAS_SHADOWS
+#if LIGHT_VARIANT_PBR || HAS_SHADOWS
 	vec3 V = u_viewPos - world;
 	float dist = length(V);
 #endif
 
-#else
+#else // LIGHT_VARIANT_TYPE_DIRECTIONAL
 	vec3 L = u_origin - world;
 	float attn = 1.0 - smoothstep(u_hardness, 1.0, length(L) / u_range);
 	L = normalize(L);
 
-#if (LIGHT_MODEL > 0) || HAS_SHADOWS
+#if (LIGHT_MODEL > 0) || LIGHT_VARIANT_PBR || HAS_SHADOWS
 	vec3 V = u_viewPos - world;
 	float dist = length(V);
 #endif
-#if LIGHT_MODEL > 0
+#if (LIGHT_MODEL > 0) || LIGHT_VARIANT_PBR
 	V = V / dist;
 #endif
 
 #endif // LIGHT_VARIANT_TYPE_DIRECTIONAL
-	
+
 #if LIGHT_VARIANT_TYPE_SPOT
 	float FdotL = dot(u_lightForward, -L);
 	float minCos = cos(u_angle);
@@ -147,6 +201,40 @@ void main() {
 #else
 	float sNdotL = mix(saturate(dot(normal, L)), LIGHT_TRANSLUCENCY_FACTOR(normal), isTranslucent);
 #endif
+
+float illumination = saturate(u_lightIntensity);
+float emission = u_lightIntensity - illumination;
+
+#if LIGHT_VARIANT_PBR
+
+	illumination *= LIGHT_PBR_INTENSITY;
+
+	vec3 H = normalize(L + V);
+	float sNdotH = saturate(dot(normal, H));
+    float sVdotH = saturate(dot(V, H));
+    float sNdotV = saturate(dot(normal, V));
+
+	vec3 albedo = texture2D(s_fb3, uv).xyz * u_color;
+
+	vec4 fb4 = texture2D(s_fb4, uv);
+	float metallic = fb4.x;
+	float roughness = fb4.y;
+
+	vec3 F = schlickFresnel(sVdotH, albedo, metallic);
+
+	vec3 specular = ggxDistribution(sNdotH, roughness) * F * geomSmith(sNdotL, roughness) * geomSmith(sNdotV, roughness) /
+					(4.0 * sNdotV * sNdotL + 0.0001);
+
+	vec3 kS = F;
+    vec3 kD = 1.0 - kS;
+	vec3 diffuse = kD * albedo / PI;
+
+	vec3 lit = (diffuse + specular) * sNdotL * attn;
+
+	lit = toGamma(lit);
+
+#else // LIGHT_VARIANT_PBR
+
 	vec3 diffuse = sNdotL * u_color;
 
 #if LIGHT_VARIANT_TYPE_DIRECTIONAL
@@ -155,14 +243,14 @@ void main() {
 
 #if LIGHT_MODEL == 1
 	vec3 R = reflect(-L, normal);
-	float VdotR = mix(dot(V, R), 0.0, isTranslucent);
-	float specular = LIGHT_SPECULAR * pow(saturate(VdotR), LIGHT_PHONG_SHININESS);
+	float sVdotR = mix(saturate(dot(V, R)), 0.0, isTranslucent);
+	float specular = LIGHT_SPECULAR * pow(sVdotR, LIGHT_PHONG_SHININESS);
 
 	vec3 lit = (diffuse + specular) * attn;
 #elif LIGHT_MODEL == 2
 	vec3 H = normalize(L + V);
-	float NdotH = mix(dot(normal, H), 0.0, isTranslucent);
-	float specular = LIGHT_SPECULAR * pow(saturate(NdotH), LIGHT_BLINN_SHININESS);
+	float sNdotH = mix(saturate(dot(normal, H)), 0.0, isTranslucent);
+	float specular = LIGHT_SPECULAR * pow(sNdotH, LIGHT_BLINN_SHININESS);
 
 	vec3 lit = (diffuse + specular) * attn;
 #else
@@ -171,8 +259,7 @@ void main() {
 
 #endif // LIGHT_VARIANT_TYPE_DIRECTIONAL
 
-float illumination = clamp(u_lightIntensity, -1.0, 1.0);
-float emission = u_lightIntensity - illumination;
+#endif // LIGHT_VARIANT_PBR
 
 #if HAS_SHADOWS
 
@@ -198,16 +285,22 @@ float emission = u_lightIntensity - illumination;
 	bool cascade1 = all(lessThanEqual(smUvDepth, vec3_splat(1.0))) && all(greaterThanEqual(smUvDepth, vec3_splat(0.0)));
 	smUvDepth = cascade1 ? smUvDepth : clipToUvDepth(transformH(u_lightVP2, smWorld).xyz);
 	lastCascade = lastCascade && !cascade1;
+#elif DEBUG_LIGHTING == 13
+	bool cascade1 = true;
 #endif
 #if LIGHT_VARIANT_SHADOW_CSM >= 3
 	bool cascade2 = all(lessThanEqual(smUvDepth, vec3_splat(1.0))) && all(greaterThanEqual(smUvDepth, vec3_splat(0.0)));
 	smUvDepth = cascade1 || cascade2 ? smUvDepth : clipToUvDepth(transformH(u_lightVP3, smWorld).xyz);
 	lastCascade = lastCascade && !cascade2;
+#elif DEBUG_LIGHTING == 13
+	bool cascade2 = false;
 #endif
 #if LIGHT_VARIANT_SHADOW_CSM >= 4
 	bool cascade3 = all(lessThanEqual(smUvDepth, vec3_splat(1.0))) && all(greaterThanEqual(smUvDepth, vec3_splat(0.0)));
 	smUvDepth = cascade1 || cascade2 || cascade3 ? smUvDepth : clipToUvDepth(transformH(u_lightVP4, smWorld).xyz);
 	lastCascade = lastCascade && !cascade3;
+#elif DEBUG_LIGHTING == 13
+	bool cascade3 = false;
 #endif
 #else
 	vec3 smUvDepth = clipToUvDepth(transformH(u_lightVP1, smWorld).xyz);
@@ -217,20 +310,20 @@ float emission = u_lightIntensity - illumination;
 
 #if LIGHT_VARIANT_TYPE_DIRECTIONAL && LIGHT_VARIANT_SHADOW_CSM >= 2
 	float shadow = overSampling ? 1.0 :
-			cascade1 ? getShadow(s_fb3, smUvDepth.xy, smUvDepth.z, fragBias, texelSize) :
+			cascade1 ? getShadow(s_sm1, smUvDepth.xy, smUvDepth.z, fragBias, texelSize) :
 #if LIGHT_VARIANT_SHADOW_CSM == 2
-			getShadow(s_fb4, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER, texelSize);
+			getShadow(s_sm2, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER, texelSize);
 #else
-			cascade2 ? getShadow(s_fb4, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER, texelSize) :
+			cascade2 ? getShadow(s_sm2, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER, texelSize) :
 #if LIGHT_VARIANT_SHADOW_CSM == 3
-			getShadow(s_fb5, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER * 2.0, texelSize);
+			getShadow(s_sm3, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER * 2.0, texelSize);
 #else
-			cascade3 ? getShadow(s_fb5, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER * 2.0, texelSize) :
-			getShadow(s_fb6, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER * 3.0, texelSize);
+			cascade3 ? getShadow(s_sm3, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER * 2.0, texelSize) :
+			getShadow(s_sm4, smUvDepth.xy, smUvDepth.z, fragBias + bias * SHADOWMAP_BIAS_CASCADE_MULTIPLIER * 3.0, texelSize);
 #endif // LIGHT_VARIANT_SHADOW_CSM == 3
 #endif // LIGHT_VARIANT_SHADOW_CSM == 2
 #else
-	float shadow = overSampling ? 1.0 : getShadow(s_fb3, smUvDepth.xy, smUvDepth.z, fragBias, texelSize);
+	float shadow = overSampling ? 1.0 : getShadow(s_sm1, smUvDepth.xy, smUvDepth.z, fragBias, texelSize);
 #endif
 
 #if SHADOWMAP_SOFT_OVERSAMPLING
