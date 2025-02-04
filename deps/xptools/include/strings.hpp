@@ -77,8 +77,11 @@ bool hasSuffix(const std::string& str, const std::string& suffix);
 /// removes `suffix` from `str` if found, returns modified string.
 std::string trimSuffix(const std::string& str, const std::string& suffix);
 
-/// transform a string to lowercase
+/// lowercase a string
 void toLower(std::string& str);
+
+/// returns a lowercased copy of a string
+std::string toLower(const std::string& str);
 
 /// Returns true if `str` contains at least one occurence of `subStr`.
 bool contains(const std::string& str, const std::string& subStr);
