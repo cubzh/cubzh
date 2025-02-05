@@ -174,6 +174,13 @@ void vx::str::toLower(std::string& str) {
     std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
+std::string vx::str::toLower(const std::string& str) {
+    std::string transformed = str;
+    // Convert each character to lowercase using std::transform and a lambda function
+    std::transform(transformed.begin(), transformed.end(), transformed.begin(), [](unsigned char c) { return std::tolower(c); });
+    return transformed;
+}
+
 bool vx::str::contains(const std::string& str, const std::string& subStr) {
     return str.find(subStr) != std::string::npos;
 }
