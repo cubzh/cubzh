@@ -1,4 +1,8 @@
-*.obj
+# bazel build output
+/bazel-bin
+/bazel-cubzh
+/bazel-out
+/bazel-testlogs
 
 # macOS
 .DS_Store
@@ -31,3 +35,5 @@
 deps/xptools/windows/bundle_tar_gz.hpp
 
 deps/bgfx/bgfx/tools/bin/
+
+*.obj
