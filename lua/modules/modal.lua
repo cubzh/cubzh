@@ -1003,7 +1003,9 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		self:setParent(nil)
 
 		for _, content in ipairs(self.contentStack) do
-			content:cleanup()
+			if content.cleanup then
+				content:cleanup()
+			end
 		end
 		self.contentStack = {}
 
