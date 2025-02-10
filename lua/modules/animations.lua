@@ -60,9 +60,6 @@ local removeOnStopCallback = function(self, callback)
 end
 
 local animationsMT = {
-	__gc = function(t)
-		privateFields[t] = nil -- (may not be required as privateFields uses weak keys)
-	end,
 	__metatable = false,
 }
 
