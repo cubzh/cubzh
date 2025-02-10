@@ -102,8 +102,8 @@ mod.checkPhoneNumber = function(_, phoneNumber, callback)
 end
 
 -- callback(err, res) err is nil on success
-mod.getLoginOptions = function(_, usernameOrEmail, callback)
-	if type(usernameOrEmail) ~= "string" then
+mod.getLoginOptions = function(_, loginIdentifier, callback)
+	if type(loginIdentifier) ~= "string" then
 		callback("1st arg must be a string", nil)
 		return
 	end
@@ -112,14 +112,14 @@ mod.getLoginOptions = function(_, usernameOrEmail, callback)
 		return
 	end
 
-	if usernameOrEmail == "" then
+	if loginIdentifier == "" then
 		callback("username can't be empty", nil)
 		return
 	end
 
 	local url = mod.kApiAddr .. "/get-login-options"
 	local body = {
-		["username-or-email"] = usernameOrEmail,
+		["loginIdentifier"] = loginIdentifier,
 	}
 
 	local req = System:HttpPost(url, body, function(resp)
@@ -156,8 +156,8 @@ mod.getLoginOptions = function(_, usernameOrEmail, callback)
 end
 
 -- callback(err) err == nil on success
-mod.getMagicKey = function(_, usernameOrEmail, callback)
-	if type(usernameOrEmail) ~= "string" then
+mod.getMagicKey = function(_, loginIdentifier, callback)
+	if type(loginIdentifier) ~= "string" then
 		callback("1st arg must be a string")
 		return
 	end
@@ -168,7 +168,7 @@ mod.getMagicKey = function(_, usernameOrEmail, callback)
 
 	local url = mod.kApiAddr .. "/get-magic-key"
 	local body = {
-		["username-or-email"] = usernameOrEmail,
+		["loginIdentifier"] = loginIdentifier,
 	}
 
 	local req = System:HttpPost(url, body, function(resp)
