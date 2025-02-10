@@ -1,0 +1,2 @@
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emar qc libtinyexr.a "CMakeFiles/tinyexr.dir/Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bimg/3rdparty/tinyexr/deps/miniz/miniz.c.o"
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emranlib libtinyexr.a

@@ -1,0 +1,2 @@
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emar qc libbgfx-imgui.a "CMakeFiles/bgfx-imgui.dir/Users/gaetan/projects/voxowl/particubes-private/common/bgfx/bgfx/examples/common/imgui/imgui.cpp.o"
+/Users/gaetan/projects/voxowl/particubes-private/wasm/emsdk/upstream/emscripten/emranlib libbgfx-imgui.a

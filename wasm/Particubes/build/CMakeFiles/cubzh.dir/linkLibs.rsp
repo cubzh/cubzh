@@ -1,0 +1,1 @@
+ libvx.a libsbs.a libvx.a libsbs.a "libbgfx-imgui.a" libbgfx.a libbimg.a "libastc-encoder.a" libedtaa3.a libetc1.a libetc2.a libiqa.a libsquish.a libnvtt.a libpvrtc.a libtinyexr.a "libdear-imgui.a" libbx.a -ldl -lrt libengine.a libxptools.a liblpng.a liblua.a 
