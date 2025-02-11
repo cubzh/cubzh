@@ -207,6 +207,12 @@ void WSConnection::_writePayload(const Payload_SharedPtr& p) {
     [(__bridge WebSocketConnection*)_platformObject send:webSocketMessage];
 }
 
+void WSConnection::writeBytes(const char *buf, size_t len) {
+    NSMutableData *data = [NSMutableData dataWithBytes:buf length:len];
+    NSURLSessionWebSocketMessage *webSocketMessage = [[NSURLSessionWebSocketMessage alloc] initWithData:data];
+    [(__bridge WebSocketConnection*)_platformObject send:webSocketMessage];
+}
+
 void WSConnection::_close() {
     _detachPlatformObject();
 }
