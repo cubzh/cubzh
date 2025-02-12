@@ -96,7 +96,9 @@ public:
         // serializes _metadata if NULL
         // returns true on success, false otherwise
         bool createMetadataIfNull();
-        
+
+        std::string getRawBytes();
+
     private:
         Payload(char* bytes, size_t len, uint8_t includes = Includes::None);
         Payload();
@@ -127,7 +129,8 @@ public:
         // When destroying a Payload, _decoded should
         // be freed if not NULL instead of _content.
         char *_decoded;
-        
+        size_t _decodedLen;
+
         // Only used when including CreatedAt
         uint64_t _createdAt; // ms timestamp
         
