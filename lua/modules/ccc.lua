@@ -142,7 +142,7 @@ mod.set = function(self, config)
 
 			local v = Number2(dpad.X, dpad.Y)
 			if v.SquaredLength > 0 then
-				local yDelta = math.atan(dpad.X, dpad.Y)
+				local yDelta = math.atan2(dpad.X, dpad.Y)
 				target.Rotation:Set(0, cameraWorldObject.Rotation.Y + yDelta, 0)
 				target.Motion:Set(target.Forward * v.Length * currentConfig.targetSpeed)
 			end
@@ -161,7 +161,7 @@ mod.set = function(self, config)
 
 			local v = Number2(x, y)
 			if v.SquaredLength > 0 then
-				local yDelta = math.atan(x, y)
+				local yDelta = math.atan2(x, y)
 				target.Rotation:Set(0, cameraWorldObject.Rotation.Y + yDelta, 0)
 				target.Motion:Set(target.Forward * v.Length * currentConfig.targetSpeed)
 			else
