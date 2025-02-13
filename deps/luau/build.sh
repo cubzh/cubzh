@@ -88,9 +88,7 @@ elif [ "$platform" == "ios" ]; then
 
 elif [ "$platform" == "macos" ]; then
   platform_to_build="macos"
-  archs_to_build=("arm64" "x86_64")
-  # TODO: might want to use apple_static_library() to create a Universal Binary library
-  #       https://github.com/bazelbuild/rules_apple/blob/master/doc/rules-apple.md#apple_static_library
+  archs_to_build=("universal") # TODO: remove when porting this to Golang
 
 elif [ "$platform" == "windows" ]; then
   platform_to_build="windows"
@@ -111,8 +109,22 @@ fi
 
 # Define the artifact name based on the platform
 artifact_name="libluau.a"
+artifact_destination_name=$artifact_name
+bazel_command_suffix=""
+
 if [ "$platform" == "windows" ]; then
-  artifact_name="luau.lib"
+  artifact_name="luau-default.lib"
+  artifact_destination_name="luau.lib"
+
+elif [ "$platform" == "macos" ]; then
+  artifact_name="luau-macos_lipo.a"
+  bazel_command_suffix="--macos_cpus=arm64,x86_64"
+
+elif [ "$platform" == "android" ]; then
+  artifact_name="libluau-default.a"
+
+elif [ "$platform" == "ios" ]; then
+  artifact_name="libluau-default.a"
 fi
 
 echo "🛠️ Building Luau for $platform_to_build... (${archs_to_build[@]})"
@@ -125,11 +137,11 @@ for arch in "${archs_to_build[@]}"; do
   rm -rf $output_dir && mkdir -p $output_dir
   
   # build
-  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch}
+  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} $bazel_command_suffix
   
   # move the library to the output directory
   mkdir -p $output_dir/lib
-  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib/$artifact_name
+  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib/$artifact_destination_name
 
   # move the header files to the output directory
   mkdir -p $output_dir/include

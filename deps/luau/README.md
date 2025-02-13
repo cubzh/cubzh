@@ -20,8 +20,7 @@ To be run from cubzh/cubzh repo root dir
 
 # macos
 ./build.sh -p macos
-# bazel build //deps/luau:luau --platforms=//:macos_arm64
-# bazel build //deps/luau:luau --platforms=//:macos_x86_64
+# bazel build //deps/luau:luau --platforms=//:macos_universal --macos_cpus=arm64,x86_64
 
 # windows
 ./build.sh -p windows

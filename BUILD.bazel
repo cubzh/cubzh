@@ -1,4 +1,3 @@
-
 # ------------------------------
 # Android
 # ------------------------------
@@ -50,6 +49,13 @@ platform(
 # ------------------------------
 # macOS
 # ------------------------------
+
+platform(
+    name = "macos_universal",
+    constraint_values = [
+        "@platforms//os:macos",
+    ],
+)
 
 platform(
     name = "macos_arm64",

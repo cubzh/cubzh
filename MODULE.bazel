@@ -1,4 +1,3 @@
-
 """Luau Bazel module."""
 
 module(
@@ -6,10 +5,10 @@ module(
 )
 
 bazel_dep(name = "platforms", version = "0.0.11")
+bazel_dep(name = "apple_support", version = "1.18.0")  # /!\ must be placed before rules_cc
+bazel_dep(name = "rules_apple", version = "3.18.0")
 bazel_dep(name = "rules_cc", version = "0.1.1")
 bazel_dep(name = "rules_android_ndk", version = "0.1.3")
-# THIS LINE MUST BE COMMENTED OUT ON WINDOWS
-bazel_dep(name = "rules_apple", version = "3.18.0")
 
 # Android NDK
 android_ndk_repository_extension = use_extension(
@@ -17,8 +16,8 @@ android_ndk_repository_extension = use_extension(
     "android_ndk_repository_extension",
 )
 use_repo(android_ndk_repository_extension, "androidndk")
-# THIS LINE MUST BE COMMENTED OUT ON WINDOWS
+
 register_toolchains("@androidndk//:all")
 
-# TODO: 
+# TODO:
 # https://stackoverflow.com/questions/78122191/bazel-its-possible-to-download-different-external-dependencies-depending-on-the
