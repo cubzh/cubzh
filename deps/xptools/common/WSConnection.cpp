@@ -274,6 +274,11 @@ void WSConnection::_writePayload(const Payload_SharedPtr& p) {
     // notify WSService that bytes are waiting to be written
     WSService::shared()->scheduleWSConnectionWrite(_weakSelf.lock());
 }
+
+void WSConnection::writeBytes(const char *buf, size_t len) {
+    // TODO: implement me!
+}
+
 #endif
 
 #if defined(__VX_USE_LIBWEBSOCKETS)
