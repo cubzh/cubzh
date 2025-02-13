@@ -10,8 +10,8 @@ To be run from cubzh/cubzh repo root dir
 # android
 ./build.sh -p android
 # bazel build //deps/luau:luau --platforms=//:android_arm64
-# bazel build //deps/luau:luau --platforms=//:android_armv7
-# bazel build //deps/luau:luau --platforms=//:android_x86_32
+# bazel build //deps/luau:luau --platforms=//:android_arm
+# bazel build //deps/luau:luau --platforms=//:android_x86
 # bazel build //deps/luau:luau --platforms=//:android_x86_64
 
 # ios
@@ -24,12 +24,12 @@ To be run from cubzh/cubzh repo root dir
 
 # windows
 ./build.sh -p windows
-# bazel build //deps/luau:luau --platforms=//:windows_x86_32
+# bazel build //deps/luau:luau --platforms=//:windows_x86
 # bazel build //deps/luau:luau --platforms=//:windows_x86_64
 
 # linux
 # ./build.sh -p linux
-# bazel build //deps/luau:luau --platforms=//:linux_x86_32
+# bazel build //deps/luau:luau --platforms=//:linux_x86
 # bazel build //deps/luau:luau --platforms=//:linux_x86_64
 
 # wasm
