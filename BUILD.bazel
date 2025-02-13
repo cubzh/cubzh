@@ -3,7 +3,7 @@
 # ------------------------------
 
 platform(
-    name = "android_armv7",
+    name = "android_arm",
     constraint_values = [
         "@platforms//os:android",
         "@platforms//cpu:armv7",
@@ -19,7 +19,7 @@ platform(
 )
 
 platform(
-    name = "android_x86_32",
+    name = "android_x86",
     constraint_values = [
         "@platforms//os:android",
         "@platforms//cpu:x86_32",

@@ -78,7 +78,7 @@ if [ "$platform" == "android" ]; then
   fi
 
   platform_to_build="android"
-  archs_to_build=("armv7" "arm64" "x86_32" "x86_64")
+  archs_to_build=("arm" "arm64" "x86" "x86_64")
 
 elif [ "$platform" == "ios" ]; then
   platform_to_build="ios"
