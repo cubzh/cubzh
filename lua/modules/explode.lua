@@ -6,7 +6,6 @@
 --- explode:shapes(someObject)
 
 local explode = {
-    hierarchyActions = require("hierarchyactions"),
 }
 
 ---@function shapes Explodes all shapes in an object (including the object itself if it's a shape).
@@ -24,7 +23,7 @@ local explode = {
 --- -- Add some shapes as children...
 --- explode:shapes(object) -- Will explode all shapes in hierarchy
 explode.shapes = function(self, object)
-    self.hierarchyActions:applyToDescendants(object, { includeRoot = true }, function(o)
+    object:Recurse(function(o)
         if type(o) == "Shape" or type(o) == "MutableShape" then
             -- Create copy of shape
             local s = Shape(o)
@@ -51,7 +50,7 @@ explode.shapes = function(self, object)
                 s:RemoveFromParent()
             end)
         end
-    end)
+    end, { includeRoot = true })
 end
 
 return explode

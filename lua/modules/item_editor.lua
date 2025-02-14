@@ -119,10 +119,10 @@ local playerHideSubshapes = function(isHidden)
 		Player.Avatar.RightFoot,
 	}
 	for _, bodyPart in ipairs(bodyParts) do
-		require("hierarchyactions"):applyToDescendants(bodyPart, { includeRoot = true }, function(o)
+		bodyPart:Recurse(function(o)
 			o.PrivateDrawMode = 0
 			disableObject(o, isHidden)
-		end)
+		end, { includeRoot = true })
 	end
 end
 
@@ -220,9 +220,6 @@ Client.OnStart = function()
 
 	colorPickerModule = require("colorpicker")
 
-	-- Descendants
-	hierarchyActions = require("hierarchyactions")
-
 	-- Displays the right tools based on state
 	refreshToolsDisplay = function()
 		local enablePaletteBtn = currentMode == mode.edit
@@ -292,9 +289,9 @@ Client.OnStart = function()
 
 		-- Pivot
 		if isModeChangePivot then
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+			item:Recurse(function(s)
 				disableObject(s, false)
-			end)
+			end, { includeRoot = true })
 
 			selectGizmo:setObject(nil)
 			changePivotBtn.Text = "Change Pivot"
@@ -310,7 +307,7 @@ Client.OnStart = function()
 	end
 
 	refreshDrawMode = function(forcedDrawMode)
-		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+		item:Recurse(function(s)
 			if not s or type(s) == "Object" then
 				return
 			end
@@ -323,13 +320,13 @@ Client.OnStart = function()
 					s.PrivateDrawMode = (s == focusShape and 2 or 0) + (gridEnabled and 8 or 0) + (dragging2 and 1 or 0)
 				end
 			end
-		end)
+		end, { includeRoot = true })
 	end
 
 	setSelfAndDescendantsHiddenSelf = function(shape, isHiddenSelf)
-		hierarchyActions:applyToDescendants(shape, { includeRoot = true }, function(s)
+		shape:Recurse(function(s)
 			disableObject(s, isHiddenSelf)
-		end)
+		end, { includeRoot = true })
 	end
 
 	undoShapesStack = {}
@@ -643,9 +640,9 @@ Client.OnStart = function()
 		fitObjectToScreen(item, nil)
 	end
 
-	hierarchyActions:applyToDescendants(Player.Body, { includeRoot = true }, function(bodyPart)
+	Player.Body:Recurse(function(bodyPart)
 		bodyPartsBasePositions[bodyPart] = bodyPart.LocalPosition:Copy()
-	end)
+	end, { includeRoot = true })
 
 	-- long press + drag
 	continuousEdition = false
@@ -1112,17 +1109,17 @@ initClientFunctions = function()
 		end
 
 		if isModeChangePivot then
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+			item:Recurse(function(s)
 				s.IsHiddenSelf = false
-			end)
+			end, { includeRoot = true })
 		end
 
 		item:Save(Environment.itemFullname, nil, itemCategory)
 
 		if isModeChangePivot then
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+			item:Recurse(function(s)
 				s.IsHiddenSelf = s ~= focusShape
-			end)
+			end, { includeRoot = true })
 		end
 
 		changesSinceLastSave = false
@@ -1225,12 +1222,12 @@ initClientFunctions = function()
 				pattern:SetParent(World)
 				local nextShape = item
 				pattern.Scale = item.Scale + Number3(1, 1, 1) * 0.001
-				hierarchyActions:applyToDescendants(pattern, { includeRoot = true }, function(s)
+				pattern:Recurse(function(s)
 					s.PrivateDrawMode = 1
 					s.Pivot = s:GetPoint("origin").Coords
 					s.Position = nextShape.Position
 					nextShape = nextShape:GetChild(1)
-				end)
+				end, { includeRoot = true })
 				Timer(0.5, function()
 					pattern:RemoveFromParent()
 				end)
@@ -2456,13 +2453,13 @@ function ui_init()
 			-- Spawn next to the parent
 			child.Position = child.Position - Number3(focusShape.Width / 2 + child.Width * 2, 0, 0)
 
-			hierarchyActions:applyToDescendants(child, { includeRoot = true }, function(s)
+			item:Recurse(function(s)
 				s.History = true -- enable history for the edited item
 				s.Physics = PhysicsMode.TriggerPerBlock
 				s.CollisionGroups = collisionGroup_item
 				s.isItem = true
 				table.insert(shapes, s)
-			end)
+			end, { includeRoot = true })
 
 			selectFocusShape(child)
 
@@ -2513,9 +2510,9 @@ function ui_init()
 
 			pivotObject:SetParent(focusShape)
 
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+			item:Recurse(function(s)
 				disableObject(s, s ~= focusShape) -- hide all except focus shape
-			end)
+			end, { includeRoot = true })
 
 			selectGizmo:setMode(gizmo.Mode.Move)
 			selectGizmo:setOrientation(gizmo.Orientation.Local)
@@ -2557,9 +2554,9 @@ function ui_init()
 				focusShape.Position = pivotObject.Position
 			end
 
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+			item:Recurse(function(s)
 				disableObject(s, false)
-			end)
+			end, { includeRoot = true })
 
 			if moveShapeBtn.selected then
 				selectGizmo:setObject(focusShape)
@@ -2924,7 +2921,7 @@ function post_item_load()
 
 		-- initialize item and its sub-shapes (physics mode, shared palette, etc.)
 		shapes = {}
-		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(s)
+		item:Recurse(function(s)
 			if type(s) == Type.MutableShape then
 				s.Physics = PhysicsMode.TriggerPerBlock
 				s.CollisionGroups = collisionGroup_item
@@ -2966,7 +2963,7 @@ function post_item_load()
 				local str = "Item category is not supported, itemCategory is " .. itemCategory
 				error(str, 2)
 			end
-		end)
+		end, { includeRoot = true })
 	end
 
 	initShapes()
@@ -3024,11 +3021,11 @@ function post_item_load()
 
 		-- models need to be refreshed only if going from opaque (alpha 255) to transparent (alpha <255), and vice-versa
 		if colorInUse and color.A ~= prevAlpha and (color.A == 255 or prevAlpha == 255) then
-			hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(o)
+			item:Recurse(function(o)
 				if o.RefreshModel ~= nil then
 					o:RefreshModel()
 				end
-			end)
+			end, { includeRoot = true })
 		end
 
 		checkAutoSave()
@@ -3082,9 +3079,9 @@ function post_item_load()
 
 	countTotalNbShapes = function()
 		local nbShapes = 0
-		hierarchyActions:applyToDescendants(item, { includeRoot = true }, function(_)
+		item:Recurse(function(_)
 			nbShapes = nbShapes + 1
-		end)
+		end, { includeRoot = true })
 		return nbShapes
 	end
 

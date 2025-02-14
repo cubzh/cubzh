@@ -12,7 +12,6 @@ avatarPrivateFields = setmetatable({}, { __mode = "k" })
 -- MODULES
 api = require("api")
 bundle = require("bundle")
-hierarchyactions = require("hierarchyactions")
 
 function emptyFunc() end
 
@@ -645,10 +644,10 @@ mod.getPlayerHead = function(self, config)
 
 	-- error("REVIEW getPlayerHead")
 	head.Name = "Head"
-	hierarchyactions:applyToDescendants(head, { includeRoot = true }, function(o)
+	head:Recurse(function(o)
 		o.Physics = PhysicsMode.Disabled
 		o.Palette = palette
-	end)
+	end, { includeRoot = true })
 
 	-- head:setEyes({ index = 1 })
 	-- head:setNose({ index = DEFAULT_NOSE_INDEX })
@@ -703,12 +702,12 @@ mod.get = function(self, config, _, didLoadCallback_deprecated)
 	local objectNewIndex = mt.__newindex
 	mt.__newindex = function(t, k, v)
 		if k == "Shadow" then
-			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
+			t:Recurse(function(o)
 				if o.Shadow == nil then
 					return
 				end
 				o.Shadow = v
-			end)
+			end, { includeRoot = false })
 			mt.Shadow = v
 			return
 		end
@@ -730,9 +729,9 @@ mod.get = function(self, config, _, didLoadCallback_deprecated)
 
 	local body = bundle:MutableShape("shapes/avatar.3zh")
 	body.Name = "Body"
-	hierarchyactions:applyToDescendants(body, { includeRoot = true }, function(o)
+	body:Recurse(function(o)
 		o.Physics = PhysicsMode.Disabled
-	end)
+	end, { includeRoot = true })
 
 	avatar:AddChild(body)
 	body.LocalPosition.Y = 12
@@ -769,9 +768,9 @@ mod.get = function(self, config, _, didLoadCallback_deprecated)
 	eyeLidLeft.IsHidden = true
 	eyeLidLeft.LocalPosition:Set(-4, 5.1, 5.1)
 
-	hierarchyactions:applyToDescendants(body, { includeRoot = true }, function(o)
+	body:Recurse(function(o)
 		o.Palette = palette
-	end)
+	end, { includeRoot = true })
 
 	avatar:updateConfig()
 	avatar:load()

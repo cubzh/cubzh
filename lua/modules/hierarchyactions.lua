@@ -23,11 +23,13 @@ Client.OnStart = function()
 end
 --]]
 
+-- DEPRECATED (february 2025)
 local hierarchyActions = {}
 local hierarchyActionsMetatable = {
 	__index = {
 		_maxDepth = -1,
 		applyToDescendants = function(self, shape, options, callback)
+			print("hierarchyActions is deprecated, please use object:Recurse(callback, options) instead")
 			if callback == nil then
 				callback = options
 				options = {}

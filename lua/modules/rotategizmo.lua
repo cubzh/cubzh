@@ -5,7 +5,6 @@ rotateGizmo = {
 }
 
 plane = require("plane")
-hierarchyActions = require("hierarchyactions")
 polygonBuilder = require("polygonbuilder")
 
 local functions = {}
@@ -39,11 +38,11 @@ end
 functions.setLayer = function(self, layer)
 	self.camera.Layers = layer
 	for _, a in ipairs(self.handles) do
-		hierarchyActions:applyToDescendants(a, { includeRoot = true }, function(obj)
+		a:Recurse(function(obj)
 			pcall(function()
 				obj.Layers = layer
 			end)
-		end)
+		end, { includeRoot = true })
 	end
 end
 
@@ -348,13 +347,13 @@ rotateGizmo.create = function(_, config)
 		})
 
 		-- Apply options to each part of the circle
-		hierarchyActions:applyToDescendants(handle, { includeRoot = true }, function(obj)
+		handle:Recurse(function(obj)
 			pcall(function()
 				obj.Layers = layer
 			end)
 			obj.axis = axis
 			obj.Physics = PhysicsMode.Trigger
-		end)
+		end, { includeRoot = true })
 
 		handle:SetParent(g.gizmoObject)
 		handle.axis = axis

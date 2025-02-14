@@ -642,10 +642,10 @@ local loadObject = function(obj, objInfo, config)
 	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr
 		and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
 
-	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(l)
+	obj:Recurse(function(l)
 		l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
 		l.Shadow = turnOnShadows
-	end)
+	end, { includeRoot = true })
 	obj.Position = objInfo.Position or Number3(0, 0, 0)
 	obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
 	obj.Scale = scale
@@ -659,11 +659,11 @@ local loadMap = function(d, n, didLoad)
 	Object:Load(d, function(j)
 		map = MutableShape(j, { includeChildren = true })
 		map.Scale = n or 5
-		require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
+		map:Recurse(function(o)
 			o.CollisionGroups = Map.CollisionGroups
 			o.CollidesWithGroups = Map.CollidesWithGroups
 			o.Physics = PhysicsMode.StaticPerBlock
-		end)
+		end, { includeRoot = true })
 		map:SetParent(World)
 		map.Position = { 0, 0, 0 }
 		map.Pivot = { 0, 0, 0 }
