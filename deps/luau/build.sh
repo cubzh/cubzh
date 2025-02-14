@@ -114,7 +114,7 @@ bazel_command_suffix=""
 
 if [ "$platform" == "windows" ]; then
   artifact_name="luau-default.lib"
-  artifact_destination_name="luau.lib"
+  artifact_destination_name="libluau.lib"
 
 elif [ "$platform" == "macos" ]; then
   artifact_name="luau-macos_lipo.a"
@@ -136,12 +136,17 @@ for arch in "${archs_to_build[@]}"; do
   output_dir="$version/prebuilt/$platform_to_build/$arch"
   rm -rf $output_dir && mkdir -p $output_dir
   
-  # build
-  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} $bazel_command_suffix
-  
+  # build in DEBUG mode
+  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
   # move the library to the output directory
-  mkdir -p $output_dir/lib
-  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib/$artifact_destination_name
+  mkdir -p $output_dir/lib-debug
+  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib-debug/$artifact_destination_name
+
+  # build in RELEASE mode
+  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
+  # move the library to the output directory
+  mkdir -p $output_dir/lib-release
+  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib-release/$artifact_destination_name
 
   # move the header files to the output directory
   mkdir -p $output_dir/include
