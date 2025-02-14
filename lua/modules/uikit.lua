@@ -48,7 +48,6 @@ local NodeType = {
 
 codes = require("inputcodes")
 cleanup = require("cleanup")
-hierarchyActions = require("hierarchyactions")
 sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
@@ -218,7 +217,7 @@ function createUI(system)
 	rootFrame.LocalPosition = { -Screen.Width * 0.5, -Screen.Height * 0.5, UI_FAR }
 
 	local function _setupUIObject(object, collides)
-		hierarchyActions:applyToDescendants(object, { includeRoot = true }, function(o)
+		object:Recurse(function(o)
 			if type(o) == "Object" then
 				return
 			end
@@ -228,7 +227,7 @@ function createUI(system)
 			o.CollidesWithGroups = {}
 			o.CollisionGroups = {}
 			o.Physics = PhysicsMode.Disabled
-		end)
+		end, { includeRoot = true })
 
 		if collides and object.Width ~= nil and object.Height ~= nil then
 			object.Physics = PhysicsMode.Trigger

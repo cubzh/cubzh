@@ -20,7 +20,6 @@ local OBJECT_DEFAULT_COLLISION_GROUP = 3
 
 -- MODULES
 
-local hierarchyactions = require("hierarchyactions")
 local ease = require("ease")
 
 -- Returns Block Player is standing on
@@ -722,22 +721,22 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 		end
 
 		if k == "Shadow" then
-			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
+			t:Recurse(function(o)
 				if o.Shadow == nil then
 					return
 				end
 				o.Shadow = v
-			end)
+			end, { includeRoot = false })
 			mt.Shadow = v
 			return
 		end
 		if k == "Layers" then
-			hierarchyactions:applyToDescendants(t, { includeRoot = false }, function(o)
+			t:Recurse(function(o)
 				if o.Layers == nil then
 					return
 				end
 				o.Layers = v
-			end)
+			end, { includeRoot = false })
 			mt.Layers = v
 			return
 		end

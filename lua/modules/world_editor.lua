@@ -142,7 +142,7 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 		return
 	end
 	obj.realPhysicsMode = physicsMode
-	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+	obj:Recurse(function(o)
 		if type(o) == "Object" then
 			return
 		end
@@ -152,7 +152,7 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 		else
 			o.Physics = physicsMode
 		end
-	end)
+	end, { includeRoot = true })
 	if syncMulti then
 		sendToServer(events.P_EDIT_OBJECT, {
 			uuid = obj.uuid,
@@ -188,7 +188,7 @@ local tryPickObject = function(pe)
 end
 
 local setObjectAlpha = function(obj, alpha)
-	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+	obj:Recurse(function(o)
 		if not o.Palette then
 			return
 		end
@@ -204,33 +204,33 @@ local setObjectAlpha = function(obj, alpha)
 			c.Color.Alpha = o.savedAlpha[k] * alpha
 		end
 		o:RefreshModel()
-	end)
+	end, { includeRoot = true })
 end
 
 local freezeObject = function(obj)
 	if not obj then
 		return
 	end
-	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+	obj:Recurse(function(o)
 		if type(o) == "Object" then
 			return
 		end
 		o.CollisionGroups = { 6 }
 		o.CollidesWithGroups = {}
-	end)
+	end, { includeRoot = true })
 end
 
 local unfreezeObject = function(obj)
 	if not obj then
 		return
 	end
-	require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+	obj:Recurse(function(o)
 		if type(o) == "Object" then
 			return
 		end
 		o.CollisionGroups = { OBJECTS_COLLISION_GROUP }
 		o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
-	end)
+	end, { includeRoot = true })
 end
 
 local spawnObject = function(data, onDone)
@@ -239,14 +239,14 @@ local spawnObject = function(data, onDone)
 		obj.isEditable = true
 		local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 		setObjectPhysicsMode(obj, physicsMode)
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+		obj:Recurse(function(o)
 			if type(o) == "Object" then
 				return
 			end
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
 			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 			o:ResetCollisionBox()
-		end)
+		end, { includeRoot = true })
 		if obj.uuid ~= -1 then
 			objects[obj.uuid] = obj
 		end
@@ -283,14 +283,14 @@ local spawnObject = function(data, onDone)
 		obj.Rotation = rotation
 		obj.Scale = scale
 
-		require("hierarchyactions"):applyToDescendants(obj, { includeRoot = true }, function(o)
+		obj:Recurse(function(o)
 			if type(o) == "Object" then
 				return
 			end
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
 			o.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups + { OBJECTS_COLLISION_GROUP }
 			o:ResetCollisionBox()
-		end)
+		end, { includeRoot = true })
 
 		obj.isEditable = true
 		obj.fullname = fullname
@@ -1026,11 +1026,11 @@ loadMap = function(fullname, scale, onDone)
 		end
 		map = MutableShape(obj, { includeChildren = true })
 		map.Scale = scale or 5
-		require("hierarchyactions"):applyToDescendants(map, { includeRoot = true }, function(o)
+		obj:Recurse(function(o)
 			o.CollisionGroups = Map.CollisionGroups
 			o.CollidesWithGroups = Map.CollidesWithGroups
 			o.Physics = PhysicsMode.StaticPerBlock
-		end)
+		end, { includeRoot = true })
 		map:SetParent(World)
 		map.Position = { 0, 0, 0 }
 		map.Pivot = { 0, 0, 0 }
