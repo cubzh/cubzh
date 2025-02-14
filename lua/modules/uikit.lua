@@ -2,49 +2,28 @@
 
 -- CONSTANTS
 
--- TMP: replace bitwise operator, supported in Lua 5.3 but not Luau
--- local bit32 = require("bit32")
-local band = bit32.band
-
--- local function band(a, b)
--- 	local result = 0
--- 	local bitval = 1
--- 	while a > 0 and b > 0 do
--- 		if a % 2 == 1 and b % 2 == 1 then
--- 			result = result + bitval
--- 		end
--- 		bitval = bitval * 2
--- 		a = math.floor(a / 2)
--- 		b = math.floor(b / 2)
--- 	end
--- 	return result
--- end
-
-UI_FAR = 1000
-UI_LAYER = 12
-UI_LAYER_SYSTEM = 13
+BUTTON_BORDER = 3
+BUTTON_PADDING = 3
+BUTTON_UNDERLINE = 1
+DEFAULT_SLICE_9_SCALE = 1.0
+LAYER_STEP = -0.1 -- children offset
+SCROLL_DAMPENING_FACTOR = 0.2
+SCROLL_DEFAULT_FRICTION = 3
+SCROLL_DEFAULT_RIGIDITY = 0.99
+SCROLL_DRAG_EPSILON = 10
+SCROLL_LOAD_MARGIN = 50
+SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED = 20
+SCROLL_SPEED_EPSILON = 1
+SCROLL_TIME_TO_DEFUSE_SPEED = 0.05
+SCROLL_UNLOAD_MARGIN = 100
+UI_ALERT_DEPTH = -950
 UI_COLLISION_GROUP = 12
 UI_COLLISION_GROUP_SYSTEM = 13
-UI_SHAPE_SCALE = 5
-LAYER_STEP = -0.1 -- children offset
+UI_FAR = 1000
 UI_FOREGROUND_DEPTH = -945
-UI_ALERT_DEPTH = -950
-BUTTON_PADDING = 3
-BUTTON_BORDER = 3
-BUTTON_UNDERLINE = 1
--- COMBO_BOX_SELECTOR_SPEED = 400
-
-DEFAULT_SLICE_9_SCALE = 1.0
-
-SCROLL_LOAD_MARGIN = 50
-SCROLL_UNLOAD_MARGIN = 100
-SCROLL_DEFAULT_RIGIDITY = 0.99
-SCROLL_DEFAULT_FRICTION = 3
-SCROLL_SPEED_EPSILON = 1
-SCROLL_DRAG_EPSILON = 10
-SCROLL_DAMPENING_FACTOR = 0.2
-SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED = 20
-SCROLL_TIME_TO_DEFUSE_SPEED = 0.05
+UI_LAYER = 12
+UI_LAYER_SYSTEM = 13
+UI_SHAPE_SCALE = 5
 
 -- ENUMS
 
@@ -64,6 +43,7 @@ local NodeType = {
 
 -- MODULES
 
+band = bit32.band -- replaces bitwise operator (in Lua 5.3 but not Luau)
 codes = require("inputcodes")
 cleanup = require("cleanup")
 sfx = require("sfx")
@@ -81,13 +61,10 @@ systemUIRootFrame = nil
 
 keyboardToolbar = nil
 
--- Using global to keep reference on focused node because
--- local within createUI conflicts between both uikit instances.
--- We could not find a better solution yet.
+-- Using global to keep reference on focused node because because
+-- even if there are 2 UIs, only one node can be focused at a time.
 focused = nil
-
--- focused combo box
-comboBoxSelector = nil
+focusedComboBoxSelector = nil
 
 function focus(node)
 	if focused ~= nil then
@@ -101,11 +78,11 @@ function focus(node)
 	end
 	focused = node
 
-	if comboBoxSelector ~= nil then
+	if focusedComboBoxSelector ~= nil then
 		local n = node
 		local close = true
 		while n ~= nil do
-			if n == comboBoxSelector then
+			if n == focusedComboBoxSelector then
 				close = false
 				break
 			end
@@ -113,9 +90,9 @@ function focus(node)
 		end
 
 		if close then
-			if comboBoxSelector.close ~= nil then
-				comboBoxSelector:close()
-				comboBoxSelector = nil
+			if focusedComboBoxSelector.close ~= nil then
+				focusedComboBoxSelector:close()
+				focusedComboBoxSelector = nil
 			end
 		end
 	end
@@ -140,8 +117,8 @@ function getPointerXYWithinNode(pe, node)
 	return Number2(x, y)
 end
 
--- Pne UI instance is automatically created when requiring module.
--- a second one is also created for system menus.
+-- One UI instance is automatically created when requiring module.
+-- A second one is also created for system menus.
 -- This function is not exposed, thus no other instances can be created.
 function createUI(system)
 	local ui = {}
@@ -153,9 +130,10 @@ function createUI(system)
 	ui.kForegroundDepth = UI_FOREGROUND_DEPTH
 	ui.kAlertDepth = UI_ALERT_DEPTH
 
-	----------------------
-	-- VARS
-	----------------------
+	-- nodes indexed by ID and referenced as weak values.
+	-- Allows to perform cleanup on nodes when they are no longer in use.
+	local nodes = {}
+	setmetatable(nodes, { __mode = "v" })
 
 	local rootChildren = {}
 
@@ -1005,6 +983,7 @@ function createUI(system)
 		node._id = nodeID
 		nodeID = nodeID + 1
 
+		nodes[node._id] = node
 		return node
 	end
 
@@ -1464,35 +1443,9 @@ function createUI(system)
 	-- @param config {table} -
 	]]
 	ui.createShape = function(_, shape, config)
-		-- TODO: uncomment this test once types are fixed
-
-		-- if shape == nil or (typeof(shape) ~= "Object" and typeof(shape) ~= "Shape" and typeof(shape) ~= "MutableShape") then
-		-- 	-- print("type(shape):", type(shape))
-		-- 	-- print("typeof(shape):", typeof(shape))
-
-		-- 	-- local t = { __type = "foo" }
-		-- 	-- local mt = { __type = "bar" }
-		-- 	-- setmetatable(t, mt)
-		-- 	-- print("type(t):", type(t))
-		-- 	-- print("typeof(t):", typeof(t))
-
-		-- 	-- type config = { a: number }
-		-- 	-- local c: config = { a = 42 }
-		-- 	-- print("type(c):", type(c))
-		-- 	-- print("typeof(c):", typeof(c))
-
-		-- 	-- local userdata = newproxy(true)
-		-- 	-- print("typeof(userdata):", typeof(userdata))
-		-- 	-- mt = getmetatable(userdata)
-		-- 	-- mt.__type = "banane"
-		-- 	-- mt.__index = {
-		-- 	-- 	oranges = 5,
-		-- 	-- }
-		-- 	-- print("typeof(userdata) 2:", typeof(userdata))
-		-- 	-- print("userdata.oranges:", userdata.oranges)
-
-		-- 	error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
-		-- end
+		if shape == nil or (typeof(shape) ~= "Object" and typeof(shape) ~= "Shape" and typeof(shape) ~= "MutableShape") then
+			error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
+		end
 
 		local node = _nodeCreate()
 
@@ -3829,7 +3782,7 @@ function createUI(system)
 
 			scroll:setParent(selector)
 
-			comboBoxSelector = selector
+			focusedComboBoxSelector = selector
 
 			scroll.Height = math.min(
 				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
@@ -3869,8 +3822,8 @@ function createUI(system)
 			end
 
 			selector.close = function(_)
-				if comboBoxSelector == selector then
-					comboBoxSelector = nil
+				if focusedComboBoxSelector == selector then
+					focusedComboBoxSelector = nil
 				end
 				ease:cancel(selector)
 				selector:remove()
@@ -4436,16 +4389,6 @@ function applyVirtualKeyboardOffset()
 				+ keyboardToolbar.copyBtn.Width
 				+ theme.paddingTiny
 			keyboardToolbar.pasteBtn.pos.Y = theme.paddingTiny
-
-			-- keyboardToolbar.undoBtn.pos.X = keyboardToolbar.pasteBtn.pos.X
-			-- 	+ keyboardToolbar.pasteBtn.Width
-			-- 	+ theme.padding
-			-- keyboardToolbar.undoBtn.pos.Y = theme.paddingTiny
-
-			-- keyboardToolbar.redoBtn.pos.X = keyboardToolbar.undoBtn.pos.X
-			-- 	+ keyboardToolbar.undoBtn.Width
-			-- 	+ theme.paddingTiny
-			-- keyboardToolbar.redoBtn.pos.Y = theme.paddingTiny
 
 			keyboardToolbar.closeBtn.pos.X = Screen.Width
 				- Screen.SafeArea.Right

@@ -8,10 +8,6 @@ Config = {
 	ChatAvailable = false,
 }
 
-if Config.ChatAvailable then
-	return
-end -- tmp: to silent "unused global variable Config" luacheck warning
-
 -- --------------------------------------------------
 -- Utilities for Player avatar
 -- --------------------------------------------------
