@@ -559,6 +559,23 @@ bool transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr
     return false;
 }
 
+bool transform_recurse_depth(Transform *t, pointer_transform_recurse_depth_func f, void *ptr, bool deepFirst, uint32_t depth) {
+    DoublyLinkedListNode *n = transform_get_children_iterator(t);
+    Transform *child = NULL;
+    while (n != NULL) {
+        child = (Transform *)doubly_linked_list_node_pointer(n);
+        if (deepFirst) {
+            if (transform_recurse_depth(child, f, ptr, deepFirst, depth + 1) || f(child, ptr, depth + 1))
+                return true;
+        } else {
+            if (f(child, ptr, depth + 1) || transform_recurse_depth(child, f, ptr, deepFirst, depth + 1))
+                return true;
+        }
+        n = doubly_linked_list_node_next(n);
+    }
+    return false;
+}
+
 bool transform_is_hidden_branch(Transform *t) {
     return _transform_get_flag(t, TRANSFORM_FLAG_HIDDEN_BRANCH);
 }

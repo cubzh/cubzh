@@ -71,6 +71,7 @@ typedef enum {
 } TransformType;
 
 typedef bool (*pointer_transform_recurse_func)(Transform *t, void *ptr);
+typedef bool (*pointer_transform_recurse_depth_func)(Transform *t, void *ptr, uint32_t depth);
 typedef void (*pointer_transform_destroyed_func)(const uint16_t id, void *managed);
 typedef Transform **Transform_Array;
 
@@ -124,6 +125,7 @@ size_t transform_get_children_count(Transform *t);
 void *transform_get_ptr(Transform *const t);
 TransformType transform_get_type(const Transform *t);
 bool transform_recurse(Transform *t, pointer_transform_recurse_func f, void *ptr, bool deepFirst);
+bool transform_recurse_depth(Transform *t, pointer_transform_recurse_depth_func f, void *ptr, bool deepFirst, uint32_t depth);
 bool transform_is_hidden_branch(Transform *t);
 void transform_set_hidden_branch(Transform *t, bool value);
 bool transform_is_hidden_self(Transform *t);
