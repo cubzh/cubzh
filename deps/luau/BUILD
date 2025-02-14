@@ -1,7 +1,6 @@
 load(
     "@rules_apple//apple:apple.bzl",
     "apple_static_library",
-    # "apple_static_xcframework",
 )
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
@@ -11,14 +10,15 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 CLANG_COPTS = [
     "-std=c++17",
+    "-fPIC", # Position Independent Code
 ]
 
 MSVC_COPTS = [
     "/std:c++17",
 ]
 
-# TODO: if possible, select on the compiler instead of the platform
-#       (or use the same compiler everywhere)
+# Updated compiler selection based on OS
+# TODO: filter on toolchain (if possible)
 COMPILER_COPTS = select({
     "@platforms//os:windows": MSVC_COPTS,
     "//conditions:default": CLANG_COPTS,
@@ -28,12 +28,8 @@ COMPILER_COPTS = select({
 # Platform-specific compiler flags
 # ----------------------------------------
 
-ANDROID_COPTS = [
-    "-Wno-string-conversion",
-]
-
 PLATFORM_COPTS = select({
-    "@platforms//os:android": ANDROID_COPTS,
+    "@platforms//os:android": ["-Wno-string-conversion"],
     "//conditions:default": [],
 })
 
@@ -75,18 +71,6 @@ cc_static_library(
     name = "luau-default",
     deps = luau_static_library_deps,
 )
-
-# apple_static_xcframework(
-#     name = "luau-macos-framework",
-#     macos = [
-#         "arm64",
-#         "x86_64",
-#     ],
-#     minimum_os_versions = {
-#         "macos": "11.0",
-#     },
-#     deps = luau_static_library_deps,
-# )
 
 # Luau.Common (only headers)
 
