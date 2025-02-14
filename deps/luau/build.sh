@@ -114,7 +114,7 @@ bazel_command_suffix=""
 
 if [ "$platform" == "windows" ]; then
   artifact_name="luau-default.lib"
-  artifact_destination_name="luau.lib"
+  artifact_destination_name="libluau.lib"
 
 elif [ "$platform" == "macos" ]; then
   artifact_name="luau-macos_lipo.a"
