@@ -129,24 +129,25 @@ fi
 
 echo "🛠️ Building Luau for $platform_to_build... (${archs_to_build[@]})"
 
+# Define build modes
+build_modes=("Debug:dbg" "Release:opt")
+
 # build for each architecture
 for arch in "${archs_to_build[@]}"; do
-  
   # recreate output directory
   output_dir="$version/prebuilt/$platform_to_build/$arch"
   rm -rf $output_dir && mkdir -p $output_dir
-  
-  # build in DEBUG mode
-  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
-  # move the library to the output directory
-  mkdir -p $output_dir/lib-debug
-  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib-debug/$artifact_destination_name
 
-  # build in RELEASE mode
-  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
-  # move the library to the output directory
-  mkdir -p $output_dir/lib-release
-  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib-release/$artifact_destination_name
+  # build for each build mode
+  for mode_pair in "${build_modes[@]}"; do
+    mode="${mode_pair%%:*}"           # get everything before the colon (e.g. Debug)
+    mode_bazel_flag="${mode_pair#*:}" # get everything after the colon (e.g. dbg)
+    # build
+    bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=${mode_bazel_flag} $bazel_command_suffix
+    # move the library to the output directory
+    mkdir -p $output_dir/lib-${mode}
+    mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib-${mode}/$artifact_destination_name
+  done
 
   # move the header files to the output directory
   mkdir -p $output_dir/include
