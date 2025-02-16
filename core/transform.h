@@ -98,6 +98,8 @@ void transform_reset_any_dirty(Transform *t);
 bool transform_is_any_dirty(Transform *t);
 void transform_set_destroy_callback(pointer_transform_destroyed_func f);
 void transform_set_managed_ptr(Transform *t, Weakptr *wptr);
+void transform_unset_managed_ptr(Transform *t);
+bool transform_is_managed(Transform *t);
 
 /// MARK: - Physics -
 void transform_set_physics_dirty(Transform *t);

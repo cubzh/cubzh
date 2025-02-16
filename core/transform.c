@@ -322,6 +322,17 @@ void transform_set_managed_ptr(Transform *t, Weakptr *wptr) {
     t->managed = wptr;
 }
 
+void transform_unset_managed_ptr(Transform *t) {
+    if (t->managed) {
+        weakptr_release(t->managed);
+        t->managed = NULL;
+    }
+}
+
+bool transform_is_managed(Transform *t) {
+    return t->managed != NULL;
+}
+
 // MARK: - Physics -
 
 void transform_set_physics_dirty(Transform *t) {
