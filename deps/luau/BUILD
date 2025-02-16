@@ -17,10 +17,11 @@ MSVC_COPTS = [
     "/std:c++17",
 ]
 
-# Updated compiler selection based on OS
-# TODO: filter on toolchain (if possible)
 COMPILER_COPTS = select({
-    "@platforms//os:windows": MSVC_COPTS,
+    "@rules_cc//cc/compiler:gcc": CLANG_COPTS,
+    "@rules_cc//cc/compiler:clang": CLANG_COPTS,
+    "@rules_cc//cc/compiler:msvc-cl": MSVC_COPTS,
+    # Fallback case for an undetected compiler.
     "//conditions:default": CLANG_COPTS,
 })
 
