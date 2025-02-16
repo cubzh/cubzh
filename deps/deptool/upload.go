@@ -2,89 +2,113 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 )
 
-func UploadArtifacts(depName, depVersion, platform string) error {
+var (
+	depsRootPath = filepath.Join("..", "..", "deps")
+)
 
-	// deps/<depName>/<depVersion>/prebuilt/<platform>
-	// deps/luau/0.693/prebuilt/macos/arm64/include
-	// deps/luau/0.693/prebuilt/macos/arm64/lib
+func uploadArtifacts(depName, version, platform string) error {
+	fmt.Printf("⭐️ Uploading artifacts for [%s] [%s] [%s]\n", depName, version, platform)
 
-	depPath := filepath.Join("deps", depName, depVersion, "prebuilt", platform)
+	// Validate arguments
+	if !slices.Contains(supportedDependencies, depName) {
+		return fmt.Errorf("invalid dependency name: %s", depName)
+	}
 
-	fmt.Printf("Uploading artifacts for %s %s %s\n", depName, depVersion, platform)
-	fmt.Printf("depPath: %s\n", depPath)
+	if platform != PlatformAll && !slices.Contains(supportedPlatforms, platform) {
+		return fmt.Errorf("invalid platform name: %s", platform)
+	}
 
-	// Create the object storage client
+	if version == "" {
+		return fmt.Errorf("version is required")
+	}
+
+	// Construct the list of artifacts paths to upload
+	depsPathsToUpload := []string{}
+	if platform == PlatformAll {
+		for _, supportedPlatform := range supportedPlatforms {
+			depsPathsToUpload = append(depsPathsToUpload, constructDepArtifactsPath(depName, version, supportedPlatform))
+		}
+	} else {
+		depsPathsToUpload = append(depsPathsToUpload, constructDepArtifactsPath(depName, version, platform))
+	}
+
+	// Get the object storage client
 	objectStorageClient, err := getObjectStorageClient()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Debug.", objectStorageClient)
+	// Try to upload each path
+	for _, depPath := range depsPathsToUpload {
+		depPath = filepath.Join("..", "..", depPath)
+		// Make sure the dependency name exists
+		if _, err := os.Stat(depPath); os.IsNotExist(err) {
+			fmt.Printf("-> Path does not exist. Skipping. %s\n", depPath)
+			continue
+		}
 
-	// // Make sure the dependency name exists
-	// if _, err := os.Stat(depPath); os.IsNotExist(err) {
-	// 	return fmt.Errorf("dependency not found : %s", depPath)
-	// }
+		// Read all files and upload them
+		err = filepath.Walk(depPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
 
-	// // Make sure the dependency version exists
-	// if _, err := os.Stat(depVersionPath); os.IsNotExist(err) {
-	// 	return fmt.Errorf("dependency version not found : %s", depVersionPath)
-	// }
+			// Skip directories
+			if info.IsDir() {
+				return nil
+			}
 
-	// // Make sure the platform exists
-	// if _, err := os.Stat(platformPath); os.IsNotExist(err) {
-	// 	return fmt.Errorf("<dependency>/prebuilt/<platform> path does not exist: %s", platformPath)
-	// }
+			// Open the file
+			file, err := os.Open(path)
+			if err != nil {
+				return fmt.Errorf("failed to open file %s: %w", path, err)
+			}
+			defer file.Close()
 
-	// // Read files to upload
+			// Create S3 key based on platform and relative path
+			objectStorageKey, err := filepath.Rel(depsRootPath, path)
+			if err != nil {
+				return fmt.Errorf("failed to get relative path: %w", err)
+			}
 
-	// directoriesToUpload := []string{"lib", "include"}
+			// Enforce / separator (even on Windows)
+			objectStorageKey = strings.ReplaceAll(objectStorageKey, `\`, `/`)
 
-	// for _, directoryToUpload := range directoriesToUpload {
-	// 	artifactsPath := filepath.Join(platformPath, directoryToUpload)
+			// Split path into elements and remove "prebuilt" if it's the 3rd element
+			pathElements := strings.Split(objectStorageKey, "/")
+			if len(pathElements) >= 3 && pathElements[2] == "prebuilt" {
+				pathElements = append(pathElements[:2], pathElements[3:]...)
+				objectStorageKey = strings.Join(pathElements, "/")
+			}
 
-	// 	// Verify the artifacts directory exists
-	// 	if _, err := os.Stat(artifactsPath); os.IsNotExist(err) {
-	// 		return fmt.Errorf("artifacts directory does not exist: %s", artifactsPath)
-	// 	}
+			// If last element is ".DS_Store", skip
+			if pathElements[len(pathElements)-1] == ".DS_Store" {
+				return nil
+			}
 
-	// 	// Walk through the artifacts directory
-	// 	err = filepath.Walk(artifactsPath, func(path string, info os.FileInfo, err error) error {
-	// 		if err != nil {
-	// 			return err
-	// 		}
+			fmt.Printf("  🔥 Uploading file: %s\n", objectStorageKey)
 
-	// 		// Skip directories
-	// 		if info.IsDir() {
-	// 			return nil
-	// 		}
+			// Upload the file to object storage
+			err = objectStorageClient.Upload(objectStorageKey, file)
+			if err != nil {
+				return fmt.Errorf("failed to upload file %s: %w", path, err)
+			}
 
-	// 		// Open the file
-	// 		file, err := os.Open(path)
-	// 		if err != nil {
-	// 			return fmt.Errorf("failed to open file %s: %w", path, err)
-	// 		}
-	// 		defer file.Close()
+			return nil
+		})
 
-	// 		// Create S3 key based on platform and relative path
-	// 		relPath, err := filepath.Rel(artifactsPath, path)
-	// 		if err != nil {
-	// 			return fmt.Errorf("failed to get relative path: %w", err)
-	// 		}
-	// 		objectStorageKey := filepath.Join(platform, relPath)
+		if err != nil {
+			fmt.Printf("❌ failed to upload files (%s): %s\n", depPath, err.Error())
+			return err
+		}
+	}
 
-	// 		// Upload the file to object storage
-	// 		err = objectStorageClient.Upload(objectStorageKey, file)
-	// 		if err != nil {
-	// 			return fmt.Errorf("failed to upload file %s: %w", path, err)
-	// 		}
-
-	// 		return nil
-	// 	})
-	// }
-
-	return err
+	fmt.Println("✅ Successfully uploaded all files")
+	return nil
 }
