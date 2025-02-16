@@ -569,7 +569,7 @@ function titleScreen()
 		didResizeListener:Remove()
 		didResizeFunction = nil
 
-		root:RemoveFromParent()
+        root:Destroy()
 		root = nil
 	end
 
@@ -1203,10 +1203,10 @@ function avatar()
 		listeners = {}
 		dragListener = nil
 
-		root:RemoveFromParent()
+		root:Destroy()
 		root = nil
 
-		emitter:RemoveFromParent()
+		emitter:Destroy()
 		emitter = nil
 	end
 

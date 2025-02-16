@@ -102,7 +102,7 @@ local HideHandle = function(player)
 	end
 
 	if privateFields.handle ~= nil then
-		privateFields.handle:RemoveFromParent()
+		privateFields.handle:Destroy()
 		privateFields.handle = nil
 	end
 end
