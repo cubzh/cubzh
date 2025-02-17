@@ -16,4 +16,7 @@
 #define LIGHT_VARIANT_SHADOW_CSM 2
 #define LIGHT_VARIANT_SHADOW_SOFT 1
 
+// Non-PBR model
+#define LIGHT_VARIANT_PBR 0
+
 #include "./fs_deferred_light_common.sh"
