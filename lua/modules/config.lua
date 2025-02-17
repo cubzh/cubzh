@@ -1,8 +1,6 @@
 config = {}
 
 defaultOptions = {
-	acceptIntegersAndNumbersDefault = true,
-	acceptIntegersAndNumbers = {}, -- map field name : boolean
 	acceptTypes = {}, -- { fieldName : { "Number3", "Object" }}
 }
 
@@ -16,7 +14,12 @@ config.merge = function(self, defaults, overrides, options)
 	end
 
 	if overrides ~= nil and type(overrides) ~= "table" then
-		error("config:merge(defaults, overrides, option) - overrides should be nil or a table", 2)
+		error(
+			"config:merge(defaults, overrides, option) - overrides should be nil or a table (overrides: "
+				.. type(overrides)
+				.. ")",
+			2
+		)
 	end
 
 	if options ~= nil and type(options) ~= "table" then
@@ -41,34 +44,38 @@ config.merge = function(self, defaults, overrides, options)
 	local overriden
 	local types
 	local vType
+	local confVType
 	if overrides then
 		for k, v in pairs(overrides) do
-			vType = type(v)
+			vType = typeof(v)
+			confVType = typeof(conf[k])
 			overriden = false
-			if vType == type(conf[k]) then
+			if vType == confVType then
 				conf[k] = v
 				overriden = true
-			else
-				if
-					(opts.acceptIntegersAndNumbersDefault or opts.acceptIntegersAndNumbers[k] == true)
-					and (type(conf[k]) == "number" or type(conf[k]) == "integer")
-					and (vType == "number" or vType == "integer")
-				then
-					conf[k] = v
-					overriden = true
-				elseif opts.acceptTypes[k] ~= nil then
-					types = opts.acceptTypes[k]
-					for _, t in ipairs(types) do
-						if vType == t or t == "*" then
-							conf[k] = v
-							overriden = true
-							break
-						end
+			elseif opts.acceptTypes[k] ~= nil then
+				types = opts.acceptTypes[k]
+				for _, t in ipairs(types) do
+					if vType == t or t == "*" then
+						conf[k] = v
+						overriden = true
+						break
 					end
 				end
 			end
 			if overriden == false then
-				print("⚠️ config:merge - overrides key ignored: " .. k)
+				-- TODO: overriding anyway for now, uncomment warning and remove following lines when types are fixed
+				-- print("⚠️ config:merge - overrides key ignored: " .. k)
+				print(
+					"⚠️ config:merge - accepting key waiting for types to be fixed: "
+						.. k
+						.. ", type: "
+						.. vType
+						.. ", conf type: "
+						.. confVType
+				)
+				conf[k] = v
+				overriden = true
 			end
 		end
 	end

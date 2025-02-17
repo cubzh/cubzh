@@ -350,7 +350,7 @@ mod.getItems = function(self, config, callback)
 	ok, err = pcall(function()
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
-				minBlock = { "integer" },
+				minBlock = { "number" },
 				category = { "string", "table" },
 			},
 		})
@@ -553,7 +553,7 @@ mod.getWorldThumbnail = function(self, worldID, callback)
 	if self ~= mod then
 		error("api:getWorldThumbnail(worldID, callback): use `:`", 2)
 	end
-	if type(worldID) ~= Type.string then
+	if type(worldID) ~= "string" then
 		error("api:getWorldThumbnail(worldID, callback): worldID should be a string", 2)
 	end
 	if type(callback) ~= "function" then

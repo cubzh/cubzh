@@ -98,6 +98,8 @@ void transform_reset_any_dirty(Transform *t);
 bool transform_is_any_dirty(Transform *t);
 void transform_set_destroy_callback(pointer_transform_destroyed_func f);
 void transform_set_managed_ptr(Transform *t, Weakptr *wptr);
+void transform_unset_managed_ptr(Transform *t);
+bool transform_is_managed(Transform *t);
 
 /// MARK: - Physics -
 void transform_set_physics_dirty(Transform *t);
@@ -236,6 +238,8 @@ void transform_set_animations_enabled(Transform *const t, const bool enabled);
 bool transform_is_animations_enabled(Transform *const t);
 float transform_get_shadow_decal(Transform *t);
 void transform_set_shadow_decal(Transform *t, float size);
+
+void transform_recycle_id(const uint16_t id);
 
 /// MARK: - Debug -
 #if DEBUG_TRANSFORM

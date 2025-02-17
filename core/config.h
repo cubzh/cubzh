@@ -70,7 +70,8 @@ extern "C" {
 #define maximum(x, y) (((x) >= (y)) ? (x) : (y))
 #define minimum(x, y) (((x) <= (y)) ? (x) : (y))
 #define CLAMP(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
-#define CLAMP01(x) CLAMP(x, 0.0f, 1.0f)
+#define CLAMP01(x) CLAMP(x, 0.0, 1.0)
+#define CLAMP01F(x) CLAMP(x, 0.0f, 1.0f)
 #define LERP(a, b, v) ((a) + ((b) - (a)) * (v))
 #define WRAP01(v) (v - floorf(v))
 

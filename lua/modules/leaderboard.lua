@@ -62,7 +62,9 @@ local get = function(leaderboard, config)
 	local u
 
 	if config.userID ~= nil then
-		u = url:parse(API_ADDR .. "/privileged/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name .. "/" .. config.userID)
+		u = url:parse(
+			API_ADDR .. "/privileged/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name .. "/" .. config.userID
+		)
 	else
 		u = url:parse(API_ADDR .. "/privileged/leaderboards/" .. System.WorldID .. "/" .. leaderboard.name)
 		u:addQueryParameter("mode", config.mode)
@@ -151,7 +153,7 @@ local set = function(leaderboard, config)
 	local ok, err = pcall(function()
 		config = conf:merge(defaultConfig, config, {
 			acceptTypes = {
-				score = { "number", "integer" },
+				score = { "number" },
 				value = { "*" },
 				callback = { "function" },
 			},

@@ -49,6 +49,7 @@ Connection::Payload_SharedPtr Connection::Payload::decode(char *bytes, size_t le
     Payload *p = new Payload();
     
     p->_decoded = bytes;
+    p->_decodedLen = len;
     char *cursor = p->_decoded;
     
     memcpy(&p->_includes, cursor, sizeof(uint8_t));
@@ -324,4 +325,8 @@ size_t Connection::Payload::metadataSize() {
 
 size_t Connection::Payload::totalSize() {
     return metadataSize() + _len;
+}
+
+std::string Connection::Payload::getRawBytes() {
+    return std::string(_decoded, _decodedLen);
 }

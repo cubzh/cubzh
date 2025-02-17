@@ -57,6 +57,10 @@ bool filo_list_uint32_pop(FiloListUInt32 *list, uint32_t *i) {
     return true;
 }
 
+bool filo_list_uint32_is_empty(FiloListUInt32 *list) {
+    return (list == NULL || list->first == NULL);
+}
+
 FiloListUInt32Node *filo_list_uint32_node_new(uint32_t value) {
     FiloListUInt32Node *node = (FiloListUInt32Node *)malloc(sizeof(FiloListUInt32Node));
     node->next = NULL;

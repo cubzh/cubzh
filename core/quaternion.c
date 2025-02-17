@@ -156,7 +156,7 @@ Quaternion *quaternion_op_lerp(const Quaternion *from,
                                const Quaternion *to,
                                Quaternion *lerped,
                                const float t) {
-    const float v = CLAMP01(t);
+    const float v = CLAMP01F(t);
     lerped->x = LERP(from->x, to->x, v);
     lerped->y = LERP(from->y, to->y, v);
     lerped->z = LERP(from->z, to->z, v);
@@ -183,7 +183,7 @@ Quaternion *quaternion_op_slerp(const Quaternion *from,
     if (fabsf(d) >= 0.95f) {
         quaternion_op_lerp(from, &_to, lerped, t);
     } else {
-        const float v = CLAMP01(t);
+        const float v = CLAMP01F(t);
         const float angle = acosf(d);
         const float sina = sinf(angle);
 

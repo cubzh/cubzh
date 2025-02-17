@@ -628,7 +628,7 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 			-- keep current _state.dirpadInput.
 			return true
 		else
-			local a = math.atan(y - center.Y, x - center.X) + math.pi
+			local a = math.atan2(y - center.Y, x - center.X) + math.pi
 			if a <= DIR_PAD_STEP_1 then
 				dirpadInput.X = -1.0
 				dirpadInput.Y = 0

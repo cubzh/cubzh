@@ -42,7 +42,7 @@ boxGizmoMetatable = {
 				box:Fit(shape, true)
 				shape.Rotation = savedRotation
 				shape:Refresh()
-				local isNotShape = type(shape) ~= "Shape" and type(shape) ~= "MutableShape"
+				local isNotShape = typeof(shape) ~= "Shape" and typeof(shape) ~= "MutableShape"
 				local w = isNotShape and 5 or (box.Max.X - box.Min.X)
 				local h = isNotShape and 5 or (box.Max.Y - box.Min.Y)
 				local d = isNotShape and 5 or (box.Max.Z - box.Min.Z)

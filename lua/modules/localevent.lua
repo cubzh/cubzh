@@ -242,7 +242,8 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 							table.insert(listenersToRemove, listener)
 							print("❌", err, "(function disabled)")
 						end
-						goto continue -- continue for loop
+						-- goto continue -- continue for loop
+						continue
 					end
 				else
 					captured = listener.callback(table.unpack(args))
@@ -252,7 +253,7 @@ local sendEventToListeners = function(self, listenersArray, name, ...)
 					break
 				end -- event captured, exit!
 
-				::continue::
+				-- ::continue::
 
 				-- else
 				-- TODO: remove listeners with nil callbacks

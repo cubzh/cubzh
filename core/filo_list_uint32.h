@@ -27,6 +27,8 @@ void filo_list_uint32_push(FiloListUInt32 *list, uint32_t i);
 // false if list is empty or NULL
 bool filo_list_uint32_pop(FiloListUInt32 *list, uint32_t *i);
 
+bool filo_list_uint32_is_empty(FiloListUInt32 *list);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

@@ -61,7 +61,7 @@ end
 
 local createHorizontalContainer = function(_, config)
 	-- legacy
-	if type(config) == "Color" then
+	if typeof(config) == "Color" then
 		config = { color = config }
 	end
 
@@ -123,7 +123,7 @@ end
 
 local createVerticalContainer = function(_, config)
 	-- legacy
-	if type(config) == "Color" then
+	if typeof(config) == "Color" then
 		config = { color = config }
 	end
 

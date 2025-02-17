@@ -95,6 +95,9 @@ public:
 
     bool doneWriting() override;
 
+    // TMP
+    void writeBytes(const char *buf, size_t len);
+
 private:
 
     /// private constructor

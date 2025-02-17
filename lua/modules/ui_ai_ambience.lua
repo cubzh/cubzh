@@ -24,29 +24,29 @@ setFromAIConfig = function(_, config, _quiet)
 		return
 	end
 
-	local colorType = type(Color.Red)
-	local c = type(config.sky.skyColor) == colorType and config.sky.skyColor
+	local colorType = typeof(Color.Red)
+	local c = typeof(config.sky.skyColor) == colorType and config.sky.skyColor
 		or Color(
 			math.floor(config.sky.skyColor[1]),
 			math.floor(config.sky.skyColor[2]),
 			math.floor(config.sky.skyColor[3])
 		)
 	current.sky.skyColor = c
-	c = type(config.sky.horizonColor) == colorType and config.sky.horizonColor
+	c = typeof(config.sky.horizonColor) == colorType and config.sky.horizonColor
 		or Color(
 			math.floor(config.sky.horizonColor[1]),
 			math.floor(config.sky.horizonColor[2]),
 			math.floor(config.sky.horizonColor[3])
 		)
 	current.sky.horizonColor = c
-	c = type(config.sky.abyssColor) == colorType and config.sky.abyssColor
+	c = typeof(config.sky.abyssColor) == colorType and config.sky.abyssColor
 		or Color(
 			math.floor(config.sky.abyssColor[1]),
 			math.floor(config.sky.abyssColor[2]),
 			math.floor(config.sky.abyssColor[3])
 		)
 	current.sky.abyssColor = c
-	c = type(config.sky.lightColor) == colorType and config.sky.lightColor
+	c = typeof(config.sky.lightColor) == colorType and config.sky.lightColor
 		or Color(
 			math.floor(config.sky.lightColor[1]),
 			math.floor(config.sky.lightColor[2]),
@@ -54,13 +54,13 @@ setFromAIConfig = function(_, config, _quiet)
 		)
 	current.sky.lightColor = c
 	current.sky.lightIntensity = config.sky.lightIntensity
-	c = type(config.fog.color) == colorType and config.fog.color
+	c = typeof(config.fog.color) == colorType and config.fog.color
 		or Color(math.floor(config.fog.color[1]), math.floor(config.fog.color[2]), math.floor(config.fog.color[3]))
 	current.fog.color = c
 	current.fog.near = math.floor(config.fog.near)
 	current.fog.far = math.floor(config.fog.far)
 	current.fog.lightAbsorbtion = math.max(0, math.min(config.fog.lightAbsorbtion, 1))
-	c = type(config.sun.color) == colorType and config.sun.color
+	c = typeof(config.sun.color) == colorType and config.sun.color
 		or Color(math.floor(config.sun.color[1]), math.floor(config.sun.color[2]), math.floor(config.sun.color[3]))
 	current.sun.color = c
 	current.sun.intensity = config.sun.intensity
