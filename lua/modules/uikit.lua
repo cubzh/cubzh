@@ -45,7 +45,6 @@ local NodeType = {
 
 band = bit32.band -- replaces bitwise operator (in Lua 5.3 but not Luau)
 codes = require("inputcodes")
-cleanup = require("cleanup")
 sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
@@ -130,11 +129,6 @@ function createUI(system)
 	ui.kForegroundDepth = UI_FOREGROUND_DEPTH
 	ui.kAlertDepth = UI_ALERT_DEPTH
 
-	-- nodes indexed by ID and referenced as weak values.
-	-- Allows to perform cleanup on nodes when they are no longer in use.
-	local nodes = {}
-	setmetatable(nodes, { __mode = "v" })
-
 	local rootChildren = {}
 
 	-- The pointer index that's currently being used to interract with the UI.
@@ -186,10 +180,6 @@ function createUI(system)
 		end
 		return _groups
 	end
-
-	-- INIT
-
-	Pointer:Show()
 
 	-- Orthographic camera, to render UI
 	local camera = Camera()
@@ -302,49 +292,57 @@ function createUI(system)
 		return self.object:GetParent() ~= nil
 	end
 
-	-- using public wrapper to limit to 1 parameter
-	-- (it should not be possible to override the `toClean` table)
 	privateFunctions._nodeRemovePublicWrapper = function(t)
 		privateFunctions._nodeRemove(t)
 	end
 
-	privateFunctions._nodeRemove = function(t, toClean)
-		local cleanupWhenDone = false
-
-		if toClean == nil then
-			cleanupWhenDone = true
-			toClean = {}
+	-- returns all children of a node, recursively
+	privateFunctions.getAllChildren = function(node, children)
+		if children == nil then
+			children = {}
 		end
 
-		_onRemoveWrapper(t)
-
-		t:setParent(nil)
-
-		if pressed == t then
-			pressed = nil
+		for _, child in pairs(node.children) do
+			table.insert(children, child)
+			privateFunctions.getAllChildren(child, children)
 		end
 
-		if focused == t then
-			focus(nil)
-		end
+		return children
+	end
 
-		if t.object then
-			t.object:RemoveFromParent()
-			t.object = nil
-		end
+	privateFunctions._nodeRemove = function(t)
+		local removedNodes = { t }
+		privateFunctions.getAllChildren(t, removedNodes)
 
-		for _, child in pairs(t.children) do
-			if child.remove ~= nil then
-				privateFunctions._nodeRemove(child, toClean)
+		-- remove from current parent
+		local attr = getmetatable(t).attr
+		if attr.parent.children ~= nil then
+			attr.parent.children[t._id] = nil
+		end
+		rootChildren[t._id] = nil -- in case node parent was root
+
+		local object = t.object
+
+		for _, node in removedNodes do
+			_onRemoveWrapper(node)
+			if pressed == node then
+				pressed = nil
+			end
+	
+			if focused == node then
+				focus(nil)
+			end
+
+			node.object = nil -- nodes considered removed when object == nil
+			local attr = getmetatable(node).attr
+			if attr then
+				attr.parent = nil
+				attr.children = {}
 			end
 		end
 
-		table.insert(toClean, t)
-
-		if cleanupWhenDone then
-			for _, node in ipairs(toClean) do
-				cleanup(node)
-			end
+		if object then
+			object:Destroy() -- destroys all children, recursively
 		end
 	end
 
@@ -931,13 +929,14 @@ function createUI(system)
 	end
 
 	local function _nodeCreate()
-		local node = {}
+		local node = {
+			object = nil,
+		}
 
 		local m = {
 			attr = {
 				-- can be a Shape, Text, Object...
 				-- depending on node type
-				object = nil,
 				color = nil,
 				parent = nil,
 				type = NodeType.None,
@@ -983,7 +982,6 @@ function createUI(system)
 		node._id = nodeID
 		nodeID = nodeID + 1
 
-		nodes[node._id] = node
 		return node
 	end
 

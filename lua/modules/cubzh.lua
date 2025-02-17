@@ -1316,6 +1316,8 @@ function home()
 		end
 
 		local function worldCellResizeFn(self)
+			if self.parent.Height == nil then return end
+			
 			self.Height = self.parent.Height
 
 			if self.shape then
