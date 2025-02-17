@@ -1,7 +1,7 @@
-load(
-    "@rules_apple//apple:apple.bzl",
-    "apple_static_library",
-)
+# load(
+#     "@rules_apple//apple:apple.bzl",
+#     "apple_static_library",
+# )
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
 # ----------------------------------------
@@ -42,10 +42,10 @@ COPTS = COMPILER_COPTS + PLATFORM_COPTS
 # luau (static library)
 
 alias(
-    name = "luau",
+    name = "libluau",
     actual = select({
-        "@platforms//os:macos": ":luau-macos",
-        "//conditions:default": ":luau-default",
+        "@platforms//os:macos": ":libluau-macos",
+        "//conditions:default": ":libluau-default",
     }),
 )
 
@@ -60,15 +60,15 @@ luau_static_library_deps = [
     ":Luau.VM",
 ]
 
-apple_static_library(
-    name = "luau-macos",
-    minimum_os_version = "11.0",
-    platform_type = "macos",
-    deps = luau_static_library_deps,
-)
+# apple_static_library(
+#     name = "libluau-macos",
+#     minimum_os_version = "11.0",
+#     platform_type = "macos",
+#     deps = luau_static_library_deps,
+# )
 
 cc_static_library(
-    name = "luau-default",
+    name = "libluau-default",
     deps = luau_static_library_deps,
 )
 
