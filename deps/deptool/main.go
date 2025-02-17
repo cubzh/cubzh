@@ -1,9 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/voxowl/objectstorage"
@@ -11,9 +11,11 @@ import (
 )
 
 const (
-	DependencyAll  = "all"
-	DependencyLuau = "luau"
+	// Supported dependencies
+	DependencyLibLuau = "libluau"
+	// DependencyLibPNG  = "libpng"
 
+	// Supported platforms
 	PlatformAll     = "all"
 	PlatformAndroid = "android"
 	PlatformIOS     = "ios"
@@ -21,50 +23,61 @@ const (
 	PlatformWindows = "windows"
 	// PlatformWeb     = "web"
 	// PlatformLinux   = "linux"
+
+	// Object storage credentials (env var names)
+	digitalOceanSpacesAuthKeyEnvVar    = "CUBZH_DIGITALOCEAN_SPACES_AUTH_KEY"
+	digitalOceanSpacesAuthSecretEnvVar = "CUBZH_DIGITALOCEAN_SPACES_AUTH_SECRET"
+	digitalOceanSpacesRegion           = "nyc3"
+	digitalOceanSpacesBucket           = "cubzh-deps"
 )
 
 var (
-	supportedDependencies = []string{DependencyLuau}
+	supportedDependencies = []string{DependencyLibLuau}
 	supportedPlatforms    = []string{PlatformAndroid, PlatformIOS, PlatformMacos, PlatformWindows}
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "deps",
-	Short: "Dependencies management tool for Cubzh",
-	Long:  `A CLI tool to manage dependencies for Cubzh, including uploading prebuilt artifacts to Object Storage.`,
-}
-
-// deptool upload
-var uploadCmd = &cobra.Command{
-	Use:   "upload <dependency> <platform> [<version>]",
-	Short: "Upload prebuilt dependency artifacts to Object Storage",
-	Long:  `Upload prebuilt dependency artifacts for a specific platform to Object Storage.`,
-	Args:  cobra.RangeArgs(2, 3),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return uploadCmdFunc(args)
-	},
-}
-
-// deptool download
-var downloadCmd = &cobra.Command{
-	Use:   "download [dependency] [platform]",
-	Short: "Download prebuilt dependency artifacts from Object Storage",
-	Long:  `Download prebuilt dependency artifacts for a specific platform from Object Storage.`,
-	Args:  cobra.ExactArgs(2),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		dependency := args[0]
-		platform := args[1]
-		fmt.Printf("🐞 Downloading artifacts for dependency: %s, platform: %s\n", dependency, platform)
-		// TODO: Implement download logic here
-		return nil
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(uploadCmd)
-}
-
 func main() {
+
+	var rootCmd = &cobra.Command{
+		Use:     "deps",
+		Short:   "Dependencies management tool for Cubzh",
+		Long:    `A CLI tool to manage dependencies for Cubzh, including uploading prebuilt artifacts to Object Storage.`,
+		Version: "0.0.1",
+	}
+
+	// debug command
+	{
+		var debugCmd = &cobra.Command{
+			Use:   "debug",
+			Short: "Debug command",
+			RunE:  debugCmdFunc,
+		}
+		rootCmd.AddCommand(debugCmd)
+	}
+
+	// deptool upload
+	{
+		var uploadCmd = &cobra.Command{
+			Use:   "upload <dependency> <version> <platform>",
+			Short: "Upload prebuilt dependency artifacts to Object Storage",
+			Args:  cobra.ExactArgs(3),
+			RunE:  uploadCmdFunc,
+		}
+		rootCmd.AddCommand(uploadCmd)
+	}
+
+	// deptool download
+	{
+		var downloadCmd = &cobra.Command{
+			Use:   "download [-f --force] <dependency> <version> <platform>",
+			Short: "Download prebuilt dependency artifacts from Object Storage",
+			Args:  cobra.ExactArgs(3),
+			RunE:  downloadCmdFunc,
+		}
+		downloadCmd.Flags().BoolP("force", "f", false, "Force download even if files already exist locally")
+		rootCmd.AddCommand(downloadCmd)
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -73,10 +86,18 @@ func main() {
 
 // Command functions
 
-// deptool upload <dependency> <platform> [<version>]
+func debugCmdFunc(cmd *cobra.Command, args []string) error {
+	// dir, err := findPathToFirstParentGitRepo()
+	// if err != nil {
+	// 	return err
+	// }
+	// fmt.Println("🔍 found git repo at:", dir)
+	return nil
+}
+
+// deptool upload <dependency> <version> <platform>
 //
 // [dependency] supported values:
-// - all: all supported dependencies
 // - luau: luau prebuilt binaries
 //
 // [platform] supported values:
@@ -88,55 +109,60 @@ func main() {
 // - web (soon)
 // - linux (soon)
 //
-// [version] optional, default is "latest"
-//
-// example: deptool upload luau macos
-// example: deptool upload luau macos 0.693
-func uploadCmdFunc(args []string) error {
-	argDependency := args[0]
-	argPlatform := args[1]
-	argVersion := args[2]
+// example: deptool upload libluau 0.661 macos
+func uploadCmdFunc(cmd *cobra.Command, args []string) error {
+	depName := args[0]
+	version := args[1]
+	platform := args[2]
+	return uploadArtifacts(depName, version, platform)
+}
 
-	// If version is not provided, use "latest"
-	if argVersion == "" {
-		argVersion = "latest"
+// deptool download <dependency> <version> <platform>
+//
+// [dependency] supported values:
+// - luau: luau prebuilt binaries
+//
+// [platform] supported values:
+// - all: all supported platforms
+// - android
+// - ios
+// - macos
+// - windows
+// - web (soon)
+// - linux (soon)
+//
+// example: deptool download libluau 0.661 macos
+func downloadCmdFunc(cmd *cobra.Command, args []string) error {
+	depName := args[0]
+	version := args[1]
+	platform := args[2]
+	forceFlag, err := cmd.Flags().GetBool("force")
+	if err != nil {
+		return err
 	}
-
-	return UploadArtifacts(argDependency, argPlatform, argVersion)
+	return downloadArtifacts(depName, version, platform, forceFlag)
 }
 
-// deptool download <dependency> <platform> [<version>]
-//
-// [dependency] supported values:
-// - all: all supported dependencies
-// - luau: luau prebuilt binaries
-//
-// [platform] supported values:
-// - all: all supported platforms
-// - android
-// - ios
-// - macos
-// - windows
-// - web (soon)
-// - linux (soon)
-//
-// example: deptool download luau macos
-func downloadCmdFunc(args []string) error {
-	// dependency := args[0]
-	// platform := args[1]
-	return errors.New("not implemented")
-}
-
-// Object storage client
+// -----------------------------
+// Utility functions
+// -----------------------------
 
 func getObjectStorageClient() (objectstorage.ObjectStorage, error) {
+
+	// Get credentials for object storage
+	authKey := os.Getenv(digitalOceanSpacesAuthKeyEnvVar)
+	authSecret := os.Getenv(digitalOceanSpacesAuthSecretEnvVar)
+	if authKey == "" || authSecret == "" {
+		return nil, fmt.Errorf("%s and %s must be set", digitalOceanSpacesAuthKeyEnvVar, digitalOceanSpacesAuthSecretEnvVar)
+	}
+
 	// Create the object storage client
 	objectStorageClient, err := digitalocean.NewDigitalOceanObjectStorage(
 		digitalocean.DigitalOceanConfig{
-			Region:     "nyc3",
-			Bucket:     "cubzh-deps",
-			AuthKey:    os.Getenv("CUBZH_DIGITALOCEAN_SPACES_AUTH_KEY"),
-			AuthSecret: os.Getenv("CUBZH_DIGITALOCEAN_SPACES_AUTH_SECRET"),
+			Region:     digitalOceanSpacesRegion,
+			Bucket:     digitalOceanSpacesBucket,
+			AuthKey:    authKey,
+			AuthSecret: authSecret,
 		},
 		digitalocean.DigitalOceanObjectStorageOpts{
 			UsePathStyle: true,
@@ -144,3 +170,32 @@ func getObjectStorageClient() (objectstorage.ObjectStorage, error) {
 	)
 	return objectStorageClient, err
 }
+
+func constructDepArtifactsPath(depName, version, platform string) string {
+	return filepath.Join("deps", depName, version, "prebuilt", platform)
+}
+
+func constructDepArtifactsPathNew(depName, version, platform string) string {
+	return filepath.Join(depName, version, "prebuilt", platform)
+}
+
+// func findPathToFirstParentGitRepo() (string, error) {
+// 	limit := 100
+// 	// Find the first parent directory that is a git repository
+// 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	// fmt.Println("🔍 searching for git repo in:", dir)
+// 	for dir != "." {
+// 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+// 			return dir, nil
+// 		}
+// 		dir = filepath.Dir(dir)
+// 		limit--
+// 		if limit <= 0 {
+// 			return "", fmt.Errorf("no git repository found")
+// 		}
+// 	}
+// 	return "", fmt.Errorf("no git repository found")
+// }
