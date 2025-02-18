@@ -94,9 +94,9 @@ elif [ "$platform" == "windows" ]; then
   platform_to_build="windows"
   archs_to_build=("x86_64")
 
-# elif [ "$platform" == "linux" ]; then
-  # platform_to_build="linux"
-  # archs_to_build=("x86_64")
+elif [ "$platform" == "linux" ]; then
+  platform_to_build="linux"
+  archs_to_build=("x86_64")
 
 # elif [ "$platform" == "wasm" ]; then
   # platform_to_build="wasm"
@@ -125,6 +125,12 @@ elif [ "$platform" == "android" ]; then
 
 elif [ "$platform" == "ios" ]; then
   artifact_name="libluau-default.a"
+
+elif [ "$platform" == "linux" ]; then
+  artifact_name="libluau-default.a"
+
+# elif [ "$platform" == "wasm" ]; then
+#   artifact_name="libluau-default.a"
 fi
 
 echo "🛠️ Building Luau for $platform_to_build... (${archs_to_build[@]})"
@@ -137,16 +143,16 @@ for arch in "${archs_to_build[@]}"; do
   rm -rf $output_dir && mkdir -p $output_dir
   
   # build in DEBUG mode
-  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
+  bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
   # move the library to the output directory
   mkdir -p $output_dir/lib-debug
-  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib-debug/$artifact_destination_name
+  mv ../../bazel-bin/deps/libluau/$artifact_name $output_dir/lib-Debug/$artifact_destination_name
 
   # build in RELEASE mode
-  bazel build //deps/luau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
+  bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
   # move the library to the output directory
   mkdir -p $output_dir/lib-release
-  mv ../../bazel-bin/deps/luau/$artifact_name $output_dir/lib-release/$artifact_destination_name
+  mv ../../bazel-bin/deps/libluau/$artifact_name $output_dir/lib-Release/$artifact_destination_name
 
   # move the header files to the output directory
   mkdir -p $output_dir/include
