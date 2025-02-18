@@ -2,31 +2,28 @@
 
 -- CONSTANTS
 
-UI_FAR = 1000
-UI_LAYER = 12
-UI_LAYER_SYSTEM = 13
+BUTTON_BORDER = 3
+BUTTON_PADDING = 3
+BUTTON_UNDERLINE = 1
+DEFAULT_SLICE_9_SCALE = 1.0
+LAYER_STEP = -0.1 -- children offset
+SCROLL_DAMPENING_FACTOR = 0.2
+SCROLL_DEFAULT_FRICTION = 3
+SCROLL_DEFAULT_RIGIDITY = 0.99
+SCROLL_DRAG_EPSILON = 10
+SCROLL_LOAD_MARGIN = 50
+SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED = 20
+SCROLL_SPEED_EPSILON = 1
+SCROLL_TIME_TO_DEFUSE_SPEED = 0.05
+SCROLL_UNLOAD_MARGIN = 100
+UI_ALERT_DEPTH = -950
 UI_COLLISION_GROUP = 12
 UI_COLLISION_GROUP_SYSTEM = 13
-UI_SHAPE_SCALE = 5
-LAYER_STEP = -0.1 -- children offset
+UI_FAR = 1000
 UI_FOREGROUND_DEPTH = -945
-UI_ALERT_DEPTH = -950
-BUTTON_PADDING = 3
-BUTTON_BORDER = 3
-BUTTON_UNDERLINE = 1
--- COMBO_BOX_SELECTOR_SPEED = 400
-
-DEFAULT_SLICE_9_SCALE = 1.0
-
-SCROLL_LOAD_MARGIN = 50
-SCROLL_UNLOAD_MARGIN = 100
-SCROLL_DEFAULT_RIGIDITY = 0.99
-SCROLL_DEFAULT_FRICTION = 3
-SCROLL_SPEED_EPSILON = 1
-SCROLL_DRAG_EPSILON = 10
-SCROLL_DAMPENING_FACTOR = 0.2
-SCROLL_OUT_OF_BOUNDS_COUNTER_SPEED = 20
-SCROLL_TIME_TO_DEFUSE_SPEED = 0.05
+UI_LAYER = 12
+UI_LAYER_SYSTEM = 13
+UI_SHAPE_SCALE = 5
 
 -- ENUMS
 
@@ -46,8 +43,8 @@ local NodeType = {
 
 -- MODULES
 
+band = bit32.band -- replaces bitwise operator (in Lua 5.3 but not Luau)
 codes = require("inputcodes")
-cleanup = require("cleanup")
 sfx = require("sfx")
 theme = require("uitheme").current
 ease = require("ease")
@@ -63,13 +60,10 @@ systemUIRootFrame = nil
 
 keyboardToolbar = nil
 
--- Using global to keep reference on focused node because
--- local within createUI conflicts between both uikit instances.
--- We could not find a better solution yet.
+-- Using global to keep reference on focused node because because
+-- even if there are 2 UIs, only one node can be focused at a time.
 focused = nil
-
--- focused combo box
-comboBoxSelector = nil
+focusedComboBoxSelector = nil
 
 function focus(node)
 	if focused ~= nil then
@@ -83,11 +77,11 @@ function focus(node)
 	end
 	focused = node
 
-	if comboBoxSelector ~= nil then
+	if focusedComboBoxSelector ~= nil then
 		local n = node
 		local close = true
 		while n ~= nil do
-			if n == comboBoxSelector then
+			if n == focusedComboBoxSelector then
 				close = false
 				break
 			end
@@ -95,9 +89,9 @@ function focus(node)
 		end
 
 		if close then
-			if comboBoxSelector.close ~= nil then
-				comboBoxSelector:close()
-				comboBoxSelector = nil
+			if focusedComboBoxSelector.close ~= nil then
+				focusedComboBoxSelector:close()
+				focusedComboBoxSelector = nil
 			end
 		end
 	end
@@ -122,8 +116,8 @@ function getPointerXYWithinNode(pe, node)
 	return Number2(x, y)
 end
 
--- Pne UI instance is automatically created when requiring module.
--- a second one is also created for system menus.
+-- One UI instance is automatically created when requiring module.
+-- A second one is also created for system menus.
 -- This function is not exposed, thus no other instances can be created.
 function createUI(system)
 	local ui = {}
@@ -134,10 +128,6 @@ function createUI(system)
 	ui.kButtonBorder = BUTTON_BORDER
 	ui.kForegroundDepth = UI_FOREGROUND_DEPTH
 	ui.kAlertDepth = UI_ALERT_DEPTH
-
-	----------------------
-	-- VARS
-	----------------------
 
 	local rootChildren = {}
 
@@ -191,10 +181,6 @@ function createUI(system)
 		return _groups
 	end
 
-	-- INIT
-
-	Pointer:Show()
-
 	-- Orthographic camera, to render UI
 	local camera = Camera()
 	camera:SetParent(World)
@@ -218,7 +204,7 @@ function createUI(system)
 
 	local function _setupUIObject(object, collides)
 		object:Recurse(function(o)
-			if type(o) == "Object" then
+			if typeof(o) == "Object" then
 				return
 			end
 			_setLayers(o)
@@ -306,49 +292,58 @@ function createUI(system)
 		return self.object:GetParent() ~= nil
 	end
 
-	-- using public wrapper to limit to 1 parameter
-	-- (it should not be possible to override the `toClean` table)
 	privateFunctions._nodeRemovePublicWrapper = function(t)
 		privateFunctions._nodeRemove(t)
 	end
 
-	privateFunctions._nodeRemove = function(t, toClean)
-		local cleanupWhenDone = false
-
-		if toClean == nil then
-			cleanupWhenDone = true
-			toClean = {}
+	-- returns all children of a node, recursively
+	privateFunctions.getAllChildren = function(node, children)
+		if children == nil then
+			children = {}
 		end
 
-		_onRemoveWrapper(t)
-
-		t:setParent(nil)
-
-		if pressed == t then
-			pressed = nil
+		for _, child in pairs(node.children) do
+			table.insert(children, child)
+			privateFunctions.getAllChildren(child, children)
 		end
 
-		if focused == t then
-			focus(nil)
-		end
+		return children
+	end
 
-		if t.object then
-			t.object:RemoveFromParent()
-			t.object = nil
-		end
+	privateFunctions._nodeRemove = function(t)
+		local removedNodes = { t }
+		privateFunctions.getAllChildren(t, removedNodes)
 
-		for _, child in pairs(t.children) do
-			if child.remove ~= nil then
-				privateFunctions._nodeRemove(child, toClean)
+		-- remove from current parent
+		local attr = getmetatable(t).attr
+		if attr.parent.children ~= nil then
+			attr.parent.children[t._id] = nil
+		end
+		rootChildren[t._id] = nil -- in case node parent was root
+
+		local object = t.object
+
+		for _, node in removedNodes do
+			_onRemoveWrapper(node)
+			if pressed == node then
+				pressed = nil
+			end
+	
+			if focused == node then
+				focus(nil)
+			end
+
+			node.object = nil -- nodes considered removed when object == nil
+			node._destroyed = true
+			local attr = getmetatable(node).attr
+			if attr then
+				attr.parent = nil
+				attr.children = {}
 			end
 		end
 
-		table.insert(toClean, t)
-
-		if cleanupWhenDone then
-			for _, node in ipairs(toClean) do
-				cleanup(node)
-			end
+		if object then
+			object:Destroy() -- destroys all children, recursively
 		end
 	end
 
@@ -448,7 +443,7 @@ function createUI(system)
 
 		if paddingType == "boolean" and self.config.padding == false then
 			padding = 0
-		elseif paddingType == "number" or paddingType == "integer" then
+		elseif paddingType == "number" then
 			padding = self.config.padding
 		end
 
@@ -585,6 +580,10 @@ function createUI(system)
 	local function _nodeIndex(t, k)
 		local m = getmetatable(t)
 
+		if m.attr._destroyed == true then
+			return -- node has been removed, early return
+		end
+
 		if k == "Width" then
 			if t._width ~= nil then
 				if type(t._width) == "function" then
@@ -658,6 +657,10 @@ function createUI(system)
 	local function _nodeNewindex(t, k, v)
 		local m = getmetatable(t)
 		local attr = m.attr
+
+		if attr._destroyed == true then
+			return -- node has been removed, early return
+		end
 
 		if k == "onPressPrecise" then
 			k = "onPress"
@@ -785,24 +788,20 @@ function createUI(system)
 			elseif t.object.Anchor ~= nil then
 				if type(v) == "table" then
 					t.object.Anchor = Number2(v[1], v[2])
-				elseif type(v) == "Number3" then
+				elseif typeof(v) == "Number3" then
 					t.object.Anchor = Number2(v.X, v.Y)
 				end
 			end
 			-- TODO: node could use a separate internal object when it needs a pivot, to be type-agnostic
 		elseif k == "pos" or k == "position" or k == "Position" or k == "LocalPosition" then
-			local isNumber = function(val)
-				return type(val) == "number" or type(val) == "integer"
-			end
-
-			if type(v) ~= "table" and type(v) ~= "Number2" and type(v) ~= "Number3" then
+			if type(v) ~= "table" and typeof(v) ~= "Number2" and typeof(v) ~= "Number3" then
 				error("uikit: node." .. k .. " must be a Number2", 2)
 			end
 			if type(v) == "table" then
 				if #v < 2 then
 					error("uikit: node." .. k .. " must be a Number2", 2)
 				end
-				if isNumber(v[1]) == false or isNumber(v[2]) == false then
+				if type(v[1]) ~= "number" or type(v[2]) ~= "number" then
 					error("uikit: node." .. k .. " subvalues must be numbers", 2)
 				end
 			end
@@ -810,7 +809,7 @@ function createUI(system)
 			local obj = t.object
 			local z = obj.LocalPosition.Z
 			-- convert to Number3
-			if type(v) == "Number2" then
+			if typeof(v) == "Number2" then
 				v = Number3(v.X, v.Y, 0)
 			elseif type(v) == "table" and #v == 2 then
 				v = Number3(v[1], v[2], 0)
@@ -818,13 +817,13 @@ function createUI(system)
 			obj.LocalPosition = v -- v is a Number3
 			obj.LocalPosition.Z = z -- restore Z (layer)
 		elseif k == "size" or k == "Size" then
-			if type(v) == "number" or type(v) == "integer" then
+			if type(v) == "number" then
 				v = Number2(v, v)
 			end
 			if type(v) == "table" and v[1] ~= nil and v[2] ~= nil then
 				v = Number2(v[1], v[2])
 			end
-			if type(v) ~= "Number2" then
+			if typeof(v) ~= "Number2" then
 				error(k .. " must be a Number2", 2)
 			end
 			if not pcall(function()
@@ -935,13 +934,12 @@ function createUI(system)
 	end
 
 	local function _nodeCreate()
-		local node = {}
+		local node = {} -- all fields stored in metatable's attr
 
 		local m = {
 			attr = {
 				-- can be a Shape, Text, Object...
 				-- depending on node type
-				object = nil,
 				color = nil,
 				parent = nil,
 				type = NodeType.None,
@@ -1373,7 +1371,7 @@ function createUI(system)
 			if self ~= node then
 				error("frame:setColor(color): use `:`", 2)
 			end
-			if type(color) ~= Type.Color and type(color) ~= "table" then
+			if typeof(color) ~= "Color" and type(color) ~= "table" then
 				error("frame:setColor(color): color should be a Color or table (see Quad.Color reference)", 2)
 			end
 			self:_setColor(color)
@@ -1383,7 +1381,7 @@ function createUI(system)
 			if self ~= node then
 				error("frame:setImage(image): use `:`", 2)
 			end
-			if image ~= nil and type(image) ~= Type.Data and type(image) ~= "table" then
+			if image ~= nil and typeof(image) ~= "Data" and type(image) ~= "table" then
 				error("frame:setImage(image): image should be a Data or table (see Quad.Image reference)", 2)
 			end
 
@@ -1446,7 +1444,7 @@ function createUI(system)
 	-- @param config {table} -
 	]]
 	ui.createShape = function(_, shape, config)
-		if shape == nil or (type(shape) ~= "Object" and type(shape) ~= "Shape" and type(shape) ~= "MutableShape") then
+		if shape == nil or (typeof(shape) ~= "Object" and typeof(shape) ~= "Shape" and typeof(shape) ~= "MutableShape") then
 			error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
 		end
 
@@ -1635,7 +1633,7 @@ function createUI(system)
 
 		local config = nil
 		if configOrcolor ~= nil then
-			if type(configOrcolor) == Type.Color then
+			if typeof(configOrcolor) == "Color" then
 				defaultConfig.color = configOrcolor
 			else
 				config = configOrcolor
@@ -1645,7 +1643,7 @@ function createUI(system)
 		if size ~= nil then
 			local sizeType = type(size)
 			if
-				(sizeType ~= "number" and sizeType ~= "integer" and sizeType ~= "string")
+				(sizeType ~= "number" and sizeType ~= "string")
 				or (sizeType == "string" and (size ~= "default" and size ~= "small" and size ~= "big"))
 			then
 				error(
@@ -1659,7 +1657,7 @@ function createUI(system)
 		local ok, err = pcall(function()
 			config = conf:merge(defaultConfig, config, {
 				acceptTypes = {
-					size = { "number", "integer", "string" },
+					size = { "number", "string" },
 				},
 			})
 		end)
@@ -1723,7 +1721,7 @@ function createUI(system)
 			alignment = config.alignment,
 		}
 
-		if type(config.size) == "number" or type(config.size) == "integer" then
+		if type(config.size) == "number" then
 			t.FontSize = config.size
 		elseif config.size == "big" then
 			t.FontSize = Text.FontSizeBig
@@ -1747,14 +1745,14 @@ function createUI(system)
 			if self ~= node then
 				error("text:select(start, end) should be called with `:`", 2)
 			end
-			if type(cursorStart) ~= "integer" then
-				error("text:select(start, end) - start should be an integer", 2)
+			if type(cursorStart) ~= "number" then
+				error("text:select(start, end) - start should be a number", 2)
 			end
 			if cursorEnd == nil then
 				cursorEnd = cursorStart
 			end
-			if type(cursorEnd) ~= "integer" then
-				error("text:select(start, end) - end should be an integer", 2)
+			if type(cursorEnd) ~= "number" then
+				error("text:select(start, end) - end should be a number", 2)
 			end
 		end
 
@@ -1763,7 +1761,7 @@ function createUI(system)
 			if self ~= node then
 				error("text:localPositionToCursor(pos) should be called with `:`", 2)
 			end
-			local posType = type(pos)
+			local posType = typeof(pos)
 			if posType ~= "Number2" and posType ~= "table" then
 				error("text:localPositionToCursor(pos) - pos should be a Number2 or table with 2 numbers", 2)
 			end
@@ -1787,8 +1785,8 @@ function createUI(system)
 			if self ~= node then
 				error("text:charIndexToCursor(charIndex) should be called with `:`", 2)
 			end
-			if type(charIndex) ~= "integer" then
-				error("text:charIndexToCursor(charIndex) - charIndex should be an integer", 2)
+			if type(charIndex) ~= "number" then
+				error("text:charIndexToCursor(charIndex) - charIndex should be a number", 2)
 			end
 
 			local t = self.object
@@ -1840,7 +1838,7 @@ function createUI(system)
 		elseif type(configOrSize) == "table" then
 			config = conf:merge(defaultConfig, configOrSize, {
 				acceptTypes = {
-					textSize = { "number", "integer", "string" },
+					textSize = { "number", "string" },
 				},
 			})
 		else
@@ -2323,9 +2321,13 @@ function createUI(system)
 							end
 						end
 
-						local cmd = (modifiers & codes.modifiers.Cmd) > 0
-						local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
-						local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
+						local cmd = band(modifiers, codes.modifiers.Cmd) > 0
+						local ctrl = band(modifiers, codes.modifiers.Ctrl) > 0
+						local option = band(modifiers, codes.modifiers.Option) > 0 -- option is alt
+
+						-- local cmd = (modifiers & codes.modifiers.Cmd) > 0
+						-- local ctrl = (modifiers & codes.modifiers.Ctrl) > 0
+						-- local option = (modifiers & codes.modifiers.Option) > 0 -- option is alt
 
 						if cmd or ctrl or option then
 							return false
@@ -2612,7 +2614,7 @@ function createUI(system)
 
 		local options = {
 			acceptTypes = {
-				padding = { "number", "integer", "table" },
+				padding = { "number", "table" },
 				gradientColor = { "Color" },
 				userdata = { "*" },
 				scrollPositionDidChange = { "function" },
@@ -2621,7 +2623,7 @@ function createUI(system)
 
 		config = conf:merge(defaultConfig, config, options)
 
-		if type(config.padding) == "number" or type(config.padding) == "integer" then
+		if type(config.padding) == "number" then
 			local padding = config.padding
 			config.padding = {
 				top = padding,
@@ -3371,7 +3373,7 @@ function createUI(system)
 
 		local options = {
 			acceptTypes = {
-				textSize = { "number", "integer", "string" },
+				textSize = { "number", "string" },
 				textColorPressed = { "Color" },
 				content = { "string", "Shape", "MutableShape", "table" },
 				backgroundQuad = { "Quad" },
@@ -3383,7 +3385,7 @@ function createUI(system)
 				colorSelected = { "Color" },
 				colorDisabled = { "Color" },
 				debugName = { "string" },
-				padding = { "boolean", "number", "integer" },
+				padding = { "boolean", "number" },
 			},
 		}
 
@@ -3481,7 +3483,7 @@ function createUI(system)
 
 		node.setColor = function(self, background, text, doNotrefresh)
 			if background ~= nil then
-				if type(background) ~= "Color" then
+				if typeof(background) ~= "Color" then
 					error("setColor - first parameter (background color) should be a Color", 2)
 				end
 				node.colors = { Color(background), Color(background), Color(background) }
@@ -3489,7 +3491,7 @@ function createUI(system)
 				node.colors[3]:ApplyBrightnessDiff(theme.buttonBottomBorderBrightnessDiff)
 			end
 			if text ~= nil then
-				if type(text) ~= "Color" then
+				if typeof(text) ~= "Color" then
 					error("setColor - second parameter (text color) should be a Color", 2)
 				end
 				node.textColor = Color(text)
@@ -3619,7 +3621,7 @@ function createUI(system)
 			local n = ui:createText(content, { size = config.textSize })
 			n:setParent(node)
 			node.content = n
-		elseif type(content) == "Shape" or type(content) == "MutableShape" then
+		elseif typeof(content) == "Shape" or typeof(content) == "MutableShape" then
 			local n = ui:createShape(content, { spherized = false, doNotFlip = true })
 			n:setParent(node)
 			node.content = n
@@ -3781,7 +3783,7 @@ function createUI(system)
 
 			scroll:setParent(selector)
 
-			comboBoxSelector = selector
+			focusedComboBoxSelector = selector
 
 			scroll.Height = math.min(
 				Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.paddingBig * 2,
@@ -3821,8 +3823,8 @@ function createUI(system)
 			end
 
 			selector.close = function(_)
-				if comboBoxSelector == selector then
-					comboBoxSelector = nil
+				if focusedComboBoxSelector == selector then
+					focusedComboBoxSelector = nil
 				end
 				ease:cancel(selector)
 				selector:remove()
@@ -4388,16 +4390,6 @@ function applyVirtualKeyboardOffset()
 				+ keyboardToolbar.copyBtn.Width
 				+ theme.paddingTiny
 			keyboardToolbar.pasteBtn.pos.Y = theme.paddingTiny
-
-			-- keyboardToolbar.undoBtn.pos.X = keyboardToolbar.pasteBtn.pos.X
-			-- 	+ keyboardToolbar.pasteBtn.Width
-			-- 	+ theme.padding
-			-- keyboardToolbar.undoBtn.pos.Y = theme.paddingTiny
-
-			-- keyboardToolbar.redoBtn.pos.X = keyboardToolbar.undoBtn.pos.X
-			-- 	+ keyboardToolbar.undoBtn.Width
-			-- 	+ theme.paddingTiny
-			-- keyboardToolbar.redoBtn.pos.Y = theme.paddingTiny
 
 			keyboardToolbar.closeBtn.pos.X = Screen.Width
 				- Screen.SafeArea.Right

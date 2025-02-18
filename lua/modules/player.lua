@@ -32,7 +32,7 @@ local blockUnderneath = function(player)
 end
 
 local CastRay = function(player, filterIn)
-	if player == nil or type(player) ~= "Player" then
+	if player == nil or typeof(player) ~= "Player" then
 		error("Player:CastRay should be called with `:`", 2)
 	end
 
@@ -54,7 +54,7 @@ local CastRay = function(player, filterIn)
 end
 
 local ShowHandle = function(player)
-	if type(player) ~= "Player" then
+	if typeof(player) ~= "Player" then
 		error("Player:ShowHandle should be called with `:`", 2)
 	end
 
@@ -90,7 +90,7 @@ local ShowHandle = function(player)
 end
 
 local HideHandle = function(player)
-	if type(player) ~= "Player" then
+	if typeof(player) ~= "Player" then
 		error("Player:HideHandle should be called with `:`", 2)
 	end
 
@@ -102,13 +102,13 @@ local HideHandle = function(player)
 	end
 
 	if privateFields.handle ~= nil then
-		privateFields.handle:RemoveFromParent()
+		privateFields.handle:Destroy()
 		privateFields.handle = nil
 	end
 end
 
 local TextBubble = function(player, text)
-	if type(player) ~= "Player" then
+	if typeof(player) ~= "Player" then
 		error("Player:TextBubble should be called with `:`", 2)
 	end
 
@@ -154,15 +154,15 @@ playerHeight = function(player)
 end
 
 local EquipBackpack = function(player, shapeOrItem)
-	if type(player) ~= "Player" then
+	if typeof(player) ~= "Player" then
 		error("Player:EquipBackpack should be called with `:`", 2)
 	end
 
 	local shape = nil
 	if shapeOrItem ~= nil then
-		if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+		if typeof(shapeOrItem) == "Shape" or typeof(shapeOrItem) == "MutableShape" then
 			shape = shapeOrItem
-		elseif type(shapeOrItem) == "Item" then
+		elseif typeof(shapeOrItem) == "Item" then
 			shape = Shape(shapeOrItem)
 			if not shape then
 				error("Player:EquipBackpack(equipment) - equipment can't be loaded", 2)
@@ -241,15 +241,15 @@ local EquipBackpack = function(player, shapeOrItem)
 end
 
 local EquipHat = function(player, shapeOrItem)
-	if type(player) ~= "Player" then
+	if typeof(player) ~= "Player" then
 		error("Player:EquipHat should be called with `:`", 2)
 	end
 
 	local shape = nil
 	if shapeOrItem ~= nil then
-		if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+		if typeof(shapeOrItem) == "Shape" or typeof(shapeOrItem) == "MutableShape" then
 			shape = shapeOrItem
-		elseif type(shapeOrItem) == "Item" then
+		elseif typeof(shapeOrItem) == "Item" then
 			shape = Shape(shapeOrItem)
 			if not shape then
 				error("Player:EquipHat(equipment) - equipment can't be loaded", 2)
@@ -328,15 +328,15 @@ local EquipHat = function(player, shapeOrItem)
 end
 
 local EquipLeftHand = function(player, shapeOrItem)
-	if type(player) ~= "Player" then
+	if typeof(player) ~= "Player" then
 		error("Player:EquipLeftHand should be called with `:`", 2)
 	end
 
 	local shape = nil
 	if shapeOrItem ~= nil then
-		if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+		if typeof(shapeOrItem) == "Shape" or typeof(shapeOrItem) == "MutableShape" then
 			shape = shapeOrItem
-		elseif type(shapeOrItem) == "Item" then
+		elseif typeof(shapeOrItem) == "Item" then
 			shape = Shape(shapeOrItem)
 			if not shape then
 				error("Player:EquipLeftHand(equipment) - equipment can't be loaded", 2)
@@ -426,15 +426,15 @@ local EquipLeftHand = function(player, shapeOrItem)
 end
 
 local EquipRightHand = function(player, shapeOrItem)
-	if type(player) ~= "Player" then
+	if typeof(player) ~= "Player" then
 		error("Player:EquipRightHand should be called with `:`", 2)
 	end
 
 	local shape = nil
 	if shapeOrItem ~= nil then
-		if type(shapeOrItem) == "Shape" or type(shapeOrItem) == "MutableShape" then
+		if typeof(shapeOrItem) == "Shape" or typeof(shapeOrItem) == "MutableShape" then
 			shape = shapeOrItem
-		elseif type(shapeOrItem) == "Item" then
+		elseif typeof(shapeOrItem) == "Item" then
 			shape = Shape(shapeOrItem)
 			if not shape then
 				error("Player:EquipRightHand(equipment) - equipment can't be loaded", 2)
@@ -523,7 +523,7 @@ local EquipRightHand = function(player, shapeOrItem)
 end
 
 local SwapHands = function(player)
-	if player == nil or type(player) ~= "Player" then
+	if player == nil or typeof(player) ~= "Player" then
 		error("Player:SwapHands should be called with `:`", 2)
 	end
 
@@ -594,7 +594,8 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	mt.HideHandle = HideHandle
 	mt.TextBubble = TextBubble
 
-	mt.__type = 2 -- ITEM_TYPE_PLAYER in engine
+	mt.__type = "Player"
+	mt.__typen = 2 -- ITEM_TYPE_PLAYER in engine
 
 	local objectIndex = mt.__index
 	mt.__index = function(t, k)

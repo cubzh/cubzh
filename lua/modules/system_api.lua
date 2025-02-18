@@ -654,7 +654,7 @@ end
 moduleMT.patchUserInfo = function(_, info, callback)
 	local url = mod.kApiAddr .. "/users/self"
 
-	if type(info) ~= Type.table then
+	if type(info) ~= "table" then
 		error("system_api:patchUserInfo(info, callback): info should be a table", 2)
 	end
 	if type(callback) ~= "function" then
@@ -663,25 +663,25 @@ moduleMT.patchUserInfo = function(_, info, callback)
 
 	local filterIsValid = function(k, v)
 		-- key must be a string
-		if type(k) ~= Type.string then
+		if type(k) ~= "string" then
 			return false
 		end
 		-- supported value types
 		local fieldExpectedType = {
-			age = Type.integer,
-			bio = Type.string,
-			discord = Type.string,
-			dob = Type.string,
-			github = Type.string,
-			parentPhone = Type.string,
-			parentPhoneVerifCode = Type.string,
-			phone = Type.string,
-			phoneVerifCode = Type.string,
-			tiktok = Type.string,
-			username = Type.string,
-			usernameKey = Type.string,
-			website = Type.string,
-			x = Type.string,
+			age = "number",
+			bio = "string",
+			discord = "string",
+			dob = "string",
+			github = "string",
+			parentPhone = "string",
+			parentPhoneVerifCode = "string",
+			phone = "string",
+			phoneVerifCode = "string",
+			tiktok = "string",
+			username = "string",
+			usernameKey = "string",
+			website = "string",
+			x = "string",
 		}
 		local expectedType = fieldExpectedType[k]
 		if expectedType ~= nil then

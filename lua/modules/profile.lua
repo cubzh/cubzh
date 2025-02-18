@@ -373,7 +373,7 @@ profile.create = function(_, config)
 				local creationDateIso = userInfo.created
 				local creationDateTable = require("time"):iso8601ToTable(creationDateIso)
 				local creationYear = creationDateTable.year
-				local creationMonth = require("time"):monthToString(math.tointeger(creationDateTable.month))
+				local creationMonth = require("time"):monthToString(math.floor(creationDateTable.month))
 				local createdStr = creationMonth .. " " .. creationYear
 
 				created.Text = "📰 " .. createdStr

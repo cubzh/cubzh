@@ -25,7 +25,7 @@ mod.createModalContent = function(_, config)
 				-- TODO: config module should allow checking deeper levels
 				-- world = {
 				-- 	thumbnail = { "Data" },
-				-- 	likes = { "integer" },
+				-- 	likes = { "number" },
 				-- 	liked = { "boolean" },
 				-- },
 			},

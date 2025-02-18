@@ -157,7 +157,7 @@ local playerSendMessage = function(message)
 			error("payload." .. k .. " can't be set.", 2)
 			return
 		end
-		if type(v) ~= Type.string then
+		if type(v) ~= "string" then
 			error("payload.message can only be a string")
 			return
 		end

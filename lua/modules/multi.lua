@@ -22,7 +22,6 @@
 --- 	end
 --- end
 
-
 local SYNC_DELAY_TRIGGER = 66 -- sync every 66ms
 local SYNC_DELAY_FORCED = 5000 -- force sync even if nothing moved
 local SMOOTH_TIME = 80
@@ -320,16 +319,16 @@ multi.sync = function(_, object, name, config)
 	if config.triggers == nil then
 		-- default triggers
 		config.triggers = {}
-		if type(object.Motion) == "Number3" then
+		if typeof(object.Motion) == "Number3" then
 			table.insert(config.triggers, "Motion")
 		end
-		if type(object.Rotation) == "Rotation" then
+		if typeof(object.Rotation) == "Rotation" then
 			table.insert(config.triggers, "Rotation")
 		end
-		if type(object.Velocity) == "Number3" then
+		if typeof(object.Velocity) == "Number3" then
 			table.insert(config.triggers, "Velocity")
 		end
-		if type(object.Position) == "Number3" then
+		if typeof(object.Position) == "Number3" then
 			table.insert(config.triggers, "Position")
 		end
 	end

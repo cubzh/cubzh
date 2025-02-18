@@ -3,7 +3,7 @@
 serverList = {}
 
 serverList.create = function(_, config)
-	if config ~= nil and type(config) ~= Type.table then
+	if config ~= nil and type(config) ~= "table" then
 		error("server_list:create(config): config should be a table", 2)
 	end
 
@@ -172,11 +172,11 @@ serverList.create = function(_, config)
 
 		local vPos = cell.Height * 0.5
 
-		local str = math.tointeger(math.floor(server.players))
+		local str = math.floor(math.floor(server.players))
 			.. "/"
-			.. math.tointeger(math.floor(server["max-players"]))
+			.. math.floor(math.floor(server["max-players"]))
 			.. " "
-		if type(server.address) == Type.string then
+		if type(server.address) == "string" then
 			if string.find(server.address, "us") ~= nil then
 				str = str .. "🇺" -- USA
 			elseif string.find(server.address, "sg") ~= nil then

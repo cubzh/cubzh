@@ -31,7 +31,8 @@ end
 
 function insert(config)
 	local camera = config.camera
-	if type(camera) ~= "Camera" then
+
+	if typeof(camera) ~= "Camera" then
 		error("camera_modes - internal error (2)")
 	end
 
@@ -140,14 +141,8 @@ cameraModes.setSatellite = function(self, config)
 	}
 
 	if config then
-		local _type
 		for k, v in pairs(_config) do
-			_type = type(config[k])
-			if _type == "number" or _type == "integer" then
-				if type(v) == "number" or type(v) == "integer" then
-					_config[k] = config[k]
-				end
-			elseif _type == type(v) then
+			if typeof(config[k]) == typeof(v) then
 				_config[k] = config[k]
 			end
 		end
@@ -205,7 +200,7 @@ cameraModes.setFirstPerson = function(self, config)
 
 	if config then
 		for k, v in pairs(_config) do
-			if type(config[k]) == type(v) then
+			if typeof(config[k]) == typeof(v) then
 				_config[k] = config[k]
 			end
 		end
@@ -216,7 +211,7 @@ cameraModes.setFirstPerson = function(self, config)
 		error("camera_modes:setFirstPerson(config) - config.target can't be nil", 2)
 	end
 
-	_config.targetIsPlayer = type(_config.target) == "Player"
+	_config.targetIsPlayer = typeof(_config.target) == "Player"
 
 	config = _config
 	local camera = config.camera
@@ -285,7 +280,7 @@ cameraModes.setThirdPerson = function(self, config)
 	end
 
 	-- NOTE (aduermael): it would be nice to remove this hardcoded system for Players
-	config.targetIsPlayer = type(config.target) == "Player"
+	config.targetIsPlayer = typeof(config.target) == "Player"
 
 	local entry = insert(config)
 
@@ -299,8 +294,10 @@ cameraModes.setThirdPerson = function(self, config)
 	local collidesWithGroups = config.collidesWithGroups
 	local offset = config.offset or Number3.Zero
 	local rotationOffset = config.rotationOffset or Rotation(0, 0, 0)
-	local targetIsPlayer = type(target) == "Player"
-	local targetHasRotation = type(target) == "Object" or type(target) == "Shape" or type(target) == "MutableShape"
+	local targetIsPlayer = typeof(target) == "Player"
+	local targetHasRotation = typeof(target) == "Object"
+		or typeof(target) == "Shape"
+		or typeof(target) == "MutableShape"
 	local rotatesWithTarget = config.rotatesWithTarget
 
 	camera:SetParent(World)

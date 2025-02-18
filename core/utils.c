@@ -111,7 +111,7 @@ FACE_INDEX_INT_T utils_face_swapped(const FACE_INDEX_INT_T face) {
 }
 
 uint8_t utils_pack_normalized_float(float value) {
-    return (uint8_t)(CLAMP01(value) * 255);
+    return (uint8_t)(CLAMP01F(value) * 255);
 }
 
 float utils_unpack_normalized_float(uint8_t value) {

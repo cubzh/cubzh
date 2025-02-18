@@ -177,7 +177,7 @@ palette.create = function(_, uikit, btnColor)
 	end
 
 	node._selectIndex = function(self, index)
-		self._selectedIndex = math.tointeger(index)
+		self._selectedIndex = math.floor(index)
 		self:_refreshSelectionFrame()
 		if self.didChangeSelection ~= nil then -- function(self, color)
 			self:didChangeSelection(self:getCurrentColor())
@@ -355,9 +355,9 @@ palette.create = function(_, uikit, btnColor)
 	node.setColors = function(self, container)
 		local palette
 
-		if type(container) == "Palette" then
+		if typeof(container) == "Palette" then
 			palette = container
-		elseif type(container) == "Shape" or type(container) == "MutableShape" then
+		elseif typeof(container) == "Shape" or typeof(container) == "MutableShape" then
 			palette = container.Palette
 		else
 			error("palette.setColors expects a Palette or a Shape")
@@ -389,9 +389,9 @@ palette.create = function(_, uikit, btnColor)
 	node.mergeColors = function(self, container)
 		local palette
 
-		if type(container) == "Palette" then
+		if typeof(container) == "Palette" then
 			palette = container
-		elseif type(container) == "Shape" or type(container) == "MutableShape" then
+		elseif typeof(container) == "Shape" or typeof(container) == "MutableShape" then
 			palette = container.Palette
 		else
 			error("palette.mergeColors expects a Palette or a Shape")
