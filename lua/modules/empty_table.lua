@@ -67,9 +67,6 @@ local mt = {
 		printMessageOnFirstAccess(t)
 		return false
 	end,
-	__pairs = function(t)
-		printMessageOnFirstAccess(t)
-	end,
 	__tostring = function(t)
 		printMessageOnFirstAccess(t)
 		return ""
