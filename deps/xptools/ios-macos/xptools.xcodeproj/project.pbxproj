@@ -1301,6 +1301,7 @@
 					P3S_NO_METRICS,
 					ONLINE_GAMESERVER,
 					"__VX_APP_BUILD_TARGET=\"\\\"darwin_gameserver\\\"\"",
+					__VX_USE_LIBWEBSOCKETS,
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1326,6 +1327,7 @@
 					P3S_NO_METRICS,
 					ONLINE_GAMESERVER,
 					"__VX_APP_BUILD_TARGET=\"\\\"darwin_gameserver\\\"\"",
+					__VX_USE_LIBWEBSOCKETS,
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				PRODUCT_NAME = "$(TARGET_NAME)";
