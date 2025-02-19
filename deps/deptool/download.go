@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -61,10 +62,11 @@ func downloadArtifacts(depName, version, platform string, forceFlag bool) error 
 
 	for _, key := range keys {
 		// Download the object at key
-		data, err := objectStorageClient.Download(key)
+		objectContent, err := objectStorageClient.Download(key)
 		if err != nil {
 			return err
 		}
+		defer objectContent.Close()
 
 		// add "prebuilt" element to the key, after the 2nd element
 		keyWithPrebuiltElement := ""
@@ -89,8 +91,15 @@ func downloadArtifacts(depName, version, platform string, forceFlag bool) error 
 			return fmt.Errorf("failed to create directories for %s: %s", localFilePath, err.Error())
 		}
 
-		// Write the data to the file
-		if err := os.WriteFile(localFilePath, data, 0644); err != nil {
+		// Create the file
+		file, err := os.Create(localFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to create local file %s: %s", localFilePath, err.Error())
+		}
+		defer file.Close()
+
+		// Copy the data to the file
+		if _, err := io.Copy(file, objectContent); err != nil {
 			return fmt.Errorf("failed to write to local file %s: %s", localFilePath, err.Error())
 		}
 	}

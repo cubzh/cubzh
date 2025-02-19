@@ -42,18 +42,18 @@ func main() {
 		Use:     "deps",
 		Short:   "Dependencies management tool for Cubzh",
 		Long:    `A CLI tool to manage dependencies for Cubzh, including uploading prebuilt artifacts to Object Storage.`,
-		Version: "0.0.1",
+		Version: "0.0.2",
 	}
 
 	// debug command
-	{
-		var debugCmd = &cobra.Command{
-			Use:   "debug",
-			Short: "Debug command",
-			RunE:  debugCmdFunc,
-		}
-		rootCmd.AddCommand(debugCmd)
-	}
+	// {
+	// 	var debugCmd = &cobra.Command{
+	// 		Use:   "debug",
+	// 		Short: "Debug command",
+	// 		RunE:  debugCmdFunc,
+	// 	}
+	// 	rootCmd.AddCommand(debugCmd)
+	// }
 
 	// deptool upload
 	{
@@ -86,14 +86,14 @@ func main() {
 
 // Command functions
 
-func debugCmdFunc(cmd *cobra.Command, args []string) error {
-	// dir, err := findPathToFirstParentGitRepo()
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Println("🔍 found git repo at:", dir)
-	return nil
-}
+// func debugCmdFunc(cmd *cobra.Command, args []string) error {
+// 	dir, err := findPathToFirstParentGitRepo()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	fmt.Println("🔍 found git repo at:", dir)
+// 	return nil
+// }
 
 // deptool upload <dependency> <version> <platform>
 //
