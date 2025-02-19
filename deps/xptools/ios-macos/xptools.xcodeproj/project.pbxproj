@@ -1242,6 +1242,7 @@
 					"CI_BUNDLE_PATH=\"\\\"$SRCROOT/../../../../ci/bundle\\\"\"",
 					"CI_STORAGE_PATH=\"\\\"$SRCROOT/../../../../ci/storage\\\"\"",
 					"CI_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_ci\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1272,6 +1273,7 @@
 					"CI_BUNDLE_PATH=\"\\\"$SRCROOT/../../ci/bundle\\\"\"",
 					"CI_STORAGE_PATH=\"\\\"$SRCROOT/../../ci/storage\\\"\"",
 					"CI_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_ci\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
