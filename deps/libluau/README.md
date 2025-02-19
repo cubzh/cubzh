@@ -9,30 +9,31 @@ To be run from cubzh/cubzh repo root dir
 ```sh
 # android
 ./build.sh -p android
-# bazel build //deps/luau:luau --platforms=//:android_arm64
-# bazel build //deps/luau:luau --platforms=//:android_arm
-# bazel build //deps/luau:luau --platforms=//:android_x86
-# bazel build //deps/luau:luau --platforms=//:android_x86_64
+# bazel build //deps/libluau:luau --platforms=//:android_arm64
+# bazel build //deps/libluau:luau --platforms=//:android_arm
+# bazel build //deps/libluau:luau --platforms=//:android_x86
+# bazel build //deps/libluau:luau --platforms=//:android_x86_64
 
 # ios
 ./build.sh -p ios
-# bazel build //deps/luau:luau --platforms=//:ios_arm64
+# bazel build //deps/libluau:luau --platforms=//:ios_arm64
 
 # macos
 ./build.sh -p macos
-# bazel build //deps/luau:luau --platforms=//:macos_universal --macos_cpus=arm64,x86_64
+# bazel build //deps/libluau:luau --platforms=//:macos_universal --macos_cpus=arm64,x86_64
 
 # windows
 ./build.sh -p windows
-# bazel build //deps/luau:luau --platforms=//:windows_x86
-# bazel build //deps/luau:luau --platforms=//:windows_x86_64
+# bazel build //deps/libluau:luau --platforms=//:windows_x86
+# bazel build //deps/libluau:luau --platforms=//:windows_x86_64
 
 # linux
-# ./build.sh -p linux
-# bazel build //deps/luau:luau --platforms=//:linux_x86
-# bazel build //deps/luau:luau --platforms=//:linux_x86_64
+# From cubzh/cubzh repo root dir
+docker run --rm -v $(pwd):/cubzh -w /cubzh/deps/libluau --entrypoint /bin/bash --platform linux/amd64 voxowl/bazel:8.1.0 ./build.sh -p linux
+# bazel build //deps/libluau:luau --platforms=//:linux_x86_64
 
 # wasm
 # ./build.sh -p wasm
-# bazel build //deps/luau:luau --platforms=//:wasm_wasm32
+# bazel build //deps/libluau:luau --platforms=//:wasm_wasm32
+# bazel build //deps/libluau:luau --platforms=//:wasm_wasm64
 ```
