@@ -14,6 +14,8 @@ creations.createModalContent = function(_, config)
 	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
 		onOpen = nil,
+		authorId = Player.UserID,
+		authorName = Player.Username,
 	}
 
 	local ok, err = pcall(function()
@@ -425,8 +427,8 @@ creations.createModalContent = function(_, config)
 			minBlocks = 1,
 			type = "items",
 			displayLikes = true,
-			repo = Player.Username,
-			authorId = Player.UserID,
+			repo = config.authorName,
+			authorId = config.authorId,
 			categories = { "null" },
 			sort = "updatedAt:desc",
 			uikit = ui,

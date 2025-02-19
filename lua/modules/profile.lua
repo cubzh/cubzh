@@ -646,7 +646,16 @@ profile.create = function(_, config)
 	else
 		creationsBtn = ui:buttonSecondary({ content = "🛠️ Creations", textSize = "small" })
 		creationsBtn.onRelease = function()
-			Menu:ShowAlert({ message = "Coming soon!" }, System)
+			Menu:ShowCreations()
+
+			local creationsContent = require("creations"):createModalContent({
+				uikit = ui,
+				authorId = userID,
+				authorName = username,
+			})
+			content:push(creationsContent)
+
+			-- Menu:ShowAlert({ message = "Coming soon!" }, System)
 		end
 
 		local alreadyFriends = nil
