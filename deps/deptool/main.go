@@ -21,8 +21,8 @@ const (
 	PlatformIOS     = "ios"
 	PlatformMacos   = "macos"
 	PlatformWindows = "windows"
+	PlatformLinux   = "linux"
 	// PlatformWeb     = "web"
-	// PlatformLinux   = "linux"
 
 	// Object storage credentials (env var names)
 	digitalOceanSpacesAuthKeyEnvVar    = "CUBZH_DIGITALOCEAN_SPACES_AUTH_KEY"
@@ -33,7 +33,7 @@ const (
 
 var (
 	supportedDependencies = []string{DependencyLibLuau}
-	supportedPlatforms    = []string{PlatformAndroid, PlatformIOS, PlatformMacos, PlatformWindows}
+	supportedPlatforms    = []string{PlatformAndroid, PlatformIOS, PlatformMacos, PlatformWindows, PlatformLinux}
 )
 
 func main() {

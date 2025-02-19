@@ -138,28 +138,30 @@ echo "🛠️ Building Luau for $platform_to_build... (${archs_to_build[@]})"
 # build for each architecture
 for arch in "${archs_to_build[@]}"; do
   
-  # recreate output directory
-  output_dir="$version/prebuilt/$platform_to_build/$arch"
-  rm -rf $output_dir && mkdir -p $output_dir
-  
-  # build in DEBUG mode
-  bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
-  # move the library to the output directory
-  mkdir -p $output_dir/lib-debug
-  mv ../../bazel-bin/deps/libluau/$artifact_name $output_dir/lib-Debug/$artifact_destination_name
+  readonly OUTPUT_DIR="$version/prebuilt/$platform_to_build/$arch"
+  readonly OUTPUT_DIR_LIB_DEBUG="$OUTPUT_DIR/lib-Debug"
+  readonly OUTPUT_DIR_LIB_RELEASE="$OUTPUT_DIR/lib-Release"
+  readonly OUTPUT_DIR_INCLUDE="$OUTPUT_DIR/include"
 
-  # build in RELEASE mode
+  # recreate output directories
+  rm -rf $OUTPUT_DIR
+  mkdir -p $OUTPUT_DIR_LIB_DEBUG
+  mkdir -p $OUTPUT_DIR_LIB_RELEASE
+  mkdir -p $OUTPUT_DIR_INCLUDE
+
+  # build library (DEBUG)
+  bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
+  mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_DEBUG/$artifact_destination_name
+
+  # build library (RELEASE)
   bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
-  # move the library to the output directory
-  mkdir -p $output_dir/lib-release
-  mv ../../bazel-bin/deps/libluau/$artifact_name $output_dir/lib-Release/$artifact_destination_name
+  mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_RELEASE/$artifact_destination_name
 
   # move the header files to the output directory
-  mkdir -p $output_dir/include
   # copy and merge all include directories from src tree to output directory
   for dir in ${SCRIPT_PARENT_DIR_PATH}/src/*/include/; do
     if [ -d "$dir" ]; then
-      cp -r "$dir"* "$output_dir/include/"
+      cp -r "$dir"* "$OUTPUT_DIR_INCLUDE/"
     fi
   done
 

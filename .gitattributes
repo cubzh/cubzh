@@ -31,6 +31,12 @@
 *.tga filter=lfs diff=lfs merge=lfs -text
 *.ttf filter=lfs diff=lfs merge=lfs -text
 
+# deps
+# --------------------
+deps/deptool/deptool_windows filter=lfs diff=lfs merge=lfs -text
+deps/deptool/deptool_macos filter=lfs diff=lfs merge=lfs -text
+deps/deptool/deptool_linux filter=lfs diff=lfs merge=lfs -text
+
 # CI
 # --------------------
 # Go vendor directories
