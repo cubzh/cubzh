@@ -1,3 +1,7 @@
+if IsServer == true then 
+	return require("empty_table"):create("menu is not supposed to be used by Server")
+end
+
 local menu = {}
 
 bundle = require("bundle")

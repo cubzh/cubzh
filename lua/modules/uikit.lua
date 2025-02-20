@@ -1,5 +1,9 @@
 --- This module allows you to create User Interface components (buttons, labels, texts, etc.).
 
+if IsServer == true then 
+	return require("empty_table"):create("uikit is not supposed to be used by Server")
+end
+
 -- CONSTANTS
 
 BUTTON_BORDER = 3
