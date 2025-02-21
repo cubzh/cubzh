@@ -350,8 +350,8 @@ static int lws_callback(struct lws *wsi,
                         void *user,
                         void *in,
                         size_t len) {
-    vxlog_trace("[WSServer] lws_callback: %s", reasonToString(reason).c_str());
-    
+    // vxlog_trace("[WSServer] lws_callback: %s", reasonToString(reason).c_str());
+
     struct vhd_minimal_server_echo *vhd = reinterpret_cast<struct vhd_minimal_server_echo *>(lws_protocol_vh_priv_get(lws_get_vhost(wsi), lws_get_protocol(wsi)));
 
     WSServerConnection_SharedPtr conn = nullptr;
