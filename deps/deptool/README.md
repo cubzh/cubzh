@@ -22,6 +22,7 @@ deptool download libluau 0.661 android
 deptool download libluau 0.661 ios
 deptool download libluau 0.661 macos
 deptool download libluau 0.661 windows
+deptool download libluau 0.661 linux
 ```
 
 ## Upload dependencies
@@ -36,4 +37,5 @@ deptool upload libluau 0.661 android
 deptool upload libluau 0.661 ios
 deptool upload libluau 0.661 macos
 deptool upload libluau 0.661 windows
+deptool upload libluau 0.661 linux
 ```

@@ -25,10 +25,12 @@ const (
 	// PlatformWeb     = "web"
 
 	// Object storage credentials (env var names)
-	digitalOceanSpacesAuthKeyEnvVar    = "CUBZH_DIGITALOCEAN_SPACES_AUTH_KEY"
-	digitalOceanSpacesAuthSecretEnvVar = "CUBZH_DIGITALOCEAN_SPACES_AUTH_SECRET"
-	digitalOceanSpacesRegion           = "nyc3"
-	digitalOceanSpacesBucket           = "cubzh-deps"
+	digitalOceanSpacesAuthKeyEnvVar     = "CUBZH_DIGITALOCEAN_SPACES_AUTH_KEY"
+	digitalOceanSpacesAuthSecretEnvVar  = "CUBZH_DIGITALOCEAN_SPACES_AUTH_SECRET"
+	digitalOceanSpacesRegion            = "nyc3"
+	digitalOceanSpacesBucket            = "cubzh-deps"
+	digitalOceanSpacesAuthKeyDefault    = "DO8019TZD8N66GJGUEE3"
+	digitalOceanSpacesAuthSecretDefault = "OVVGXIdaEXRG8TPi2/TmI3Ji/h56nZgetMxeYw9aXlk"
 )
 
 var (
@@ -37,6 +39,14 @@ var (
 )
 
 func main() {
+
+	// get path of the executable
+	executablePath, err := os.Executable()
+	if err != nil {
+		fmt.Println("failed to get executable path:", err)
+		os.Exit(1)
+	}
+	fmt.Println("executable path:", executablePath)
 
 	var rootCmd = &cobra.Command{
 		Use:     "deps",
@@ -152,8 +162,13 @@ func getObjectStorageClient() (objectstorage.ObjectStorage, error) {
 	// Get credentials for object storage
 	authKey := os.Getenv(digitalOceanSpacesAuthKeyEnvVar)
 	authSecret := os.Getenv(digitalOceanSpacesAuthSecretEnvVar)
-	if authKey == "" || authSecret == "" {
-		return nil, fmt.Errorf("%s and %s must be set", digitalOceanSpacesAuthKeyEnvVar, digitalOceanSpacesAuthSecretEnvVar)
+	// if only one of the two is set, return an error
+	if (authKey == "" && authSecret != "") || (authKey != "" && authSecret == "") {
+		return nil, fmt.Errorf("%s and %s must be both set (or not set at all)", digitalOceanSpacesAuthKeyEnvVar, digitalOceanSpacesAuthSecretEnvVar)
+	}
+	if authKey == "" && authSecret == "" {
+		authKey = digitalOceanSpacesAuthKeyDefault
+		authSecret = digitalOceanSpacesAuthSecretDefault
 	}
 
 	// Create the object storage client
