@@ -52,7 +52,7 @@ itemGrid.create = function(_, config)
 		--
 		displayLikes = false,
 		--
-		perPage = 25, -- TODO: offer to load more when reaching the end scroll
+		perPage = 100, -- TODO: offer to load more when reaching the end scroll
 		--
 		onOpen = function(_) end,
 		--
