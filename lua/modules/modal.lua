@@ -567,6 +567,9 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		end
 
 		local modalContent = self.contentStack[stackIndex]
+
+		modalContent.title = modalContent.title
+
 		local previous
 
 		if self.shouldRefreshContent then
@@ -633,7 +636,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			end
 
 			if modalContent.title ~= nil and type(modalContent.title) == "string" then
-				local title = ui:createText(modalContent.title, {
+				local title = ui:createText( modalContent.title, {
 					color = theme.textColor,
 					outline = 0.4,
 					-- bold = true,
@@ -761,16 +764,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			end
 		end
 
-		local topCenterElementsWidth = 0
-		for i, element in ipairs(self._topCenter) do
-			if i > 1 then
-				topCenterElementsWidth = topCenterElementsWidth + theme.padding
-			end
-			topCenterElementsWidth = topCenterElementsWidth + element.Width
-			if element.Height > topbarHeight then
-				topbarHeight = element.Height
-			end
-		end
+		-- topCenterElementsWidth computed later to accomodate available width
+		-- (texts within center elements can be scaled to fit)
 
 		self.topBar.Height = topbarHeight
 		if self.topBar.Height > 0 then
@@ -829,29 +824,18 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		-- enforcing same left and right width for center elements
 		-- to better better appear at center with correct margins
 		local topLeftRightWidth = math.max(self.closeBtn.Width, topLeftElementsWidth)
-		local totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
+		-- local totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
 		local totalBottomWidth = bottomRightElementsWidth
 			+ bottomCenterElementsWidth
 			+ bottomLeftElementsWidth
 			+ theme.padding * 4
 
-		local availableWidthForTopCenter = Screen.Width
-			- (self.closeBtn.Width + topLeftElementsWidth + theme.padding * 8)
 		if self._title and modalContent.title then
-			self._title.Text = modalContent.title
-		end
-		if self._title and self._title.Width > availableWidthForTopCenter then
-			-- ui:shrinkToFit(self._title, availableWidthForTopCenter)
-			self._title.pos.X = topLeftElementsWidth + theme.padding
-			topCenterElementsWidth = self._title.Width
-			totalTopWidth = topLeftRightWidth + topCenterElementsWidth + topLeftRightWidth + theme.padding * 4
+			self._title.Text = modalContent.title 
 		end
 
 		-- Start from max size
 		local borderSize = Number2(self:_computeWidth(), self:_computeHeight())
-		if borderSize.Width < totalTopWidth then
-			borderSize.Width = totalTopWidth
-		end
 		if borderSize.Width < totalBottomWidth then
 			borderSize.Width = totalBottomWidth
 		end
@@ -863,15 +847,12 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 		local contentSize = backgroundSize
 			- Number2(theme.padding * 2, (theme.padding * 2) + self.topBar.Height + self.bottomBar.Height)
 
-		local minWidth = math.max(totalTopWidth, totalBottomWidth)
+		local minWidth = totalBottomWidth -- math.max(totalTopWidth, totalBottomWidth)
 
 		if modalContent.idealReducedContentSize ~= nil then
 			local reducedContentSize =
 				modalContent.idealReducedContentSize(self._content, contentSize.Width, contentSize.Height, minWidth)
 			if reducedContentSize ~= nil and reducedContentSize ~= contentSize then
-				if reducedContentSize.X < totalTopWidth then
-					reducedContentSize.X = totalTopWidth
-				end
 				if reducedContentSize.X < totalBottomWidth then
 					reducedContentSize.X = totalBottomWidth
 				end
@@ -958,6 +939,41 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				element.pos.X = self.topBar.pos.X + theme.modalTopBarPadding
 			end
 			previous = element
+		end
+
+		local availableWidthForTopCenter = self.background.Width - theme.modalTopBarPadding * 2 - theme.padding * 2 - topLeftRightWidth * 2
+		local topCenterElementsWidth = 0
+		local topCenterElementsTextWidth = 0
+		for i, element in ipairs(self._topCenter) do
+			if i > 1 then
+				topCenterElementsWidth = topCenterElementsWidth + theme.padding
+			end
+			if element.Text ~= nil then
+				element.object.Scale = 1 -- reset scale
+				topCenterElementsTextWidth = topCenterElementsTextWidth + element.Width
+			end
+			topCenterElementsWidth = topCenterElementsWidth + element.Width
+			if element.Height > topbarHeight then
+				topbarHeight = element.Height
+			end
+		end
+		
+		if topCenterElementsWidth > availableWidthForTopCenter then
+			local nonTextWidth = topCenterElementsWidth - topCenterElementsTextWidth
+			local textScale = (availableWidthForTopCenter - nonTextWidth) / topCenterElementsTextWidth
+			topCenterElementsWidth = 0
+			for i, element in ipairs(self._topCenter) do
+				if i > 1 then
+					topCenterElementsWidth = topCenterElementsWidth + theme.padding
+				end
+				if element.Text ~= nil then
+					element.object.Scale = textScale
+				end
+				topCenterElementsWidth = topCenterElementsWidth + element.Width
+				if element.Height > topbarHeight then
+					topbarHeight = element.Height
+				end
+			end
 		end
 
 		previous = nil
