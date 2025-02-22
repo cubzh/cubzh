@@ -250,6 +250,10 @@ function createUI(system)
 		if parent == nil then
 			return
 		end
+		if parent._destroyed == true then
+			-- parent is destroyed, do nothing
+			return
+		end
 
 		local parentObject
 

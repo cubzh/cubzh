@@ -798,7 +798,9 @@ function avatar_load(self, config)
 				config.didLoad(err, nil)
 				return
 			end
-
+			if self.IsDestroyed then
+				return
+			end
 			-- eyes type (index)
 			local eyesTypeIndex = data.eyesIndex
 			if eyesTypeIndex == nil or eyesTypeIndex == 0 then
