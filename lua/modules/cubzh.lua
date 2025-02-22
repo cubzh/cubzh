@@ -2568,6 +2568,8 @@ function home()
 			scroll.Height = Screen.Height - self.Height --  - Screen.SafeArea.Top
 		end
 		bottomBar:setParent(root)
+
+		home():resume()
 	end
 
 	_home.hide = function()
