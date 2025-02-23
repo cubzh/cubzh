@@ -45,15 +45,20 @@ deptool upload libluau 0.661 linux
 ### Build for current platforms
 
 ```bash
-cd cubzh/deps/deptool
-go build -o deptool_platforms
+# /!\ execute from the "deps/deptool/cmd" directory
+
+# macos (arm64)
+go build -o deptool_macos_arm64
+
+# windows (x86_64)
+go build -o deptool_windows_amd64
 ```
 
 ## Build in docker container
 
 ```bash
-# execute from the "deps/deptool" directory
-# Note: we force the platform to linux/amd64
-docker run --platform linux/amd64 --rm -it -v $(pwd):/deptool -w /deptool golang:1.24.0-alpine3.21 go build -o deptool_linux_amd64
-docker run --platform linux/arm64 --rm -it -v $(pwd):/deptool -w /deptool golang:1.24.0-alpine3.21 go build -o deptool_linux_arm64
+# /!\ execute from the "deps/deptool/cmd" directory
+
+docker run --platform linux/amd64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.0-alpine3.21 go build -o deptool_linux_amd64
+docker run --platform linux/arm64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.0-alpine3.21 go build -o deptool_linux_arm64
 ```

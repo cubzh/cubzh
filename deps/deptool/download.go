@@ -1,26 +1,29 @@
-package main
+package deptool
 
 import (
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/voxowl/objectstorage"
 )
 
 // DownloadArtifacts downloads artifacts from object storage to the local filesystem
-func downloadArtifacts(depName, version, platform string, forceFlag bool) error {
+func DownloadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, depName, version, platform string, forceFlag bool) error {
 	fmt.Printf("⭐️ Downloading artifacts for [%s] [%s] [%s] (force: %t)\n", depName, version, platform, forceFlag)
 
 	// Validate arguments
-	if !slices.Contains(supportedDependencies, depName) {
+	if objectStorage == nil {
+		return fmt.Errorf("object storage client is nil")
+	}
+
+	if !isDependencyNameValid(depName) {
 		return fmt.Errorf("invalid dependency name: %s", depName)
 	}
 
-	if platform != PlatformAll && !slices.Contains(supportedPlatforms, platform) {
+	if !isPlatformNameValid(platform) {
 		return fmt.Errorf("invalid platform name: %s", platform)
 	}
 
@@ -29,7 +32,6 @@ func downloadArtifacts(depName, version, platform string, forceFlag bool) error 
 	}
 
 	// Destination directory path
-	depsDirPath := filepath.Join("..", "..", "deps")
 	destinationDirPath := filepath.Join(depsDirPath, constructDepArtifactsPathNew(depName, version, platform))
 
 	// If the destination directory exists, and --force is not set, prints a message and exits
@@ -45,24 +47,18 @@ func downloadArtifacts(depName, version, platform string, forceFlag bool) error 
 		}
 	}
 
-	// Create the object storage client
-	objectStorageClient, err := getObjectStorageClient()
-	if err != nil {
-		return err
-	}
-
 	// Construct the S3 key prefix
 	s3KeyPrefix := fmt.Sprintf("%s/%s/%s/", depName, version, platform)
 
 	// List objects in the platform prefix
-	keys, err := objectStorageClient.List(s3KeyPrefix, objectstorage.ListOpts{})
+	keys, err := objectStorage.List(s3KeyPrefix, objectstorage.ListOpts{})
 	if err != nil {
 		return err
 	}
 
 	for _, key := range keys {
 		// Download the object at key
-		objectContent, err := objectStorageClient.Download(key)
+		objectContent, err := objectStorage.Download(key)
 		if err != nil {
 			return err
 		}

@@ -1,11 +1,14 @@
-module cu.bzh/tools/deptool
+module cu.bzh/tools/deptool/cmd
 
 go 1.24.0
 
-// For local development of objectstorage
-// replace github.com/voxowl/objectstorage => ../../../../objectstorage
+// Use the local copy of the deptool package
+replace github.com/cubzh/cubzh/deps/deptool v0.0.1 => ../
 
-require github.com/voxowl/objectstorage v0.0.3
+require (
+	github.com/cubzh/cubzh/deps/deptool v0.0.1
+	github.com/spf13/cobra v1.9.1
+)
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.2 // indirect
@@ -20,4 +23,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.14 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.77.1 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/voxowl/objectstorage v0.0.3 // indirect
 )
