@@ -2252,7 +2252,7 @@ function home()
 
 						local bell = ui:frame({
 							image = {
-								data = Data:FromBundle("images/bell.png"),
+								data = Data:FromBundle("images/icon-bell.png"),
 								alpha = true,
 							},
 						})

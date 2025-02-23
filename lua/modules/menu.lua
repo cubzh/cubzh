@@ -833,8 +833,8 @@ function layoutNotification()
 	local endX = Screen.Width - Screen.SafeArea.Right
 
 	if chatBtn:isVisible() then
-		local p = absNodePos(textBubbleShape)
-		startX = p.X + textBubbleShape.Width + PADDING
+		local p = absNodePos(chatIcon)
+		startX = p.X + chatIcon.Width + PADDING
 	end
 
 	if pezhBtn:isVisible() then
@@ -970,9 +970,9 @@ topBarBtnRelease = function(self)
 end
 
 btnContentParentDidResize = function(self)
-	local padding = PADDING_BIG
-	if self == cubzhBtnShape or self == avatar then
-		padding = PADDING
+	local padding = PADDING
+	if self == pezhShape then
+		padding = PADDING_BIG
 	end
 	local parent = self.parent
 	local ratio = self.Width / self.Height
@@ -1013,18 +1013,22 @@ if System.IsHomeAppRunning then
 	local settingsIcon =
 		ui:frame({ image = {
 			data = Data:FromBundle("images/icon-settings.png"),
-			cutout = true,
+			alpha = true,
 		} })
 	settingsIcon.Width = 50
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)
 	settingsIcon.parentDidResize = btnContentParentDidResize
 else
-	local cubzhLogo = logo:createShape()
-	cubzhBtnShape = ui:createShape(cubzhLogo, { doNotFlip = true })
-	cubzhBtnShape:setParent(cubzhBtn)
-	cubzhBtnShape.parentDidResize = btnContentParentDidResize
-	cubzhBtnShape:parentDidResize()
+	local homeIcon =
+		ui:frame({ image = {
+			data = Data:FromBundle("images/icon-exit.png"),
+			alpha = true,
+		} })
+	homeIcon.Width = 50
+	homeIcon.Height = 50
+	homeIcon:setParent(cubzhBtn)
+	homeIcon.parentDidResize = btnContentParentDidResize
 end
 
 -- CONNECTIVITY BTN
@@ -1132,13 +1136,18 @@ chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
 chatBtn:setParent(topBar)
 
-textBubbleShape = ui:createShape(bundle:Shape("shapes/textbubble"))
-textBubbleShape:setParent(chatBtn)
-textBubbleShape.parentDidResize = function(self)
+chatIcon = ui:frame({ image = {
+	data = Data:FromBundle("images/icon-chat.png"),
+	alpha = true,
+} })
+chatIcon.Width = 50
+chatIcon.Height = 50
+chatIcon:setParent(chatBtn)
+chatIcon.parentDidResize = function(self)
 	local parent = self.parent
-	self.Height = parent.Height - PADDING_BIG * 2
+	self.Height = parent.Height - PADDING * 2
 	self.Width = self.Height
-	self.pos = { PADDING, PADDING_BIG }
+	self.pos = { PADDING, PADDING }
 end
 
 cubzhBtn.onPress = topBarBtnPress
@@ -1553,9 +1562,9 @@ topBar.parentDidResize = function(self)
 	if topBarChat then
 		local topBarHeight = self.Height - System.SafeAreaTop
 		topBarChat.Height = topBarHeight - PADDING
-		if textBubbleShape:isVisible() then
-			topBarChat.Width = chatBtn.Width - PADDING * 3 - textBubbleShape.Width
-			topBarChat.pos.X = textBubbleShape.Width + PADDING * 2
+		if chatIcon:isVisible() then
+			topBarChat.Width = chatBtn.Width - PADDING * 3 - chatIcon.Width
+			topBarChat.pos.X = chatIcon.Width + PADDING * 2
 		else
 			topBarChat.Width = chatBtn.Width - PADDING * 2
 			topBarChat.pos.X = PADDING
