@@ -988,24 +988,24 @@ cubzhBtn:setParent(topBar)
 
 uiBadge = require("ui_badge")
 
-cubhBtnBadge = nil
+cubzhBtnBadge = nil
 
 function showBadge(str)
 	removeBadge()
-	cubhBtnBadge = uiBadge:create({ text = str, ui = ui })
-	cubhBtnBadge.internalParentDidResize = cubhBtnBadge.parentDidResize
-	cubhBtnBadge.parentDidResize = function(self)
+	cubzhBtnBadge = uiBadge:create({ text = str, ui = ui })
+	cubzhBtnBadge.internalParentDidResize = cubzhBtnBadge.parentDidResize
+	cubzhBtnBadge.parentDidResize = function(self)
 		self.pos.X = self.parent.Width * 0.5
 		self.pos.Y = 0
 		self:internalParentDidResize()
 	end
-	cubhBtnBadge:setParent(cubzhBtn)
+	cubzhBtnBadge:setParent(cubzhBtn)
 end
 
 function removeBadge()
-	if cubhBtnBadge ~= nil then
-		cubhBtnBadge:remove()
-		cubhBtnBadge = nil
+	if cubzhBtnBadge ~= nil then
+		cubzhBtnBadge:remove()
+		cubzhBtnBadge = nil
 	end
 end
 
@@ -1201,25 +1201,6 @@ end
 
 -- CHAT
 
-function createTopBarChat()
-	if topBarChat ~= nil then
-		return -- already created
-	end
-	topBarChat = require("chat"):create({ uikit = ui, input = false, time = false, heads = false, maxMessages = 4 })
-	topBarChat:setParent(chatBtn)
-	if topBar.parentDidResize then
-		topBar:parentDidResize()
-	end
-end
-
-function removeTopBarChat()
-	if topBarChat == nil then
-		return -- nothing to remove
-	end
-	topBarChat:remove()
-	topBarChat = nil
-end
-
 function createChat()
 	if chat ~= nil then
 		return -- chat already created
@@ -1293,10 +1274,8 @@ function refreshChat()
 		else
 			createChat()
 		end
-		removeTopBarChat()
 	else
 		removeChat()
-		createTopBarChat()
 	end
 end
 
@@ -1547,30 +1526,7 @@ topBar.parentDidResize = function(self)
 	-- CHAT BUTTON
 
 	chatBtn.Height = height
-	-- chatBtn.pos.X = pezhBtn.pos.X + pezhBtn.Width
-
-	if pezhBtn:isVisible() then
-		chatBtn.Width = pezhBtn.pos.X - chatBtn.pos.X
-	elseif connBtn:isVisible() then
-		chatBtn.Width = connBtn.pos.X - chatBtn.pos.X
-	else
-		chatBtn.Width = cubzhBtn.pos.X - chatBtn.pos.X
-	end
-
-	-- CHAT MESSAGES
-
-	if topBarChat then
-		local topBarHeight = self.Height - System.SafeAreaTop
-		topBarChat.Height = topBarHeight - PADDING
-		if chatIcon:isVisible() then
-			topBarChat.Width = chatBtn.Width - PADDING * 3 - chatIcon.Width
-			topBarChat.pos.X = chatIcon.Width + PADDING * 2
-		else
-			topBarChat.Width = chatBtn.Width - PADDING * 2
-			topBarChat.pos.X = PADDING
-		end
-		topBarChat.pos.Y = PADDING
-	end
+	chatBtn.Width = height
 end
 topBar:parentDidResize()
 
