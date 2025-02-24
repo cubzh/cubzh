@@ -1222,10 +1222,12 @@ function createChat()
 			hideChat()
 		end,
 		onFocus = function()
+			if chat == nil then return end
 			chat.Color = Color(0, 0, 0, 0.5)
 			btnChatFullscreen:show()
 		end,
 		onFocusLost = function()
+			if chat == nil then return end
 			chat.Color = Color(0, 0, 0, 0.3)
 			btnChatFullscreen:hide()
 		end,
@@ -1261,9 +1263,11 @@ function removeChat()
 	if chat == nil then
 		return -- nothing to remove
 	end
-	chat:remove()
+	local c = chat
 	chat = nil
 	console = nil
+	btnChatFullscreen = nil
+	c:remove()
 end
 
 -- displayes chat as expected based on state
