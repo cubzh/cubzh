@@ -611,23 +611,53 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				self._backButton = backBtn
 			end
 
-			if modalContent.icon ~= nil and type(modalContent.icon) == "string" then
-				local icon = ui:createFrame(Color(0, 0, 0, 0))
-				local iconTxt = ui:createText(modalContent.icon, Color(255, 255, 255, 254))
-				iconTxt:setParent(icon)
-				local padding = ui.kButtonPadding + ui.kButtonBorder
-				icon.Width = iconTxt.Width + padding * 2
-				icon.Height = iconTxt.Height + padding * 2
-				iconTxt.pos = { padding, padding, 0 }
+			if modalContent.icon ~= nil then
+				if type(modalContent.icon) == "string" then
+					local icon = ui:frame({ 
+						color = Color(0, 0, 0, 0) 
+					})
+					local iconTxt = ui:createText(modalContent.icon, Color(255, 255, 255, 254))
+					iconTxt:setParent(icon)
+					local padding = ui.kButtonPadding + ui.kButtonBorder
+					icon.Width = iconTxt.Width + padding * 2
+					icon.Height = iconTxt.Height + padding * 2
+					iconTxt.pos = { padding, padding }
 
-				icon.contentDidResize = function(self)
-					self.Width = iconTxt.Width + padding * 2
-					self.Height = iconTxt.Height + padding * 2
+					icon.contentDidResize = function(self)
+						self.Width = iconTxt.Width + padding * 2
+						self.Height = iconTxt.Height + padding * 2
+					end
+
+					icon:setParent(self.topBar)
+					table.insert(self._topLeft, icon)
+					self._icon = icon
+				elseif typeof(modalContent.icon) == "Data" then
+					local icon = ui:frame({ 
+						color = Color(0, 0, 0, 0) 
+					})
+
+					local img = ui:frame({ image = {
+						data = modalContent.icon,
+						alpha = true,
+					} })
+					img:setParent(icon)
+
+					local textRef = ui:createText("X")
+					local size = math.max(textRef.Width, textRef.Height)
+					textRef:remove()
+
+					local padding = ui.kButtonPadding + ui.kButtonBorder
+
+					img.Width = size
+					img.Height = size
+					img.pos = { padding, padding }
+					icon.Width = size + padding * 2
+					icon.Height = size + padding * 2
+					
+					icon:setParent(self.topBar)
+					table.insert(self._topLeft, icon)
+					self._icon = icon
 				end
-
-				icon:setParent(self.topBar)
-				table.insert(self._topLeft, icon)
-				self._icon = icon
 			end
 
 			for _, element in ipairs(modalContent.topLeft) do
