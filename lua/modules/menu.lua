@@ -1,3 +1,7 @@
+if IsServer == true then 
+	return require("empty_table"):create("menu is not supposed to be used by Server")
+end
+
 local menu = {}
 
 bundle = require("bundle")
@@ -829,8 +833,8 @@ function layoutNotification()
 	local endX = Screen.Width - Screen.SafeArea.Right
 
 	if chatBtn:isVisible() then
-		local p = absNodePos(textBubbleShape)
-		startX = p.X + textBubbleShape.Width + PADDING
+		local p = absNodePos(chatIcon)
+		startX = p.X + chatIcon.Width + PADDING
 	end
 
 	if pezhBtn:isVisible() then
@@ -966,9 +970,9 @@ topBarBtnRelease = function(self)
 end
 
 btnContentParentDidResize = function(self)
-	local padding = PADDING_BIG
-	if self == cubzhBtnShape or self == avatar then
-		padding = PADDING
+	local padding = PADDING
+	if self == pezhShape then
+		padding = PADDING_BIG
 	end
 	local parent = self.parent
 	local ratio = self.Width / self.Height
@@ -984,24 +988,24 @@ cubzhBtn:setParent(topBar)
 
 uiBadge = require("ui_badge")
 
-cubhBtnBadge = nil
+cubzhBtnBadge = nil
 
 function showBadge(str)
 	removeBadge()
-	cubhBtnBadge = uiBadge:create({ text = str, ui = ui })
-	cubhBtnBadge.internalParentDidResize = cubhBtnBadge.parentDidResize
-	cubhBtnBadge.parentDidResize = function(self)
+	cubzhBtnBadge = uiBadge:create({ text = str, ui = ui })
+	cubzhBtnBadge.internalParentDidResize = cubzhBtnBadge.parentDidResize
+	cubzhBtnBadge.parentDidResize = function(self)
 		self.pos.X = self.parent.Width * 0.5
 		self.pos.Y = 0
 		self:internalParentDidResize()
 	end
-	cubhBtnBadge:setParent(cubzhBtn)
+	cubzhBtnBadge:setParent(cubzhBtn)
 end
 
 function removeBadge()
-	if cubhBtnBadge ~= nil then
-		cubhBtnBadge:remove()
-		cubhBtnBadge = nil
+	if cubzhBtnBadge ~= nil then
+		cubzhBtnBadge:remove()
+		cubzhBtnBadge = nil
 	end
 end
 
@@ -1009,18 +1013,22 @@ if System.IsHomeAppRunning then
 	local settingsIcon =
 		ui:frame({ image = {
 			data = Data:FromBundle("images/icon-settings.png"),
-			cutout = true,
+			alpha = true,
 		} })
 	settingsIcon.Width = 50
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)
 	settingsIcon.parentDidResize = btnContentParentDidResize
 else
-	local cubzhLogo = logo:createShape()
-	cubzhBtnShape = ui:createShape(cubzhLogo, { doNotFlip = true })
-	cubzhBtnShape:setParent(cubzhBtn)
-	cubzhBtnShape.parentDidResize = btnContentParentDidResize
-	cubzhBtnShape:parentDidResize()
+	local homeIcon =
+		ui:frame({ image = {
+			data = Data:FromBundle("images/icon-exit.png"),
+			alpha = true,
+		} })
+	homeIcon.Width = 50
+	homeIcon.Height = 50
+	homeIcon:setParent(cubzhBtn)
+	homeIcon.parentDidResize = btnContentParentDidResize
 end
 
 -- CONNECTIVITY BTN
@@ -1128,13 +1136,18 @@ chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 
 chatBtn:setParent(topBar)
 
-textBubbleShape = ui:createShape(bundle:Shape("shapes/textbubble"))
-textBubbleShape:setParent(chatBtn)
-textBubbleShape.parentDidResize = function(self)
+chatIcon = ui:frame({ image = {
+	data = Data:FromBundle("images/icon-chat.png"),
+	alpha = true,
+} })
+chatIcon.Width = 50
+chatIcon.Height = 50
+chatIcon:setParent(chatBtn)
+chatIcon.parentDidResize = function(self)
 	local parent = self.parent
-	self.Height = parent.Height - PADDING_BIG * 2
+	self.Height = parent.Height - PADDING * 2
 	self.Width = self.Height
-	self.pos = { PADDING, PADDING_BIG }
+	self.pos = { PADDING, PADDING }
 end
 
 cubzhBtn.onPress = topBarBtnPress
@@ -1188,25 +1201,6 @@ end
 
 -- CHAT
 
-function createTopBarChat()
-	if topBarChat ~= nil then
-		return -- already created
-	end
-	topBarChat = require("chat"):create({ uikit = ui, input = false, time = false, heads = false, maxMessages = 4 })
-	topBarChat:setParent(chatBtn)
-	if topBar.parentDidResize then
-		topBar:parentDidResize()
-	end
-end
-
-function removeTopBarChat()
-	if topBarChat == nil then
-		return -- nothing to remove
-	end
-	topBarChat:remove()
-	topBarChat = nil
-end
-
 function createChat()
 	if chat ~= nil then
 		return -- chat already created
@@ -1228,10 +1222,12 @@ function createChat()
 			hideChat()
 		end,
 		onFocus = function()
+			if chat == nil then return end
 			chat.Color = Color(0, 0, 0, 0.5)
 			btnChatFullscreen:show()
 		end,
 		onFocusLost = function()
+			if chat == nil then return end
 			chat.Color = Color(0, 0, 0, 0.3)
 			btnChatFullscreen:hide()
 		end,
@@ -1267,9 +1263,11 @@ function removeChat()
 	if chat == nil then
 		return -- nothing to remove
 	end
-	chat:remove()
+	local c = chat
 	chat = nil
 	console = nil
+	btnChatFullscreen = nil
+	c:remove()
 end
 
 -- displayes chat as expected based on state
@@ -1280,10 +1278,8 @@ function refreshChat()
 		else
 			createChat()
 		end
-		removeTopBarChat()
 	else
 		removeChat()
-		createTopBarChat()
 	end
 end
 
@@ -1534,30 +1530,7 @@ topBar.parentDidResize = function(self)
 	-- CHAT BUTTON
 
 	chatBtn.Height = height
-	-- chatBtn.pos.X = pezhBtn.pos.X + pezhBtn.Width
-
-	if pezhBtn:isVisible() then
-		chatBtn.Width = pezhBtn.pos.X - chatBtn.pos.X
-	elseif connBtn:isVisible() then
-		chatBtn.Width = connBtn.pos.X - chatBtn.pos.X
-	else
-		chatBtn.Width = cubzhBtn.pos.X - chatBtn.pos.X
-	end
-
-	-- CHAT MESSAGES
-
-	if topBarChat then
-		local topBarHeight = self.Height - System.SafeAreaTop
-		topBarChat.Height = topBarHeight - PADDING
-		if textBubbleShape:isVisible() then
-			topBarChat.Width = chatBtn.Width - PADDING * 3 - textBubbleShape.Width
-			topBarChat.pos.X = textBubbleShape.Width + PADDING * 2
-		else
-			topBarChat.Width = chatBtn.Width - PADDING * 2
-			topBarChat.pos.X = PADDING
-		end
-		topBarChat.pos.Y = PADDING
-	end
+	chatBtn.Width = height
 end
 topBar:parentDidResize()
 

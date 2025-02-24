@@ -43,7 +43,7 @@ settings.createModalContent = function(_, config)
 
 	local content = modal:createContent()
 	content.title = "Settings"
-	content.icon = "⚙️"
+	content.icon = Data:FromBundle("images/icon-settings.png")
 	content.node = settingsNode
 
 	local rows = {}
@@ -233,7 +233,7 @@ settings.createModalContent = function(_, config)
 		accountButton.onRelease = function(_)
 			local accountContent = modal:createContent()
 			accountContent.title = "Account"
-			accountContent.icon = "⚙️"
+			accountContent.icon = Data:FromBundle("images/icon-settings.png")
 
 			local node = ui:createFrame()
 			accountContent.node = node
@@ -396,7 +396,7 @@ settings.createModalContent = function(_, config)
 		cacheButton.onRelease = function(_)
 			local clearCacheContent = modal:createContent()
 			clearCacheContent.title = "Settings"
-			clearCacheContent.icon = "⚙️"
+			clearCacheContent.icon = Data:FromBundle("images/icon-settings.png")
 
 			local node = ui:createFrame()
 			clearCacheContent.node = node

@@ -46,12 +46,14 @@ local orientationCubeMetatable = {
 
 			self.camera.Rotation:Set(cameraRotation)
 
-			for _, t in ipairs(self.texts) do
-				local visible = t.Forward:Dot(self.camera.Forward) > -0.3
-				if visible then
-					t:SetParent(self.cube)
-				else
-					t:RemoveFromParent()
+			if self.texts ~= nil then
+				for _, t in ipairs(self.texts) do
+					local visible = t.Forward:Dot(self.camera.Forward) > -0.3
+					if visible then
+						t:SetParent(self.cube)
+					else
+						t:RemoveFromParent()
+					end
 				end
 			end
 		end,
@@ -155,7 +157,7 @@ local orientationCubeMetatable = {
 					t.Text = data.text
 					t.Padding = 0
 					t.FontSize = 5.5
-					t.Font = Font.Noto
+					t.Font = Font.Pixel
 					t.Color = Color.White
 					t.BackgroundColor = Color(0, 0, 0, 0)
 					t.Layers = self.layer

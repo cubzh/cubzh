@@ -373,7 +373,7 @@ profile.create = function(_, config)
 				local creationDateIso = userInfo.created
 				local creationDateTable = require("time"):iso8601ToTable(creationDateIso)
 				local creationYear = creationDateTable.year
-				local creationMonth = require("time"):monthToString(math.tointeger(creationDateTable.month))
+				local creationMonth = require("time"):monthToString(math.floor(creationDateTable.month))
 				local createdStr = creationMonth .. " " .. creationYear
 
 				created.Text = "📰 " .. createdStr
@@ -646,7 +646,16 @@ profile.create = function(_, config)
 	else
 		creationsBtn = ui:buttonSecondary({ content = "🛠️ Creations", textSize = "small" })
 		creationsBtn.onRelease = function()
-			Menu:ShowAlert({ message = "Coming soon!" }, System)
+			Menu:ShowCreations()
+
+			local creationsContent = require("creations"):createModalContent({
+				uikit = ui,
+				authorId = userID,
+				authorName = username,
+			})
+			content:push(creationsContent)
+
+			-- Menu:ShowAlert({ message = "Coming soon!" }, System)
 		end
 
 		local alreadyFriends = nil

@@ -95,10 +95,10 @@ mod.set = function(self, config)
 	local offset = currentConfig.offset or Number3.Zero
 	local target = currentConfig.target
 
-	local targetIsPlayer = type(target) == "Player"
-	-- local targetHasRotation = type(target) == "Object" or type(target) == "Shape" or type(target) == "MutableShape"
+	local targetIsPlayer = typeof(target) == "Player"
+	-- local targetHasRotation = typeof(target) == "Object" or typeof(target) == "Shape" or typeof(target) == "MutableShape"
 
-	if type(target) == "Number3" then
+	if typeof(target) == "Number3" then
 		target = { Position = target }
 	end
 
@@ -142,7 +142,7 @@ mod.set = function(self, config)
 
 			local v = Number2(dpad.X, dpad.Y)
 			if v.SquaredLength > 0 then
-				local yDelta = math.atan(dpad.X, dpad.Y)
+				local yDelta = math.atan2(dpad.X, dpad.Y)
 				target.Rotation:Set(0, cameraWorldObject.Rotation.Y + yDelta, 0)
 				target.Motion:Set(target.Forward * v.Length * currentConfig.targetSpeed)
 			end
@@ -161,7 +161,7 @@ mod.set = function(self, config)
 
 			local v = Number2(x, y)
 			if v.SquaredLength > 0 then
-				local yDelta = math.atan(x, y)
+				local yDelta = math.atan2(x, y)
 				target.Rotation:Set(0, cameraWorldObject.Rotation.Y + yDelta, 0)
 				target.Motion:Set(target.Forward * v.Length * currentConfig.targetSpeed)
 			else

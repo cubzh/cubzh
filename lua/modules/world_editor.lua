@@ -143,7 +143,7 @@ local setObjectPhysicsMode = function(obj, physicsMode, syncMulti)
 	end
 	obj.realPhysicsMode = physicsMode
 	obj:Recurse(function(o)
-		if type(o) == "Object" then
+		if typeof(o) == "Object" then
 			return
 		end
 		-- If disabled, keep trigger to allow raycast
@@ -212,7 +212,7 @@ local freezeObject = function(obj)
 		return
 	end
 	obj:Recurse(function(o)
-		if type(o) == "Object" then
+		if typeof(o) == "Object" then
 			return
 		end
 		o.CollisionGroups = { 6 }
@@ -225,7 +225,7 @@ local unfreezeObject = function(obj)
 		return
 	end
 	obj:Recurse(function(o)
-		if type(o) == "Object" then
+		if typeof(o) == "Object" then
 			return
 		end
 		o.CollisionGroups = { OBJECTS_COLLISION_GROUP }
@@ -240,7 +240,7 @@ local spawnObject = function(data, onDone)
 		local physicsMode = data.Physics or PhysicsMode.StaticPerBlock
 		setObjectPhysicsMode(obj, physicsMode)
 		obj:Recurse(function(o)
-			if type(o) == "Object" then
+			if typeof(o) == "Object" then
 				return
 			end
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
@@ -284,7 +284,7 @@ local spawnObject = function(data, onDone)
 		obj.Scale = scale
 
 		obj:Recurse(function(o)
-			if type(o) == "Object" then
+			if typeof(o) == "Object" then
 				return
 			end
 			o.CollisionGroups = { 3, OBJECTS_COLLISION_GROUP }
@@ -1306,9 +1306,8 @@ initDefaultMode = function()
 			type = "button",
 			text = "Reset all",
 			callback = function()
-				alertModal = require("alert"):create(
-					"Confirm that you want to remove all modifications and start from scratch."
-				)
+				alertModal =
+					require("alert"):create("Confirm that you want to remove all modifications and start from scratch.")
 				alertModal:setPositiveCallback("Reset and pick a new map", function()
 					menuBar:hide()
 					showSettingsBtn:show()

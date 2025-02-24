@@ -63,6 +63,13 @@ bool filo_list_uint16_pop(FiloListUInt16 *list, uint16_t *i) {
     return true;
 }
 
+FiloListUInt16Node *filo_list_uint16_get_first(FiloListUInt16 *list) {
+    if (list == NULL) {
+        return NULL;
+    }
+    return list->first;
+}
+
 //---------------------
 // FiloListUint16Node
 //---------------------
@@ -76,4 +83,18 @@ FiloListUInt16Node *filo_list_uint16_node_new(uint16_t value) {
 
 void filo_list_uint16_node_free(FiloListUInt16Node *node) {
     free(node);
+}
+
+FiloListUInt16Node *filo_list_uint16_node_next(FiloListUInt16Node *node) {
+    if (node == NULL) {
+        return NULL;
+    }
+    return node->next;
+}
+
+uint16_t filo_list_uint16_node_get_value(FiloListUInt16Node *node) {
+    if (node == NULL) {
+        return 0;
+    }
+    return node->value;
 }

@@ -52,7 +52,7 @@ itemGrid.create = function(_, config)
 		--
 		displayLikes = false,
 		--
-		perPage = 25, -- TODO: offer to load more when reaching the end scroll
+		perPage = 100, -- TODO: offer to load more when reaching the end scroll
 		--
 		onOpen = function(_) end,
 		--
@@ -462,6 +462,14 @@ itemGrid.create = function(_, config)
 										if err ~= nil then
 											-- silent error
 											return
+										end
+
+										if cell.object == nil then 
+											-- should not happen... but in fact it does. 
+											-- request should be cancelled when cell is removed,
+											-- so the callback should not be triggered.
+											-- Let's debug this... but in the meantime, let's early return to avoid error.
+											return 
 										end
 
 										local thumbnail = ui:frame({ image = img })

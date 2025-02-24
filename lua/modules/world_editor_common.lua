@@ -60,7 +60,7 @@ local ambienceFields = { -- key, serialize and deserialize functions
 	["sky.skyColor"] = {
 		"ssc",
 		function(d, v)
-			if type(v) == "Color" then
+			if typeof(v) == "Color" then
 				d:WriteColor(v)
 			else
 				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
@@ -73,7 +73,7 @@ local ambienceFields = { -- key, serialize and deserialize functions
 	["sky.horizonColor"] = {
 		"shc",
 		function(d, v)
-			if type(v) == "Color" then
+			if typeof(v) == "Color" then
 				d:WriteColor(v)
 			else
 				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
@@ -86,7 +86,7 @@ local ambienceFields = { -- key, serialize and deserialize functions
 	["sky.abyssColor"] = {
 		"sac",
 		function(d, v)
-			if type(v) == "Color" then
+			if typeof(v) == "Color" then
 				d:WriteColor(v)
 			else
 				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
@@ -99,7 +99,7 @@ local ambienceFields = { -- key, serialize and deserialize functions
 	["sky.lightColor"] = {
 		"slc",
 		function(d, v)
-			if type(v) == "Color" then
+			if typeof(v) == "Color" then
 				d:WriteColor(v)
 			else
 				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
@@ -121,7 +121,7 @@ local ambienceFields = { -- key, serialize and deserialize functions
 	["fog.color"] = {
 		"foc",
 		function(d, v)
-			if type(v) == "Color" then
+			if typeof(v) == "Color" then
 				d:WriteColor(v)
 			else
 				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
@@ -161,7 +161,7 @@ local ambienceFields = { -- key, serialize and deserialize functions
 	["sun.color"] = {
 		"suc",
 		function(d, v)
-			if type(v) == "Color" then
+			if typeof(v) == "Color" then
 				d:WriteColor(v)
 			else
 				d:WriteColor(Color(math.floor(v[1]), math.floor(v[2]), math.floor(v[3])))
@@ -523,7 +523,7 @@ local writeChunkBlocks = function(d, blocks)
 		if type(color) == "number" and color == -1 then
 			d:WriteUInt8(0) -- block removed
 			nbBlocks = nbBlocks + 1
-		elseif type(color) == "Color" then
+		elseif typeof(color) == "Color" then
 			d:WriteUInt8(1) -- block added
 			d:WriteColor(color)
 			nbBlocks = nbBlocks + 1

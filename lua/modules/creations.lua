@@ -14,6 +14,8 @@ creations.createModalContent = function(_, config)
 	local defaultConfig = {
 		uikit = require("uikit"), -- allows to provide specific instance of uikit
 		onOpen = nil,
+		authorId = Player.UserID,
+		authorName = Player.Username,
 	}
 
 	local ok, err = pcall(function()
@@ -416,7 +418,11 @@ creations.createModalContent = function(_, config)
 
 	local createCreationsContent = function()
 		local creationsContent = modal:createContent()
-		creationsContent.title = "Creations"
+		if config.authorId == Player.UserID then
+			creationsContent.title = "Creations"
+		else
+			creationsContent.title = config.authorName .. "'s Creations"
+		end
 		creationsContent.icon = "🏗️"
 
 		local node = ui:frame()
@@ -425,22 +431,31 @@ creations.createModalContent = function(_, config)
 			minBlocks = 1,
 			type = "items",
 			displayLikes = true,
-			repo = Player.Username,
-			authorId = Player.UserID,
+			repo = config.authorName,
+			authorId = config.authorId,
 			categories = { "null" },
 			sort = "updatedAt:desc",
 			uikit = ui,
 		})
 		grid:setParent(node)
 
-		local btnNew = ui:buttonPositive({ content = "✨ Create item ⚔️", padding = theme.padding })
-		btnNew:setParent(node)
+		local btnNew
+		if config.authorId == Player.UserID then
+			btnNew = ui:buttonPositive({ content = "✨ Create item ⚔️", padding = theme.padding })
+			btnNew:setParent(node)
+		end
 
 		node.parentDidResize = function(self)
+			if btnNew then
 			grid.Width = self.Width
-			grid.Height = self.Height - btnNew.Height - theme.padding
-			grid.pos.Y = btnNew.Height + theme.padding
-			btnNew.pos = { self.Width * 0.5 - btnNew.Width * 0.5, 0 }
+				grid.Height = self.Height - btnNew.Height - theme.padding
+				grid.pos.Y = btnNew.Height + theme.padding
+				btnNew.pos = { self.Width * 0.5 - btnNew.Width * 0.5, 0 }
+			else
+				grid.Width = self.Width
+				grid.Height = self.Height
+				grid.pos.Y = 0
+			end
 		end
 
 		creationsContent.willResignActive = function(_)
@@ -483,7 +498,9 @@ creations.createModalContent = function(_, config)
 			end
 		end
 
-		btnNew.onRelease = newItem
+		if btnNew then
+			btnNew.onRelease = newItem
+		end
 
 		creationsContent.tabs = {
 			{
@@ -491,9 +508,11 @@ creations.createModalContent = function(_, config)
 				short = "⚔️",
 				action = function()
 					grid:setCategories({ "null" }, "items")
-					btnNew.Text = "✨ Create item ⚔️"
-					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-					btnNew.onRelease = newItem
+					if btnNew then
+						btnNew.Text = "✨ Create item ⚔️"
+						btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+						btnNew.onRelease = newItem
+					end
 				end,
 			},
 			{
@@ -501,9 +520,11 @@ creations.createModalContent = function(_, config)
 				short = "👕",
 				action = function()
 					grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
-					btnNew.Text = "✨ Create wearable 👕"
-					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-					btnNew.onRelease = newWearable
+					if btnNew then
+						btnNew.Text = "✨ Create wearable 👕"
+						btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+						btnNew.onRelease = newWearable
+					end
 				end,
 			},
 			{
@@ -511,9 +532,11 @@ creations.createModalContent = function(_, config)
 				short = "🌎",
 				action = function()
 					grid:setCategories({ "null" }, "worlds")
-					btnNew.Text = "✨ Create world 🌎"
-					btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-					btnNew.onRelease = newWorld
+					if btnNew then
+						btnNew.Text = "✨ Create world 🌎"
+						btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+						btnNew.onRelease = newWorld
+					end
 				end,
 			},
 		}
@@ -530,66 +553,70 @@ creations.createModalContent = function(_, config)
 				local itemFullName = entity.repo .. "." .. entity.name
 				local category = entity.category
 
+				local mode = config.authorId == Player.UserID and "create" or "explore"
+
 				local itemDetailsContent =
-					itemDetails:createModalContent({ item = entity, mode = "create", uikit = ui })
+					itemDetails:createModalContent({ item = entity, mode = mode, uikit = ui })
 
-				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
-				btnEdit.onRelease = function()
-					System.LaunchItemEditor(itemFullName, category)
-				end
-
-				local btnDuplicate = ui:buttonSecondary({ content = "📑 Duplicate", textSize = "default" })
-				btnDuplicate.onRelease = function()
-					local m = itemDetailsContent:getModalIfContentIsActive()
-					if m ~= nil then
-						local what
-						if category == nil then
-							what = "item"
-						else
-							what = "wearable"
-						end
-						m:push(functions.createNewContent(what, itemFullName, grid, category))
+				if mode == "create" then
+					local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
+					btnEdit.onRelease = function()
+						System.LaunchItemEditor(itemFullName, category)
 					end
-				end
 
-				local btnExport = ui:buttonSecondary({ content = "📤", textSize = "default" })
-				btnExport.onRelease = function()
-					File:ExportItem(entity.repo, entity.name, "vox", function(err, message)
-						if err then
-							print("Error: " .. message)
-							return
+					local btnDuplicate = ui:buttonSecondary({ content = "📑 Duplicate", textSize = "default" })
+					btnDuplicate.onRelease = function()
+						local m = itemDetailsContent:getModalIfContentIsActive()
+						if m ~= nil then
+							local what
+							if category == nil then
+								what = "item"
+							else
+								what = "wearable"
+							end
+							m:push(functions.createNewContent(what, itemFullName, grid, category))
 						end
-					end)
-				end
+					end
 
-				local btnArchive = ui:buttonSecondary({ content = "🗑️", textSize = "default" })
-				btnArchive.onRelease = function()
-					local str = "Are you sure you want to archive this item?"
-					local positive = function()
-						local data = { archived = true }
-						api:patchItem(entity.id, data, function(err, itm)
-							if err or not itm.archived then
-								Menu:ShowAlert({ message = "Could not archive item" }, System)
+					local btnExport = ui:buttonSecondary({ content = "📤", textSize = "default" })
+					btnExport.onRelease = function()
+						File:ExportItem(entity.repo, entity.name, "vox", function(err, message)
+							if err then
+								print("Error: " .. message)
 								return
 							end
-							itemDetailsContent:pop()
-							grid:getItems()
 						end)
 					end
-					local negative = function() end
-					local alertConfig = {
-						message = str,
-						positiveLabel = "Yes",
-						positiveCallback = positive,
-						negativeLabel = "No",
-						negativeCallback = negative,
-					}
 
-					Menu:ShowAlert(alertConfig, System)
+					local btnArchive = ui:buttonSecondary({ content = "🗑️", textSize = "default" })
+					btnArchive.onRelease = function()
+						local str = "Are you sure you want to archive this item?"
+						local positive = function()
+							local data = { archived = true }
+							api:patchItem(entity.id, data, function(err, itm)
+								if err or not itm.archived then
+									Menu:ShowAlert({ message = "Could not archive item" }, System)
+									return
+								end
+								itemDetailsContent:pop()
+								grid:getItems()
+							end)
+						end
+						local negative = function() end
+						local alertConfig = {
+							message = str,
+							positiveLabel = "Yes",
+							positiveCallback = positive,
+							negativeLabel = "No",
+							negativeCallback = negative,
+						}
+
+						Menu:ShowAlert(alertConfig, System)
+					end
+
+					itemDetailsContent.bottomLeft = { btnDuplicate, btnExport, btnArchive }
+					itemDetailsContent.bottomRight = { btnEdit }
 				end
-
-				itemDetailsContent.bottomLeft = { btnDuplicate, btnExport, btnArchive }
-				itemDetailsContent.bottomRight = { btnEdit }
 
 				itemDetailsContent.idealReducedContentSize = function(content, width, height)
 					content.Width = width
@@ -602,8 +629,11 @@ creations.createModalContent = function(_, config)
 					m:push(itemDetailsContent)
 				end
 			elseif entity.type == "world" then
+
+				local mode = config.authorId == Player.UserID and "create" or "explore"
+
 				local worldDetailsContent =
-					worldDetails:createModalContent({ mode = "create", world = entity, uikit = ui })
+					worldDetails:createModalContent({ mode = mode, world = entity, uikit = ui })
 				worldDetailsContent.onContentUpdate = function(updatedWorld)
 					gridNeedRefresh = true
 					worldDetailsContent.title = updatedWorld.title
@@ -612,17 +642,21 @@ creations.createModalContent = function(_, config)
 					end
 				end
 
-				local btnEditCode = ui:buttonSecondary({ content = "🤓 Code", textSize = "default" })
-				btnEditCode.onRelease = function()
-					System.EditWorldCode(entity.id)
-				end
+				if mode == "create" then
 
-				local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
-				btnEdit.onRelease = function()
-					System.EditWorld(entity.id)
-				end
+					local btnEditCode = ui:buttonSecondary({ content = "🤓 Code", textSize = "default" })
+					btnEditCode.onRelease = function()
+						System.EditWorldCode(entity.id)
+					end
 
-				worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
+					local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
+					btnEdit.onRelease = function()
+						System.EditWorld(entity.id)
+					end
+
+					worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
+
+				end
 
 				worldDetailsContent.idealReducedContentSize = function(content, width, height)
 					content.Width = width

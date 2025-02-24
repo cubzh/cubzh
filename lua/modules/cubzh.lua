@@ -309,8 +309,19 @@ Client.OnStart = function()
 
 	local delta = Number2(-1, 1)
 	speed = 0.2
+	local _x = 0
+	local _y = 0
 	LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
-		backgroundLogo.Offset = backgroundLogo.Offset + delta * dt * speed
+		-- _x += delta.X * dt * speed
+		-- _y += delta.Y * dt * speed
+		-- backgroundLogo.Offset = { _x, _y }
+
+		-- both lines below should work but for some reason it doesn't
+		backgroundLogo.Offset += delta * dt * speed
+		-- backgroundLogo.Offset = backgroundLogo.Offset + delta * dt * speed
+
+		-- backgroundLogo.Offset = backgroundLogo.Offset
+		-- print(backgroundLogo.Offset)
 	end)
 
 	if Client.LoggedIn then
@@ -558,7 +569,7 @@ function titleScreen()
 		didResizeListener:Remove()
 		didResizeFunction = nil
 
-		root:RemoveFromParent()
+        root:Destroy()
 		root = nil
 	end
 
@@ -1192,10 +1203,10 @@ function avatar()
 		listeners = {}
 		dragListener = nil
 
-		root:RemoveFromParent()
+		root:Destroy()
 		root = nil
 
-		emitter:RemoveFromParent()
+		emitter:Destroy()
 		emitter = nil
 	end
 
@@ -1305,6 +1316,8 @@ function home()
 		end
 
 		local function worldCellResizeFn(self)
+			if self.parent.Height == nil then return end
+			
 			self.Height = self.parent.Height
 
 			if self.shape then
@@ -2239,7 +2252,7 @@ function home()
 
 						local bell = ui:frame({
 							image = {
-								data = Data:FromBundle("images/bell.png"),
+								data = Data:FromBundle("images/icon-bell.png"),
 								alpha = true,
 							},
 						})
@@ -2555,6 +2568,8 @@ function home()
 			scroll.Height = Screen.Height - self.Height --  - Screen.SafeArea.Top
 		end
 		bottomBar:setParent(root)
+
+		home():resume()
 	end
 
 	_home.hide = function()

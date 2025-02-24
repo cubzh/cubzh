@@ -60,9 +60,6 @@ local removeOnStopCallback = function(self, callback)
 end
 
 local animationsMT = {
-	__gc = function(t)
-		privateFields[t] = nil -- (may not be required as privateFields uses weak keys)
-	end,
 	__metatable = false,
 }
 
@@ -124,8 +121,8 @@ animationsMT.__newindex = function(t, k, v)
 		error("Animations." .. k .. " is read-only")
 	end
 
-	if v ~= nil and type(v) ~= "Animation" then
-		error("Animations." .. k .. " should be of type Animation", 2)
+	if v ~= nil and typeof(v) ~= "Animation" then
+	        error("Animations." .. k .. " should be of type Animation", 2)
 	end
 
 	-- TODO: REMOVE CALLBACKS

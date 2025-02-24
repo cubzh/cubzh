@@ -8,10 +8,6 @@ Config = {
 	ChatAvailable = false,
 }
 
-if Config.ChatAvailable then
-	return
-end -- tmp: to silent "unused global variable Config" luacheck warning
-
 -- --------------------------------------------------
 -- Utilities for Player avatar
 -- --------------------------------------------------
@@ -73,7 +69,7 @@ end
 -- returns an array of shapes
 -- `testFunc` is a function(shape) -> boolean
 utils.findSubshapes = function(rootShape, testFunc)
-	if type(rootShape) ~= "Shape" and type(rootShape) ~= "MutableShape" and type(testFunc) ~= "function" then
+	if typeof(rootShape) ~= "Shape" and typeof(rootShape) ~= "MutableShape" and type(testFunc) ~= "function" then
 		error("wrong arguments")
 	end
 
@@ -147,7 +143,7 @@ local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 	-- item is a wearable, we set the avatar visibility based on `p_wearablePreviewMode`
 	if p_wearablePreviewMode == wearablePreviewMode.hide then
 		local parents = utils:equipmentParents(Player, itemCategory)
-		local parentsType = type(parents)
+		local parentsType = typeof(parents)
 		if parentsType == "table" then
 			for _, parent in ipairs(parents) do
 				parent.PrivateDrawMode = 1
@@ -162,7 +158,7 @@ local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
 	elseif p_wearablePreviewMode == wearablePreviewMode.bodyPart then
 		-- show some of the avatar body parts based on the type of wearable being edited
 		local parents = utils:equipmentParents(Player, itemCategory)
-		local parentsType = type(parents)
+		local parentsType = typeof(parents)
 		if parentsType == "table" then
 			for _, parent in ipairs(parents) do
 				disableObject(parent, false)
@@ -308,7 +304,7 @@ Client.OnStart = function()
 
 	refreshDrawMode = function(forcedDrawMode)
 		item:Recurse(function(s)
-			if not s or type(s) == "Object" then
+			if not s or typeof(s) == "Object" then
 				return
 			end
 			if forcedDrawMode ~= nil then
@@ -523,7 +519,7 @@ Client.OnStart = function()
 
 		local t
 		for _, asset in ipairs(assets) do
-			t = type(asset)
+			t = typeof(asset)
 			if t == "Palette" then
 				standalonePalette = asset
 			elseif (t == "Object" or t == "Shape" or t == "MutableShape") and asset:GetParent() == nil then
@@ -583,7 +579,7 @@ Client.OnStart = function()
 
 	updateWearableShapesPosition = function()
 		local parents = utils:equipmentParents(Player, itemCategory)
-		local parentsType = type(parents)
+		local parentsType = typeof(parents)
 
 		-- parents can be a Lua table (containing Shapes) or a Shape
 		if parentsType == "table" then
@@ -1131,7 +1127,7 @@ initClientFunctions = function()
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then
 			return
 		end
-		if type(facemode) ~= Type.boolean then
+		if type(facemode) ~= "boolean" then
 			return
 		end
 
@@ -1273,7 +1269,7 @@ initClientFunctions = function()
 		if shape == nil or impact == nil or facemode == nil or impact.Block == nil then
 			return
 		end
-		if type(facemode) ~= Type.boolean then
+		if type(facemode) ~= "boolean" then
 			return
 		end
 
@@ -1360,7 +1356,7 @@ initClientFunctions = function()
 		if impact == nil or facemode == nil or impact.Block == nil then
 			return
 		end
-		if type(facemode) ~= Type.boolean then
+		if type(facemode) ~= "boolean" then
 			return
 		end
 
@@ -2922,7 +2918,7 @@ function post_item_load()
 		-- initialize item and its sub-shapes (physics mode, shared palette, etc.)
 		shapes = {}
 		item:Recurse(function(s)
-			if type(s) == Type.MutableShape then
+			if typeof(s) == "MutableShape" then
 				s.Physics = PhysicsMode.TriggerPerBlock
 				s.CollisionGroups = collisionGroup_item
 				s.isItem = true

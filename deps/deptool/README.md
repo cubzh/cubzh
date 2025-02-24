@@ -22,6 +22,7 @@ deptool download libluau 0.661 android
 deptool download libluau 0.661 ios
 deptool download libluau 0.661 macos
 deptool download libluau 0.661 windows
+deptool download libluau 0.661 linux
 ```
 
 ## Upload dependencies
@@ -36,4 +37,28 @@ deptool upload libluau 0.661 android
 deptool upload libluau 0.661 ios
 deptool upload libluau 0.661 macos
 deptool upload libluau 0.661 windows
+deptool upload libluau 0.661 linux
+```
+
+## Build deptool
+
+### Build for current platforms
+
+```bash
+# /!\ execute from the "deps/deptool/cmd" directory
+
+# macos (arm64)
+go build -o deptool_macos_arm64
+
+# windows (x86_64)
+go build -o deptool_windows_amd64
+```
+
+## Build in docker container
+
+```bash
+# /!\ execute from the "deps/deptool/cmd" directory
+
+docker run --platform linux/amd64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.0-alpine3.21 go build -o deptool_linux_amd64
+docker run --platform linux/arm64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.0-alpine3.21 go build -o deptool_linux_arm64
 ```

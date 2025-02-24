@@ -1397,7 +1397,7 @@ float rigidbody_get_combined_bounciness(const RigidBody *rb1,
 }
 
 float rigidbody_get_mass_push_ratio(const RigidBody *rb, const RigidBody *pushed) {
-    return CLAMP01(rb->mass / pushed->mass - PHYSICS_MASS_PUSH_THRESHOLD);
+    return CLAMP01F(rb->mass / pushed->mass - PHYSICS_MASS_PUSH_THRESHOLD);
 }
 
 void rigidbody_apply_force_impulse(RigidBody *rb, const float3 *value) {

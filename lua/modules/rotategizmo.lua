@@ -97,7 +97,7 @@ functions.drag = function(self, pe)
 	local cross = self._gizmoObjectCopy:PositionLocalToWorld(self._localImpactPosition:Cross(p2))
 	local det = axis:Dot(cross)
 
-	local angle = math.atan(det, dot)
+	local angle = math.atan2(det, dot)
 
 	local snap = (self.snap or 0)
 	if snap > 0 then

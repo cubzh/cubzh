@@ -1,26 +1,29 @@
-package main
+package deptool
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
+
+	"github.com/voxowl/objectstorage"
 )
 
-var (
-	depsRootPath = filepath.Join("..", "..", "deps")
-)
-
-func uploadArtifacts(depName, version, platform string) error {
+func UploadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, depName, version, platform string) error {
 	fmt.Printf("⭐️ Uploading artifacts for [%s] [%s] [%s]\n", depName, version, platform)
 
+	var err error
+
 	// Validate arguments
-	if !slices.Contains(supportedDependencies, depName) {
+	if objectStorage == nil {
+		return fmt.Errorf("object storage client is nil")
+	}
+
+	if !isDependencyNameValid(depName) {
 		return fmt.Errorf("invalid dependency name: %s", depName)
 	}
 
-	if platform != PlatformAll && !slices.Contains(supportedPlatforms, platform) {
+	if !isPlatformNameValid(platform) {
 		return fmt.Errorf("invalid platform name: %s", platform)
 	}
 
@@ -36,12 +39,6 @@ func uploadArtifacts(depName, version, platform string) error {
 		}
 	} else {
 		depsPathsToUpload = append(depsPathsToUpload, constructDepArtifactsPath(depName, version, platform))
-	}
-
-	// Get the object storage client
-	objectStorageClient, err := getObjectStorageClient()
-	if err != nil {
-		return err
 	}
 
 	// Try to upload each path
@@ -72,7 +69,7 @@ func uploadArtifacts(depName, version, platform string) error {
 			defer file.Close()
 
 			// Create S3 key based on platform and relative path
-			objectStorageKey, err := filepath.Rel(depsRootPath, path)
+			objectStorageKey, err := filepath.Rel(depsDirPath, path)
 			if err != nil {
 				return fmt.Errorf("failed to get relative path: %w", err)
 			}
@@ -95,7 +92,7 @@ func uploadArtifacts(depName, version, platform string) error {
 			fmt.Printf("  🔥 Uploading file: %s\n", objectStorageKey)
 
 			// Upload the file to object storage
-			err = objectStorageClient.Upload(objectStorageKey, file)
+			err = objectStorage.Upload(objectStorageKey, file)
 			if err != nil {
 				return fmt.Errorf("failed to upload file %s: %w", path, err)
 			}

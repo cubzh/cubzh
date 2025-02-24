@@ -30,6 +30,7 @@ COMPILER_COPTS = select({
 
 PLATFORM_COPTS = select({
     "@platforms//os:android": ["-Wno-string-conversion"],
+    "@platforms//os:linux": ["-Wno-unused-variable"],
     "//conditions:default": [],
 })
 

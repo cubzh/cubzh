@@ -5,8 +5,7 @@
 --- -- Explode an object and all its shape descendants into pieces
 --- explode:shapes(someObject)
 
-local explode = {
-}
+local explode = {}
 
 ---@function shapes Explodes all shapes in an object (including the object itself if it's a shape).
 ---@param self explode
@@ -23,34 +22,34 @@ local explode = {
 --- -- Add some shapes as children...
 --- explode:shapes(object) -- Will explode all shapes in hierarchy
 explode.shapes = function(self, object)
-    object:Recurse(function(o)
-        if type(o) == "Shape" or type(o) == "MutableShape" then
-            -- Create copy of shape
-            local s = Shape(o)
-            World:AddChild(s)
+	object:Recurse(function(o)
+		if typeof(o) == "Shape" or typeof(o) == "MutableShape" then
+			-- Create copy of shape
+			local s = Shape(o)
+			World:AddChild(s)
 
-            -- Preserve original transform
-            s.Scale = o.LossyScale
-            s.Position = o.Position
-            s.Rotation = o.Rotation
+			-- Preserve original transform
+			s.Scale = o.LossyScale
+			s.Position = o.Position
+			s.Rotation = o.Rotation
 
-            -- Setup physics properties
-            s.Physics = true
-            s.CollisionGroups = nil
-            s.CollidesWithGroups = Map.CollisionGroups
-            s.Bounciness = 0.1
+			-- Setup physics properties
+			s.Physics = true
+			s.CollisionGroups = nil
+			s.CollidesWithGroups = Map.CollisionGroups
+			s.Bounciness = 0.1
 
-            -- Apply random upward explosion force
-            local v = Number3(0, 0, 1) * (50 + math.random() * 100)
-            v:Rotate(Number3(math.random() * -math.pi, math.random() * math.pi * 2, 0))
-            s.Velocity = v
+			-- Apply random upward explosion force
+			local v = Number3(0, 0, 1) * (50 + math.random() * 100)
+			v:Rotate(Number3(math.random() * -math.pi, math.random() * math.pi * 2, 0))
+			s.Velocity = v
 
-            -- Remove the exploded piece after 5 seconds
-            Timer(5, function()
-                s:RemoveFromParent()
-            end)
-        end
-    end, { includeRoot = true })
+			-- Remove the exploded piece after 5 seconds
+			Timer(5, function()
+				s:RemoveFromParent()
+			end)
+		end
+	end, { includeRoot = true })
 end
 
 return explode

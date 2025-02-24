@@ -798,7 +798,9 @@ function avatar_load(self, config)
 				config.didLoad(err, nil)
 				return
 			end
-
+			if self.IsDestroyed then
+				return
+			end
 			-- eyes type (index)
 			local eyesTypeIndex = data.eyesIndex
 			if eyesTypeIndex == nil or eyesTypeIndex == 0 then
@@ -1123,7 +1125,7 @@ function avatar_setEyes(self, config)
 
 	config = require("config"):merge({}, config, {
 		acceptTypes = {
-			index = { "integer" },
+			index = { "number" },
 			color = { "Color" },
 		},
 	})
@@ -1170,7 +1172,7 @@ function avatar_setNose(self, config)
 
 	config = require("config"):merge({}, config, {
 		acceptTypes = {
-			index = { "integer" },
+			index = { "number" },
 			color = { "Color" },
 		},
 	})
@@ -1241,6 +1243,10 @@ function avatar_update_config(self, config)
 
 			local eyeBlinks = {}
 			eyeBlinks.close = function()
+				if eyeLidRight.IsDestroyed then 
+					eyeBlinks = nil
+					return 
+				end
 				-- removing eyelids when head loses its parent
 				-- not ideal, but no easy way currently to detect when the avatar is destroyed
 				if eyeLidRight:GetParent() == nil or eyeLidRight:GetParent():GetParent() == nil then
@@ -1256,6 +1262,11 @@ function avatar_update_config(self, config)
 				fields.eyeBlinksTimer = Timer(0.1, eyeBlinks.open)
 			end
 			eyeBlinks.open = function()
+				if eyeLidRight.IsDestroyed then 
+					eyeBlinks = nil
+					return 
+				end
+
 				eyeLidRight.Scale.Y = 0
 				eyeLidRight.IsHidden = true
 				eyeLidLeft.Scale.Y = 0

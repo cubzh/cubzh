@@ -32,7 +32,7 @@ mod.create = function(_, text, target, answers, callback)
 			end)
 			return p
 		end
-		if type(target) == "Number3" then
+		if typeof(target) == "Number3" then
 			return target
 		end
 		ok = pcall(function()

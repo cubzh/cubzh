@@ -1242,6 +1242,7 @@
 					"CI_BUNDLE_PATH=\"\\\"$SRCROOT/../../../../ci/bundle\\\"\"",
 					"CI_STORAGE_PATH=\"\\\"$SRCROOT/../../../../ci/storage\\\"\"",
 					"CI_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_ci\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1252,9 +1253,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Debug;
@@ -1272,6 +1272,7 @@
 					"CI_BUNDLE_PATH=\"\\\"$SRCROOT/../../ci/bundle\\\"\"",
 					"CI_STORAGE_PATH=\"\\\"$SRCROOT/../../ci/storage\\\"\"",
 					"CI_MODULES_PATH=\"\\\"$SRCROOT/../../../../cubzh/lua\\\"\"",
+					"__VX_APP_BUILD_TARGET=\"\\\"darwin_ci\\\"\"",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../../deps/libwebsockets/output_macos/lib";
 				OTHER_LDFLAGS = (
@@ -1282,9 +1283,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Release;
@@ -1308,9 +1308,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Debug;
@@ -1334,9 +1333,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Release;
@@ -1363,9 +1361,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Debug;
@@ -1391,9 +1388,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Release;
@@ -1458,7 +1454,10 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SYSTEM_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../../lpng/src";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../lpng/src",
+					"$(PROJECT_DIR)/../../miniaudio",
+				);
 				WARNING_CFLAGS = (
 					"-Weverything",
 					"-Wno-c++98-compat-pedantic",
@@ -1521,7 +1520,10 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SYSTEM_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../../lpng/src";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../../lpng/src",
+					"$(PROJECT_DIR)/../../miniaudio",
+				);
 				WARNING_CFLAGS = (
 					"-Weverything",
 					"-Wno-c++98-compat-pedantic",
@@ -1552,9 +1554,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Debug;
@@ -1580,9 +1581,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 					"$(PROJECT_DIR)/../../libssl/macos/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/macos/include",
 				);
 			};
 			name = Release;
@@ -1608,9 +1608,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/ios/include",
 					"$(PROJECT_DIR)/../../libssl/ios/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/ios/include",
 				);
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1637,9 +1636,8 @@
 				SKIP_INSTALL = YES;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/../../libwebsockets/ios/include",
 					"$(PROJECT_DIR)/../../libssl/ios/include",
-					"$(PROJECT_DIR)/../../miniaudio",
+					"$(PROJECT_DIR)/../../libwebsockets/ios/include",
 				);
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;

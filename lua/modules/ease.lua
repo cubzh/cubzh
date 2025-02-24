@@ -24,9 +24,6 @@ local ease = {
 	c1 = 1.70158,
 	c3 = 1.70158 + 1.0,
 	c4 = (2 * math.pi) / 3,
-	isNumber = function(n)
-		return n ~= nil and (type(n) == "number" or type(n) == "integer")
-	end,
 }
 
 local rotation = Rotation()
@@ -52,10 +49,10 @@ ease._startIfNeeded = function(self)
 
 				for k, from in pairs(instance.from) do
 					to = instance.to[k]
-					if type(from) == "Rotation" then
+					if typeof(from) == "Rotation" then
 						p = rotation
 						p:Lerp(from, to, percent)
-					elseif type(from) == "Color" then
+					elseif typeof(from) == "Color" then
 						p = color
 						p:Lerp(from, to, percent)
 					else
@@ -114,33 +111,28 @@ ease._common = function(self, object, duration, config)
 			error("ease: can't ease to nil value")
 		end
 
-		local fieldType = type(t.object[k])
-		if
-			fieldType ~= type(v)
-			and not (
-				(fieldType == "number" and type(v) == "integer") or (fieldType == "integer" and type(v) == "number")
-			)
-		then
+		local fieldType = typeof(t.object[k])
+		if fieldType ~= typeof(v) then
 			if
 				fieldType == "Number3" -- see if value can be turned into Number3
-				and type(v) == "table"
+				and typeof(v) == "table"
 				and #v == 3
-				and ease.isNumber(v[1])
-				and ease.isNumber(v[2])
-				and ease.isNumber(v[3])
+				and type(v[1]) == "number"
+				and type(v[2]) == "number"
+				and type(v[3]) == "number"
 			then
 				v = Number3(v[1], v[2], v[3])
 			elseif
 				fieldType == "Rotation" -- see if value can be turned into Rotation
-				and type(v) == "table"
+				and typeof(v) == "table"
 				and #v == 3
-				and ease.isNumber(v[1])
-				and ease.isNumber(v[2])
-				and ease.isNumber(v[3])
+				and type(v[1]) == "number"
+				and type(v[2]) == "number"
+				and type(v[3]) == "number"
 			then
 				v = Rotation(v[1], v[2], v[3])
 			else
-				error("ease: can't ease from " .. fieldType .. " to " .. type(v))
+				error("ease: can't ease from " .. fieldType .. " to " .. typeof(v))
 			end
 		end
 
