@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Examples:
+#
+# ./build.sh -p macos
+# ./build.sh -p macos -v 0.661
+# ./build.sh -p macos -v 0.661 -s /Users/gaetan/src
+#
+
 # exit on error
 set -e
 
@@ -18,54 +25,67 @@ SCRIPT_PARENT_DIR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Parse flags and store them in variables
 platform=""
 version=""
-while getopts ":p:v:" opt; do
+src_override=""
+while getopts ":p:v:s:" opt; do
   case ${opt} in
     p ) platform=$OPTARG ;;
     v ) version=$OPTARG ;;
-    \? ) echo "Usage: $0 [-p platform] [-v version (optional)]" ;;
+    s ) src_override=$OPTARG ;;
+    \? ) echo "Usage: $0 [-p platform] [-v version (optional)] [-s src_override (optional)]" ;;
   esac
 done
 
-# Validate required parameters
+# Validate parameters
+
+# `platform` is required
 if [ -z "$platform" ]; then
-  echo "⚠️ Platform is not specified"
-  echo "Usage: $0 [-p platform] [-v version (optional)]"
+  echo "❌ Platform is not specified"
+  echo "Usage: $0 -p platform [-v version] [-s src_override]"
   exit 1
 fi
 
-# If version is "", get the latest version from the GitHub API
-if [ -z "$version" ]; then
-  echo -n "🔍 No version provided. Getting latest version from GitHub API..."
-  version=$(curl -s https://api.github.com/repos/luau-lang/luau/releases/latest | jq -r '.tag_name')
-  echo " ✅ [$version]"
-fi
-
-# if version is empty, exit
-if [ -z "$version" ]; then
-  echo "⚠️ Version is empty"
+# `version` and `src_override` are optional
+# but if -s is provided, then -v must also be provided
+if [ -n "$src_override" ] && [ -z "$version" ]; then
+  echo "❌ If src_override (-s) is provided, then version (-v) must also be provided"
+  echo "Usage: $0 -p platform [-v version] [-s src_override]"
   exit 1
 fi
 
-# Make sure the Luau source code is present
-
-DEPENDENCY_VERSION_PATH="${SCRIPT_PARENT_DIR_PATH}/${version}"
-SOURCE_CODE_PATH="${DEPENDENCY_VERSION_PATH}/src"
-
-# check presence of ./src directory
-if [ ! -d ${SOURCE_CODE_PATH} ]; then
-  echo "🔍 Luau source code looks to be missing. Downloading it..."
-  ${SCRIPT_PARENT_DIR_PATH}/download.sh -q -v ${version} -o ${DEPENDENCY_VERSION_PATH}
+# If src_override is empty, we check the version
+if [ -z "$src_override" ]; then
+  # If version is empty, set it to the latest version from the GitHub API
+  if [ -z "$version" ]; then
+    echo -n "🔍 No version provided. Getting latest version from GitHub API..."
+    version=$(curl -s https://api.github.com/repos/luau-lang/luau/releases/latest | jq -r '.tag_name')
+    echo " ✅ [$version]"
+  fi
 fi
 
-# check presence of *.cpp files in src directory or its subdirectories
-if [ -z "$(find ${SOURCE_CODE_PATH} -name '*.cpp')" ]; then
-  echo "🔍 Luau source code looks to be missing. Downloading it..."
-  ${SCRIPT_PARENT_DIR_PATH}/download.sh -q -v ${version} -o ${DEPENDENCY_VERSION_PATH}
+# If src_override is not provided, check whether the source code is present locally and download it if needed
+if [ -z "$src_override" ]; then
+  # Make sure the Luau source code is present
+  DEPENDENCY_VERSION_PATH="${SCRIPT_PARENT_DIR_PATH}/${version}"
+  SOURCE_CODE_PATH="${DEPENDENCY_VERSION_PATH}/src"
+
+  # check presence of ./src directory
+  if [ ! -d ${SOURCE_CODE_PATH} ]; then
+    echo "🔍 Luau source code looks to be missing. Downloading it..."
+    ${SCRIPT_PARENT_DIR_PATH}/download.sh -q -v ${version} -o ${DEPENDENCY_VERSION_PATH}
+  fi
+
+  # check presence of *.cpp files in src directory or its subdirectories
+  if [ -z "$(find ${SOURCE_CODE_PATH} -name '*.cpp')" ]; then
+    echo "🔍 Luau source code looks to be missing. Downloading it..."
+    ${SCRIPT_PARENT_DIR_PATH}/download.sh -q -v ${version} -o ${DEPENDENCY_VERSION_PATH}
+  fi
+else
+  # -s is provided
+  SOURCE_CODE_PATH="${src_override}"
 fi
 
-# --- Copy the source code to the current directory for bazel to find it ---
-
-cp -r ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
+# --- Create symlink to source code for bazel to find it ---
+ln -s ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
 
 # --- Build ---
 
@@ -169,7 +189,8 @@ done
 
 # --- Clean up ---
 
-rm -rf ${SCRIPT_PARENT_DIR_PATH}/src
+# Remove the symlink
+rm ${SCRIPT_PARENT_DIR_PATH}/src
 
 # --- The End ---
 
