@@ -33,8 +33,8 @@ typedef struct _LocalTransform {
 
 DoublyLinkedList *serialization_load_assets_v6(Stream *s,
                                                ColorAtlas *colorAtlas,
-                                               const AssetType filterMask,
-                                               const LoadShapeSettings *const settings);
+                                               const ASSET_MASK_T filter,
+                                               const ShapeSettings *const settings);
 
 /// Saves shape in file w/ optional palette
 bool serialization_v6_save_shape(Shape *shape,

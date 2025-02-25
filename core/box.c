@@ -413,9 +413,9 @@ void box_squarify(Box *b, SquarifyType squarify) {
 
 /// note: use this if there is no rotation, if both rotation & scale are involved, use box_to_aabox
 /// or the transform helper functions which are specific to what type of box should be produced,
-/// - transform_utils_box_to_aabb
-/// - transform_utils_box_to_static_collider
-/// - transform_utils_box_to_dynamic_collider
+/// - transform_utils_aabox_local_to_world
+/// - transform_utils_aabox_local_to_static_collider
+/// - transform_utils_aabox_local_to_dynamic_collider
 void box_to_aabox_no_rot(const Box *b,
                          Box *aab,
                          const float3 *translation,

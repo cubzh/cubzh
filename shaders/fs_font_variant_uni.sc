@@ -9,6 +9,7 @@
 // No multiple render target
 #define FONT_VARIANT_MRT_LIGHTING 0
 #define FONT_VARIANT_MRT_LINEAR_DEPTH 0
+#define FONT_VARIANT_MRT_PBR 0
 
 // Cutout
 #define FONT_VARIANT_CUTOUT 0
