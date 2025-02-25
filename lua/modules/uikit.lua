@@ -1244,13 +1244,31 @@ function createUI(system)
 		})
 	end
 
+	local frameLogsBadgeQuadData
+	ui.frameLogsBadge = function(self)
+		if self ~= ui then
+			error("ui:frameNotification(): use `:`", 2)
+		end
+		if frameLogsBadgeQuadData == nil then
+			frameLogsBadgeQuadData = Data:FromBundle("images/badge-white.png")
+		end
+		return ui.frame(self, {
+			image = {
+				data = frameLogsBadgeQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				alpha = true,
+			},
+		})
+	end
+
 	local frameNotificationBadgeQuadData
 	ui.frameNotificationBadge = function(self)
 		if self ~= ui then
 			error("ui:frameNotification(): use `:`", 2)
 		end
 		if frameNotificationBadgeQuadData == nil then
-			frameNotificationBadgeQuadData = Data:FromBundle("images/notification_badge.png")
+			frameNotificationBadgeQuadData = Data:FromBundle("images/badge-red.png")
 		end
 		return ui.frame(self, {
 			image = {
@@ -1668,6 +1686,7 @@ function createUI(system)
 			config = conf:merge(defaultConfig, config, {
 				acceptTypes = {
 					size = { "number", "string" },
+					weight = { "string" },
 				},
 			})
 		end)
@@ -1726,7 +1745,7 @@ function createUI(system)
 		end
 
 		t.Format = {
-			weight = config.bold and "bold" or "regular",
+			weight = config.weight ~= nil and config.weight or (config.bold and "bold" or "regular"),
 			slant = config.italic and "italic" or "regular",
 			alignment = config.alignment,
 		}
