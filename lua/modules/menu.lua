@@ -29,12 +29,12 @@ BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
 BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
 ALERT_BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
 ALERT_BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
-CHAT_SCREEN_WIDTH_RATIO = 0.3
+CHAT_SCREEN_WIDTH_RATIO = 0.4
 CHAT_MAX_WIDTH = 600
-CHAT_MIN_WIDTH = 250
-CHAT_SCREEN_HEIGHT_RATIO = 0.25
+CHAT_MIN_WIDTH = 200
+CHAT_SCREEN_HEIGHT_RATIO = 0.33
 CHAT_MIN_HEIGHT = 160
-CHAT_MAX_HEIGHT = 400
+CHAT_MAX_HEIGHT = 500
 CONNECTION_RETRY_DELAY = 5.0 -- in seconds
 PADDING = theme.padding
 PADDING_BIG = 9
@@ -1141,11 +1141,103 @@ chatIcon = ui:frame({ image = {
 chatIcon.Width = 50
 chatIcon.Height = 50
 chatIcon:setParent(chatBtn)
+
+chatIconSelected = ui:frame({ image = {
+	data = Data:FromBundle("images/icon-chat-selected.png"),
+	alpha = true,
+} })
+chatIconSelected.Width = 50
+chatIconSelected.Height = 50
+chatIconSelected:setParent(chatBtn)
+chatIconSelected:hide()
+
 chatIcon.parentDidResize = function(self)
 	local parent = self.parent
 	self.Height = parent.Height - PADDING * 2
 	self.Width = self.Height
 	self.pos = { PADDING, PADDING }
+
+	chatIconSelected.Height = parent.Height - PADDING * 2
+	chatIconSelected.Width = self.Height
+	chatIconSelected.pos = { PADDING, PADDING }
+end
+
+chatBadge = nil
+
+function updateChatBadge(nbLogs, errorLogs, warningLogs)
+	local totalLogs = nbLogs + errorLogs + warningLogs
+	if totalLogs == 0 then
+		removeChatBadge()
+		return
+	end
+	if chatBadge ~= nil then
+		chatBadge:setCount(totalLogs)
+		return
+	end
+
+	chatBadge = require("notifications"):createBadge({
+		count = totalLogs,
+		ui = ui,
+		height = chatIcon.Height * 0.6,
+		padding = 3,
+		vPadding = 0,
+	})
+	chatBadge.internalParentDidResize = chatBadge.parentDidResize
+	chatBadge.parentDidResize = function(self)
+		self:internalParentDidResize()
+		self.pos.X = self.parent.Width * 0.75
+		self.pos.Y = self.parent.Height * 0.33
+	end
+	chatBadge:setParent(chatIcon)
+end
+
+function removeChatBadge()
+	if chatBadge ~= nil then
+		chatBadge:remove()
+		chatBadge = nil
+	end
+end
+
+local unreadLogs = 0
+local unreadErrorLogs = 0
+local unreadWarningLogs = 0
+local logCountRefreshTimer
+updateChatBadge(unreadLogs, unreadErrorLogs, unreadWarningLogs)
+LocalEvent:Listen(LocalEvent.Name.Log, function(log)
+	if chatDisplayed then
+		return
+	end
+	unreadLogs += 1
+	if logCountRefreshTimer ~= nil then
+		return
+	end
+	logCountRefreshTimer = Timer(0.1, function()
+		logCountRefreshTimer = nil
+		updateChatBadge(unreadLogs, unreadErrorLogs, unreadWarningLogs)
+	end)
+end)
+
+function resetLogCount()
+	unreadLogs = 0
+	unreadErrorLogs = 0
+	unreadWarningLogs = 0
+	updateChatBadge(unreadLogs, unreadErrorLogs, unreadWarningLogs)
+end
+
+-- displayes chat as expected based on state
+function refreshChat()
+	if chatDisplayed and cppMenuIsActive == false then
+		if activeModal then
+			removeChat()
+		else
+			if chat == nil then
+				resetLogCount()
+			end
+			createChat()
+		end
+	else
+		removeChat()
+	end
 end
 
 cubzhBtn.onPress = topBarBtnPress
@@ -1199,19 +1291,29 @@ end
 
 -- CHAT
 
+local chatBackgroundData
 function createChat()
 	if chat ~= nil then
 		return -- chat already created
 	end
-	chat = ui:createFrame(Color(0, 0, 0, 0.3))
-	chat:setParent(background)
 
-	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small", unfocuses = false })
-	btnChatFullscreen.onRelease = function()
-		showModal(MODAL_KEYS.CHAT)
+	chatIcon:hide()
+	chatIconSelected:show()
+
+	if chatBackgroundData == nil then
+		chatBackgroundData = Data:FromBundle("images/chat-background.png")
 	end
-	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
-	btnChatFullscreen:hide()
+	chat = ui:frame({
+		image = {
+			data = chatBackgroundData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = 1.0,
+			alpha = true,
+		},
+	})
+
+	-- chat = ui:createFrame(Color(0, 0, 0, 0.8))
+	chat:setParent(background)
 
 	console = require("chat"):create({
 		uikit = ui,
@@ -1219,25 +1321,12 @@ function createChat()
 		onSubmitEmpty = function()
 			hideChat()
 		end,
-		onFocus = function()
-			if chat == nil then
-				return
-			end
-			chat.Color = Color(0, 0, 0, 0.5)
-			btnChatFullscreen:show()
-		end,
-		onFocusLost = function()
-			if chat == nil then
-				return
-			end
-			chat.Color = Color(0, 0, 0, 0.3)
-			btnChatFullscreen:hide()
-		end,
+		onFocus = function() end,
+		onFocusLost = function() end,
 	})
 	console.Width = 200
 	console.Height = 500
 	console:setParent(chat)
-	btnChatFullscreen:setParent(chat)
 
 	chat.parentDidResize = function()
 		local w = Screen.Width * CHAT_SCREEN_WIDTH_RATIO
@@ -1255,8 +1344,6 @@ function createChat()
 
 		console.pos = { theme.paddingTiny, theme.paddingTiny }
 		chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
-
-		btnChatFullscreen.pos = { chat.Width + theme.paddingTiny, chat.Height - btnChatFullscreen.Height }
 	end
 	chat:parentDidResize()
 end
@@ -1268,21 +1355,9 @@ function removeChat()
 	local c = chat
 	chat = nil
 	console = nil
-	btnChatFullscreen = nil
 	c:remove()
-end
-
--- displayes chat as expected based on state
-function refreshChat()
-	if chatDisplayed and cppMenuIsActive == false then
-		if activeModal then
-			removeChat()
-		else
-			createChat()
-		end
-	else
-		removeChat()
-	end
+	chatIcon:show()
+	chatIconSelected:hide()
 end
 
 function showChat(input)
