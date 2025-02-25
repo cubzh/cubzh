@@ -71,5 +71,9 @@ const std::string& vx::device::getScreenAllowedOrientation() {
 }
 
 std::string vx::device::appBuildTarget() {
+#if defined(__VX_APP_BUILD_TARGET)
     return __VX_APP_BUILD_TARGET;
+#else
+#error __VX_APP_BUILD_TARGET is not defined
+#endif
 }
