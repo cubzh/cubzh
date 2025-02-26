@@ -45,6 +45,7 @@ CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
 -- VARS
 
+minified = not System.IsHomeAppRunning
 wasActive = nil
 modalWasShown = false
 alertWasShown = false
@@ -151,6 +152,8 @@ function closeModal()
 	if activeModal ~= nil then
 		activeModal:close()
 		activeModal = nil
+		activeModalKey = nil
+		refreshButtons()
 	end
 end
 
@@ -290,6 +293,7 @@ function showModal(key, config)
 			activeModal = nil
 			activeModalKey = nil
 			refreshChat()
+			refreshButtons()
 			triggerCallbacks()
 		end
 
@@ -297,6 +301,7 @@ function showModal(key, config)
 	end
 
 	refreshChat()
+	refreshButtons()
 	triggerCallbacks()
 
 	return modal, content
@@ -465,7 +470,53 @@ function refreshDisplay()
 			chatBtn:hide()
 		end
 
-		pezhBtn:show()
+		if not minified then
+			pezhBtn:show()
+		end
+	end
+end
+
+function refreshButtons()
+	if activeModalKey == nil then
+		if chat ~= nil then
+			chatIcon:hide()
+			chatIconSelected:show()
+		else
+			chatIcon:show()
+			chatIconSelected:hide()
+		end
+	else
+		if activeModalKey == MODAL_KEYS.CHAT then
+			chatIcon:hide()
+			chatIconSelected:show()
+		else
+			chatIcon:show()
+			chatIconSelected:hide()
+		end
+	end
+
+	if activeModalKey == MODAL_KEYS.NOTIFICATIONS then
+		notificationsIcon:hide()
+		notificationsIconSelected:show()
+	else
+		notificationsIcon:show()
+		notificationsIconSelected:hide()
+	end
+
+	if activeModalKey == MODAL_KEYS.SETTINGS then
+		if cubzhBtn.iconSelected then
+			cubzhBtn.icon:hide()
+			cubzhBtn.iconSelected:show()
+		end
+	else
+		if cubzhBtn.iconSelected then
+			cubzhBtn.icon:show()
+			cubzhBtn.iconSelected:hide()
+		end
+	end
+
+	if activeModalKey == MODAL_KEYS.CUBZH_MENU then
+		-- TODO
 	end
 end
 
@@ -506,7 +557,21 @@ settingsBtn.onRelease = function()
 	end
 end
 
-settingsIcon = ui:createText("⚙️", Color.White, "big")
+local tmp = ui:createText("⚙️", Color.White, "big")
+local size = math.max(tmp.Width, tmp.Height)
+tmp:remove()
+
+local settingsIcon = ui:frame({ image = {
+	data = Data:FromBundle("images/icon-settings.png"),
+	alpha = true,
+} })
+settingsIcon.Width = size
+settingsIcon.Height = size
+settingsIcon:setParent(settingsBtn)
+-- settingsIcon.parentDidResize = btnContentParentDidResize
+-- cubzhBtn.icon = settingsIcon
+
+-- settingsIcon = ui:createText("⚙️", Color.White, "big")
 settingsIcon:setParent(settingsBtn)
 
 settingsBtn.getMinSize = function(_)
@@ -956,7 +1021,16 @@ end
 
 -- TOP BAR
 
-topBar = ui:createFrame(Color(0, 0, 0, 0.7))
+topBar = ui:frame({
+	image = {
+		data = Data:FromBundle("images/menu-background.png"),
+		slice9 = { 0.5, 0.5 },
+		slice9Scale = 1.0,
+		alpha = true,
+	},
+})
+
+-- menu-background.png
 topBar:setParent(background)
 topBar:hide()
 
@@ -1018,15 +1092,29 @@ if System.IsHomeAppRunning then
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)
 	settingsIcon.parentDidResize = btnContentParentDidResize
+	cubzhBtn.icon = settingsIcon
+
+	local settingsIconSelected =
+		ui:frame({ image = {
+			data = Data:FromBundle("images/icon-settings-selected.png"),
+			alpha = true,
+		} })
+	settingsIconSelected.Width = 50
+	settingsIconSelected.Height = 50
+	settingsIconSelected:setParent(cubzhBtn)
+	settingsIconSelected.parentDidResize = btnContentParentDidResize
+	settingsIconSelected:hide()
+	cubzhBtn.iconSelected = settingsIconSelected
 else
-	local homeIcon = ui:frame({ image = {
+	local exitIcon = ui:frame({ image = {
 		data = Data:FromBundle("images/icon-exit.png"),
 		alpha = true,
 	} })
-	homeIcon.Width = 50
-	homeIcon.Height = 50
-	homeIcon:setParent(cubzhBtn)
-	homeIcon.parentDidResize = btnContentParentDidResize
+	exitIcon.Width = 50
+	exitIcon.Height = 50
+	exitIcon:setParent(cubzhBtn)
+	exitIcon.parentDidResize = btnContentParentDidResize
+	cubzhBtn.icon = exitIcon
 end
 
 -- CONNECTIVITY BTN
@@ -1130,8 +1218,57 @@ function connectionIndicatorStartAnimation()
 	end
 end
 
-chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+-- NOTIFICATIONS
 
+notificationsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+notificationsBtn:setParent(topBar)
+if minified then
+	notificationsBtn:hide()
+end
+
+notificationsIcon = ui:frame({
+	image = {
+		data = Data:FromBundle("images/icon-bell.png"),
+		alpha = true,
+	},
+})
+notificationsIcon.Width = 50
+notificationsIcon.Height = 50
+notificationsIcon:setParent(notificationsBtn)
+
+notificationsIconSelected =
+	ui:frame({ image = {
+		data = Data:FromBundle("images/icon-bell-selected.png"),
+		alpha = true,
+	} })
+notificationsIconSelected.Width = 50
+notificationsIconSelected.Height = 50
+notificationsIconSelected:setParent(notificationsBtn)
+notificationsIconSelected:hide()
+
+notificationsIcon.parentDidResize = function(self)
+	local parent = self.parent
+	self.Height = parent.Height - PADDING * 2
+	self.Width = self.Height
+	self.pos = { PADDING, PADDING }
+
+	notificationsIconSelected.Height = parent.Height - PADDING * 2
+	notificationsIconSelected.Width = self.Height
+	notificationsIconSelected.pos = { PADDING, PADDING }
+end
+
+notificationsBtn.onPress = topBarBtnPress
+notificationsBtn.onCancel = topBarBtnRelease
+notificationsBtn.onRelease = function(self)
+	topBarBtnRelease(self)
+	showModal(MODAL_KEYS.NOTIFICATIONS)
+	menu:sendHomeDebugEvent("User presses NOTIFICATIONS button")
+	-- menu:ShowNotifications()
+end
+
+-- CHAT
+
+chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 chatBtn:setParent(topBar)
 
 chatIcon = ui:frame({ image = {
@@ -1261,6 +1398,7 @@ chatBtn.onRelease = function(self)
 		chatDisplayed = not chatDisplayed
 		refreshChat()
 	end
+	refreshButtons()
 end
 
 -- hide chat button by default
@@ -1289,6 +1427,11 @@ pezhBtn.onRelease = function(self)
 	sfx("coin_1", { Volume = 0.75, Pitch = 1.0, Spatialized = false })
 end
 
+if minified then
+	pezhBtn:hide()
+	pezhShape:setParent(nil)
+end
+
 -- CHAT
 
 local chatBackgroundData
@@ -1296,9 +1439,6 @@ function createChat()
 	if chat ~= nil then
 		return -- chat already created
 	end
-
-	chatIcon:hide()
-	chatIconSelected:show()
 
 	if chatBackgroundData == nil then
 		chatBackgroundData = Data:FromBundle("images/chat-background.png")
@@ -1320,6 +1460,7 @@ function createChat()
 		time = false,
 		onSubmitEmpty = function()
 			hideChat()
+			refreshButtons()
 		end,
 		onFocus = function() end,
 		onFocusLost = function() end,
@@ -1343,7 +1484,7 @@ function createChat()
 		console.Height = chat.Height - theme.paddingTiny * 2
 
 		console.pos = { theme.paddingTiny, theme.paddingTiny }
-		chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
+		chat.pos = { theme.padding, topBar.pos.Y - chat.Height - PADDING }
 	end
 	chat:parentDidResize()
 end
@@ -1356,8 +1497,6 @@ function removeChat()
 	chat = nil
 	console = nil
 	c:remove()
-	chatIcon:show()
-	chatIconSelected:hide()
 end
 
 function showChat(input)
@@ -1576,38 +1715,62 @@ end
 topBar.parentDidResize = function(self)
 	local height = TOP_BAR_HEIGHT
 
+	self.Height = height
+	self.pos = {
+		Screen.SafeArea.Left + PADDING,
+		Screen.Height - System.SafeAreaTop - self.Height - PADDING,
+	}
+
+	local width = cubzhBtn.Width
+
+	cubzhBtn.pos = { 0, 0 }
+
+	-- SETTINGS / EXPERIENCE EXIT
+
 	cubzhBtn.Height = height
 	cubzhBtn.Width = height
-
-	connBtn.Height = height
-	connBtn.Width = height
-
-	self.Width = Screen.Width
-	if self:isVisible() then
-		self.Height = System.SafeAreaTop + height
-	else
-		self.Height = System.SafeAreaTop
-	end
-	self.pos.Y = Screen.Height - self.Height
-
-	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width
-	connBtn.pos.X = cubzhBtn.pos.X - connBtn.Width
+	local previousBtn = cubzhBtn
 
 	-- PEZH BUTTON
 
-	pezhBtn.Height = height
-	pezhBtn.Width = height
+	if pezhBtn:isVisible() then
+		pezhBtn.Height = height
+		pezhBtn.Width = height
+		pezhBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = pezhBtn
+		width += pezhBtn.Width
+	end
+
+	-- NOTIFICATIONS BUTTON
+
+	if notificationsBtn:isVisible() then
+		notificationsBtn.Height = height
+		notificationsBtn.Width = height
+		notificationsBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = notificationsBtn
+		width += notificationsBtn.Width
+	end
+
+	-- CONNECTION BUTTON
 
 	if connBtn:isVisible() then
-		pezhBtn.pos.X = connBtn.pos.X - pezhBtn.Width
-	else
-		pezhBtn.pos.X = cubzhBtn.pos.X - pezhBtn.Width
+		connBtn.Height = height
+		connBtn.Width = height
+		connBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = connBtn
+		width += connBtn.Width
 	end
 
 	-- CHAT BUTTON
 
-	chatBtn.Height = height
-	chatBtn.Width = height
+	if chatBtn:isVisible() then
+		chatBtn.Height = height
+		chatBtn.Width = height
+		chatBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		width += chatBtn.Width
+	end
+
+	self.Width = width
 end
 topBar:parentDidResize()
 
@@ -2012,6 +2175,10 @@ local mt = {
 	__index = function(_, k)
 		if k == "Height" then
 			return topBar.Height
+		elseif k == "Width" then
+			return topBar.Width
+		elseif k == "Position" then
+			return Number2(topBar.pos.X, topBar.pos.Y)
 		end
 	end,
 	__newindex = function()
@@ -2094,6 +2261,7 @@ LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	refreshDisplay()
 	triggerCallbacks()
 	refreshChat()
+	refreshButtons()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionSuccess, function()
