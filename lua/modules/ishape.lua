@@ -171,15 +171,15 @@ index.create = function(shape, config)
 	-- Checking config
 	local _config = {}
 	_config.callback = type(config.callback) == "function" and config.callback or nil
-	_config.callbackTriggerDistance = type(config.callbackTriggerDistance) == "integer"
+	_config.callbackTriggerDistance = type(config.callbackTriggerDistance) == "number"
 			and config.callbackTriggerDistance
 		or nil
 	_config.bubbleText = type(config.bubbleText) == "string" and config.bubbleText or nil
-	_config.bubbleTriggerDistance = type(config.bubbleTriggerDistance) == "integer" and config.bubbleTriggerDistance
+	_config.bubbleTriggerDistance = type(config.bubbleTriggerDistance) == "number" and config.bubbleTriggerDistance
 		or nil
 	_config.buttonText = type(config.buttonText) == "string" and config.buttonText or nil
 	_config.buttonCallback = type(config.buttonCallback) == "function" and config.buttonCallback or nil
-	_config.buttonTriggerDistance = type(config.buttonTriggerDistance) == "integer" and config.buttonTriggerDistance
+	_config.buttonTriggerDistance = type(config.buttonTriggerDistance) == "number" and config.buttonTriggerDistance
 		or nil
 	_config.position = type(config.position) == "Number3" and config.position or nil
 	_config.rotation = type(config.rotation) == "Number3" and config.rotation or nil
@@ -244,7 +244,7 @@ index.create = function(shape, config)
 		if self ~= _shape then
 			error("iShape:setCallbackTriggerDistance should be called with `:`", 2)
 		end
-		if type(distance) ~= "number" and type(distance) ~= "integer" then
+		if type(distance) ~= "number" then
 			error("Parameter is not a number", 2)
 		end
 		if self.triggerCallbackArea then
@@ -260,7 +260,7 @@ index.create = function(shape, config)
 		if self ~= _shape then
 			error("iShape:setBubbleTriggerDistance should be called with `:`", 2)
 		end
-		if type(distance) ~= "number" and type(distance) ~= "integer" then
+		if type(distance) ~= "number" then
 			error("Parameter is not a number", 2)
 		end
 		if self.triggerBubbleArea then
@@ -276,7 +276,7 @@ index.create = function(shape, config)
 		if self ~= _shape then
 			error("iShape:setButtonTriggerDistance should be called with `:`", 2)
 		end
-		if type(distance) ~= "number" and type(distance) ~= "integer" then
+		if type(distance) ~= "number" then
 			error("Parameter is not a number", 2)
 		end
 		if self.triggerButtonArea then
