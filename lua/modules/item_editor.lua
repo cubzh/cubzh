@@ -123,7 +123,7 @@ local playerHideSubshapes = function(isHidden)
 end
 
 local playerUpdateVisibility = function(p_isWearable, p_wearablePreviewMode)
-	if type(p_isWearable) ~= "boolean" or type(p_wearablePreviewMode) ~= "integer" then
+	if type(p_isWearable) ~= "boolean" or type(p_wearablePreviewMode) ~= "number" then
 		error("wrong arguments")
 	end
 
