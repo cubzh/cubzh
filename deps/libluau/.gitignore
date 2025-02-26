@@ -1,5 +1,9 @@
 # Ignore directories matching pattern like 0.660
 [0-9].[0-9][0-9][0-9]/
+head/
 
 # Ignore ./src directory (which exists only during build)
 src/
+
+# Ignore symlink to active libluau
+_active_

@@ -32,7 +32,7 @@ func DownloadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, d
 	}
 
 	// Destination directory path
-	destinationDirPath := filepath.Join(depsDirPath, constructDepArtifactsPathNew(depName, version, platform))
+	destinationDirPath := filepath.Join(depsDirPath, constructDepArtifactsPath(depName, version, platform))
 
 	// If the destination directory exists, and --force is not set, prints a message and exits
 	if _, err := os.Stat(destinationDirPath); err == nil {
