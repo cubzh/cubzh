@@ -8,6 +8,7 @@ mod.createBadge = function(_, config)
 		height = 0, -- forces badge height if not 0
 		padding = 6, -- left and right padding
 		vPadding = 0,
+		type = "notifications", -- "notifications" or "logs"
 	}
 
 	ok, err = pcall(function()
@@ -19,8 +20,16 @@ mod.createBadge = function(_, config)
 
 	local ui = config.ui
 
-	local badge = ui:frameLogsBadge()
-	local badgeLabel = ui:createText("", { font = Font.Noto, size = "small", color = Color.Black })
+	local badge
+	local textColor
+	if config.type == "logs" then
+		badge = ui:frameLogsBadge()
+		textColor = Color.Black
+	else
+		badge = ui:frameNotificationsBadge()
+		textColor = Color.White
+	end
+	local badgeLabel = ui:createText("", { font = Font.Noto, size = "small", color = textColor })
 	badgeLabel:setParent(badge)
 	badge.parentDidResize = function(self)
 		local parent = self.parent

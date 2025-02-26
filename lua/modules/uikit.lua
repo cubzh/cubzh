@@ -1263,7 +1263,7 @@ function createUI(system)
 	end
 
 	local frameNotificationBadgeQuadData
-	ui.frameNotificationBadge = function(self)
+	ui.frameNotificationsBadge = function(self)
 		if self ~= ui then
 			error("ui:frameNotification(): use `:`", 2)
 		end

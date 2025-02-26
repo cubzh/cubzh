@@ -1257,13 +1257,56 @@ notificationsIcon.parentDidResize = function(self)
 	notificationsIconSelected.pos = { PADDING, PADDING }
 end
 
+local badge = require("notifications"):createBadge({
+	count = 0,
+	ui = ui,
+	type = "notifications",
+	height = 16,
+	padding = 3,
+	vPadding = 0,
+})
+
+badge.internalParentDidResize = badge.parentDidResize
+badge.parentDidResize = function(self)
+	self:internalParentDidResize()
+	self.pos.X = self.parent.Width * 0.70 - self.Width * 0.5
+	self.pos.Y = self.parent.Height * 0.70 - self.Height * 0.5
+end
+
+badge:setParent(notificationsBtn)
+
+local function refreshBellCount()
+	if notificationsReq ~= nil then
+		notificationsReq:Cancel()
+	end
+	notificationsReq = require("user"):getUnreadNotificationCount({
+		callback = function(count, err)
+			notificationsReq = nil
+			if err ~= nil then
+				return
+			end
+			badge:setCount(count)
+		end,
+	})
+end
+
+if notificationCountListeners == nil then
+	notificationCountListeners = {}
+	local l = LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshBellCount)
+	table.insert(notificationCountListeners, l)
+	l = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, refreshBellCount)
+	table.insert(notificationCountListeners, l)
+end
+
+refreshBellCount()
+
 notificationsBtn.onPress = topBarBtnPress
 notificationsBtn.onCancel = topBarBtnRelease
 notificationsBtn.onRelease = function(self)
 	topBarBtnRelease(self)
 	showModal(MODAL_KEYS.NOTIFICATIONS)
 	menu:sendHomeDebugEvent("User presses NOTIFICATIONS button")
-	-- menu:ShowNotifications()
+	badge:setCount(0)
 end
 
 -- CHAT
@@ -1315,17 +1358,18 @@ function updateChatBadge(nbLogs, errorLogs, warningLogs)
 	chatBadge = require("notifications"):createBadge({
 		count = totalLogs,
 		ui = ui,
-		height = chatIcon.Height * 0.6,
+		type = "logs",
+		height = 16,
 		padding = 3,
 		vPadding = 0,
 	})
 	chatBadge.internalParentDidResize = chatBadge.parentDidResize
 	chatBadge.parentDidResize = function(self)
 		self:internalParentDidResize()
-		self.pos.X = self.parent.Width * 0.75
-		self.pos.Y = self.parent.Height * 0.33
+		self.pos.X = math.max(self.parent.Width * 0.5, self.parent.Width * 0.70 - self.Width * 0.5)
+		self.pos.Y = self.parent.Height * 0.70 - self.Height * 0.5
 	end
-	chatBadge:setParent(chatIcon)
+	chatBadge:setParent(chatBtn)
 end
 
 function removeChatBadge()
