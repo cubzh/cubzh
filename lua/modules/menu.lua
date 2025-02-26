@@ -134,7 +134,7 @@ function maxModalWidth()
 end
 
 function maxModalHeight()
-	local availableHeight = Screen.Height - Screen.SafeArea.Bottom - topBar.Height
+	local availableHeight = topBar.Position.Y - Screen.SafeArea.Bottom
 	local minusFixedMargin = availableHeight - MODAL_MARGIN * 2
 	local percentage = availableHeight * 0.9
 	local max = 700
@@ -143,7 +143,7 @@ end
 
 function updateModalPosition(modal)
 	local vMin = Screen.SafeArea.Bottom + MODAL_MARGIN
-	local vMax = Screen.Height - topBar.Height - MODAL_MARGIN
+	local vMax = topBar.Position.Y - MODAL_MARGIN
 	local vCenter = vMin + (vMax - vMin) * 0.5
 	modal.pos = { Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5 }
 end
