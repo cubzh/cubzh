@@ -464,12 +464,12 @@ itemGrid.create = function(_, config)
 											return
 										end
 
-										if cell.object == nil then 
-											-- should not happen... but in fact it does. 
+										if cell.object == nil then
+											-- should not happen... but in fact it does.
 											-- request should be cancelled when cell is removed,
 											-- so the callback should not be triggered.
 											-- Let's debug this... but in the meantime, let's early return to avoid error.
-											return 
+											return
 										end
 
 										local thumbnail = ui:frame({ image = img })

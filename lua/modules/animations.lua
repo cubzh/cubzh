@@ -122,7 +122,7 @@ animationsMT.__newindex = function(t, k, v)
 	end
 
 	if v ~= nil and typeof(v) ~= "Animation" then
-	        error("Animations." .. k .. " should be of type Animation", 2)
+		error("Animations." .. k .. " should be of type Animation", 2)
 	end
 
 	-- TODO: REMOVE CALLBACKS

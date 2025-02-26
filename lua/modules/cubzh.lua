@@ -569,7 +569,7 @@ function titleScreen()
 		didResizeListener:Remove()
 		didResizeFunction = nil
 
-        root:Destroy()
+		root:Destroy()
 		root = nil
 	end
 
@@ -1316,8 +1316,10 @@ function home()
 		end
 
 		local function worldCellResizeFn(self)
-			if self.parent.Height == nil then return end
-			
+			if self.parent.Height == nil then
+				return
+			end
+
 			self.Height = self.parent.Height
 
 			if self.shape then

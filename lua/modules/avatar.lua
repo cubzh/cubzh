@@ -1243,9 +1243,9 @@ function avatar_update_config(self, config)
 
 			local eyeBlinks = {}
 			eyeBlinks.close = function()
-				if eyeLidRight.IsDestroyed then 
+				if eyeLidRight.IsDestroyed then
 					eyeBlinks = nil
-					return 
+					return
 				end
 				-- removing eyelids when head loses its parent
 				-- not ideal, but no easy way currently to detect when the avatar is destroyed
@@ -1262,9 +1262,9 @@ function avatar_update_config(self, config)
 				fields.eyeBlinksTimer = Timer(0.1, eyeBlinks.open)
 			end
 			eyeBlinks.open = function()
-				if eyeLidRight.IsDestroyed then 
+				if eyeLidRight.IsDestroyed then
 					eyeBlinks = nil
-					return 
+					return
 				end
 
 				eyeLidRight.Scale.Y = 0
