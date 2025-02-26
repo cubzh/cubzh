@@ -259,22 +259,9 @@ gizmo.create = function(_, config)
 		onScale = function() end,
 	}
 
-	local function sameType(a, b)
-		if type(a) == type(b) then
-			return true
-		end
-		if type(a) == "number" and type(b) == "integer" then
-			return true
-		end
-		if type(a) == "integer" and type(b) == "number" then
-			return true
-		end
-		return false
-	end
-
 	if config ~= nil then
 		for k, v in pairs(_config) do
-			if sameType(v, config[k]) then
+			if type(v) == type(config[k]) then
 				_config[k] = config[k]
 			end
 		end
