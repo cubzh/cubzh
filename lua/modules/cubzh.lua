@@ -11,7 +11,7 @@ local CONFIG = {
 	TINY_PADDING = 2,
 	CELL_PADDING = 5,
 	LOAD_CONTENT_DELAY = 0.3,
-	AVATAR_DEFAULT_YAW = math.rad(-190),
+	AVATAR_DEFAULT_YAW = math.rad(-170),
 	AVATAR_DEFAULT_PITCH = 0,
 	TINY_FONT_SCALE = 0.8,
 }
@@ -192,16 +192,17 @@ Client.OnStart = function()
 		avatarCameraState.avatarCameraFollowHomeScroll = avatarCameraFollowHomeScroll
 		avatarCameraState.avatarCameraX = avatarCameraX
 
-		local targetX = 0
+		local targetX = Screen.Width - w
 		local targetY = 0
+
+		Camera.TargetX = targetX
+		Camera.TargetY = targetY
 
 		if config.noAnimation then
 			Camera.TargetHeight = h
 			Camera.TargetWidth = w
 			Camera.Height = h
 			Camera.Width = w
-			Camera.TargetX = targetX
-			Camera.TargetY = targetY
 			Camera.Position:Set(p)
 			return
 		end
@@ -216,8 +217,6 @@ Client.OnStart = function()
 		anim.TargetWidth = w
 		anim.Height = h
 		anim.Width = w
-		anim.TargetX = targetX
-		anim.TargetY = targetY
 		anim.Position = p
 	end
 
@@ -2252,17 +2251,9 @@ function home()
 						end
 						visitHouseBtn:setParent(profileCell)
 
-						local bell = ui:frame({
-							image = {
-								data = Data:FromBundle("images/icon-bell.png"),
-								alpha = true,
-							},
-						})
-						bell.Width = 32
-						bell.Height = 36
-
+						-- TODO: move bell badge to menu module
 						local badge = require("notifications"):createBadge({ count = 0 })
-						badge:setParent(bell)
+						badge:setParent(nil)
 
 						local function refreshBellCount()
 							if notificationsReq ~= nil then
@@ -2288,17 +2279,6 @@ function home()
 						end
 
 						refreshBellCount()
-
-						bell.onPress = function()
-							Client:HapticFeedback()
-						end
-
-						bell.onRelease = function()
-							Menu:sendHomeDebugEvent("User presses NOTIFICATIONS button")
-							Menu:ShowNotifications()
-						end
-
-						bell:setParent(profileCell)
 
 						profileCell.parentDidResize = function(self)
 							self.Width = self.parent.Width
@@ -2326,19 +2306,16 @@ function home()
 							avatarTransparentFrame.Width = avatarWidth + padding * 2 -- occupy a bit more space for easier drag inputs
 							avatarTransparentFrame.Height = self.Height
 
-							local totalWidth = infoWidth + avatarWidth + padding
-
 							local y = self.Height * 0.5 + infoHeight * 0.5 - usernameHeight
-							local x = 0
 
-							avatarTransparentFrame.pos.X = x - padding * 2
-
-							x = x + avatarWidth + padding
+							avatarTransparentFrame.pos.X = Screen.Width - avatarTransparentFrame.Width - padding
+							local x = avatarTransparentFrame.pos.X - infoWidth
 
 							local previousAvatarCameraX = avatarCameraX
 							avatarCameraX = padding + avatarWidth * 0.5
 
-							usernameFrame.pos = { x, y + usernameHeight * 0.5 - usernameFrame.Height * 0.5 }
+							usernameFrame.pos = { x + infoWidth - usernameFrame.Width, y + usernameHeight * 0.5 - usernameFrame.Height * 0.5 }
+
 							if editUsernameBtn then
 								editUsernameBtn.pos = {
 									usernameFrame.pos.X + usernameFrame.Width + padding,
@@ -2354,11 +2331,6 @@ function home()
 							if previousAvatarCameraX ~= avatarCameraX then
 								layoutCamera()
 							end
-
-							bell.pos = {
-								self.Width - bell.Width - padding,
-								self.Height - bell.Height - padding,
-							}
 						end
 					end
 					return profileCell

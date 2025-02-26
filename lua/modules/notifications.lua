@@ -378,6 +378,9 @@ mod.createModalContent = function(_, config)
 				end
 				loadedNotifications = notifications
 				nbLoadedNotifications = #notifications
+				if type(scroll.flush) ~= "function" then
+					return
+				end
 				scroll:flush()
 				scroll:refresh()
 
