@@ -43,7 +43,8 @@ func UploadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, dep
 
 	// Try to upload each path
 	for _, depPath := range depsPathsToUpload {
-		depPath = filepath.Join("..", "..", depPath)
+		depPath = filepath.Join(depsDirPath, depPath)
+
 		// Make sure the dependency name exists
 		if _, err := os.Stat(depPath); os.IsNotExist(err) {
 			fmt.Printf("-> Path does not exist. Skipping. %s\n", depPath)
