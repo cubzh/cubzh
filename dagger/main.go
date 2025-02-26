@@ -145,3 +145,50 @@ func (m *Cubzh) LintModules(
 	fmt.Println("[🐞] NOT IMPLEMENTED YET")
 	return nil
 }
+
+// Performs code formatting on Luau modules
+// Command:
+// dagger call luau-modules-check-format --src=.
+func (m *Cubzh) LuauModulesCheckFormat(
+	// +ignore=["*", "!lua/modules"]
+	src *dagger.Directory,
+) *dagger.Container {
+
+	// Get /cubzh/lua/modules directory
+	modules := src.Directory("lua/modules")
+
+	// TODO: gdevillele:
+	// - docker image johnnymorganz/stylua:2.0.2 is not available for ARM
+	// - make it work for ARM and open a PR on the OSS repo
+
+	return dag.
+		Container(dagger.ContainerOpts{Platform: "linux/amd64"}).
+		From("johnnymorganz/stylua:2.0.2").
+		WithMountedDirectory("/lua/modules", modules).
+		WithWorkdir("/lua/modules").
+		WithExec([]string{"/stylua", "--check", "."})
+}
+
+// TODO: gdevillele:
+// I need to find a way to apply the formatting to the source code on the host machine
+//
+// // Performs code formatting on Luau modules
+// func (m *Cubzh) LuauModulesApplyFormat(
+// 	// +ignore=["*", "!lua/modules"]
+// 	src *dagger.Directory,
+// ) *dagger.Container {
+
+// 	// Get /cubzh/lua/modules directory
+// 	modules := src.Directory("lua/modules")
+
+// 	// TODO: gdevillele:
+// 	// - docker image johnnymorganz/stylua:2.0.2 is not available for ARM
+// 	// - make it work for ARM and open a PR on the OSS repo
+
+// 	return dag.
+// 		Container(dagger.ContainerOpts{Platform: "linux/amd64"}).
+// 		From("johnnymorganz/stylua:2.0.2").
+// 		WithMountedDirectory("/lua/modules", modules).
+// 		WithWorkdir("/lua/modules").
+// 		WithExec([]string{"/stylua", "."})
+// }

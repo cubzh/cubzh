@@ -5,7 +5,7 @@ The documentation for modules is generated from module script annotations and pu
 ## Check code format
 
 ```sh
-stylua --check --glob *.lua
+stylua --check .
 if [ $? -eq 0 ]; then
     echo "✅ Code formatting is correct"
 else
@@ -16,5 +16,5 @@ fi
 ## Perform code formatting
 
 ```sh
-stylua --glob *.lua
+stylua .
 ```
