@@ -592,7 +592,7 @@ local _activateDirPad = function(x, y, pointerEventIndex, eventType)
 					_state.dirpad.pivot.LocalRotation = o.dirPadRot
 				end,
 			}).dirPadRot =
-			{ 0, 0, 0 }
+				{ 0, 0, 0 }
 
 			_state.dirpad.arrowLeft.Palette[1].Color = config.iconOffColor
 			_state.dirpad.arrowRight.Palette[1].Color = config.iconOffColor
@@ -1488,8 +1488,7 @@ index.refresh = function()
 		end
 
 		if
-			(top ~= nil and top > halfScreenHeight)
-			or (leftEdge ~= nil and leftEdge < Screen.Width - maxWidthOccupancy)
+			(top ~= nil and top > halfScreenHeight) or (leftEdge ~= nil and leftEdge < Screen.Width - maxWidthOccupancy)
 		then
 			local scaleV = (halfScreenHeight - bottom) / (top - bottom)
 			local scaleH = (maxWidthOccupancy - (Screen.Width - rightEdge)) / (rightEdge - leftEdge)

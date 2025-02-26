@@ -1,4 +1,4 @@
-if IsServer == true then 
+if IsServer == true then
 	return require("empty_table"):create("menu is not supposed to be used by Server")
 end
 
@@ -1010,21 +1010,19 @@ function removeBadge()
 end
 
 if System.IsHomeAppRunning then
-	local settingsIcon =
-		ui:frame({ image = {
-			data = Data:FromBundle("images/icon-settings.png"),
-			alpha = true,
-		} })
+	local settingsIcon = ui:frame({ image = {
+		data = Data:FromBundle("images/icon-settings.png"),
+		alpha = true,
+	} })
 	settingsIcon.Width = 50
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)
 	settingsIcon.parentDidResize = btnContentParentDidResize
 else
-	local homeIcon =
-		ui:frame({ image = {
-			data = Data:FromBundle("images/icon-exit.png"),
-			alpha = true,
-		} })
+	local homeIcon = ui:frame({ image = {
+		data = Data:FromBundle("images/icon-exit.png"),
+		alpha = true,
+	} })
 	homeIcon.Width = 50
 	homeIcon.Height = 50
 	homeIcon:setParent(cubzhBtn)
@@ -1222,12 +1220,16 @@ function createChat()
 			hideChat()
 		end,
 		onFocus = function()
-			if chat == nil then return end
+			if chat == nil then
+				return
+			end
 			chat.Color = Color(0, 0, 0, 0.5)
 			btnChatFullscreen:show()
 		end,
 		onFocusLost = function()
-			if chat == nil then return end
+			if chat == nil then
+				return
+			end
 			chat.Color = Color(0, 0, 0, 0.3)
 			btnChatFullscreen:hide()
 		end,

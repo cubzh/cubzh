@@ -447,7 +447,7 @@ creations.createModalContent = function(_, config)
 
 		node.parentDidResize = function(self)
 			if btnNew then
-			grid.Width = self.Width
+				grid.Width = self.Width
 				grid.Height = self.Height - btnNew.Height - theme.padding
 				grid.pos.Y = btnNew.Height + theme.padding
 				btnNew.pos = { self.Width * 0.5 - btnNew.Width * 0.5, 0 }
@@ -555,8 +555,7 @@ creations.createModalContent = function(_, config)
 
 				local mode = config.authorId == Player.UserID and "create" or "explore"
 
-				local itemDetailsContent =
-					itemDetails:createModalContent({ item = entity, mode = mode, uikit = ui })
+				local itemDetailsContent = itemDetails:createModalContent({ item = entity, mode = mode, uikit = ui })
 
 				if mode == "create" then
 					local btnEdit = ui:buttonNeutral({ content = "✏️ Edit", textSize = "default" })
@@ -629,11 +628,9 @@ creations.createModalContent = function(_, config)
 					m:push(itemDetailsContent)
 				end
 			elseif entity.type == "world" then
-
 				local mode = config.authorId == Player.UserID and "create" or "explore"
 
-				local worldDetailsContent =
-					worldDetails:createModalContent({ mode = mode, world = entity, uikit = ui })
+				local worldDetailsContent = worldDetails:createModalContent({ mode = mode, world = entity, uikit = ui })
 				worldDetailsContent.onContentUpdate = function(updatedWorld)
 					gridNeedRefresh = true
 					worldDetailsContent.title = updatedWorld.title
@@ -643,7 +640,6 @@ creations.createModalContent = function(_, config)
 				end
 
 				if mode == "create" then
-
 					local btnEditCode = ui:buttonSecondary({ content = "🤓 Code", textSize = "default" })
 					btnEditCode.onRelease = function()
 						System.EditWorldCode(entity.id)
@@ -655,7 +651,6 @@ creations.createModalContent = function(_, config)
 					end
 
 					worldDetailsContent.bottomRight = { btnEdit, btnEditCode }
-
 				end
 
 				worldDetailsContent.idealReducedContentSize = function(content, width, height)

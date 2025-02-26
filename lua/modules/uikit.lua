@@ -1,6 +1,6 @@
 --- This module allows you to create User Interface components (buttons, labels, texts, etc.).
 
-if IsServer == true then 
+if IsServer == true then
 	return require("empty_table"):create("uikit is not supposed to be used by Server")
 end
 
@@ -336,7 +336,7 @@ function createUI(system)
 			if pressed == node then
 				pressed = nil
 			end
-	
+
 			if focused == node then
 				focus(nil)
 			end
@@ -1452,7 +1452,9 @@ function createUI(system)
 	-- @param config {table} -
 	]]
 	ui.createShape = function(_, shape, config)
-		if shape == nil or (typeof(shape) ~= "Object" and typeof(shape) ~= "Shape" and typeof(shape) ~= "MutableShape") then
+		if
+			shape == nil or (typeof(shape) ~= "Object" and typeof(shape) ~= "Shape" and typeof(shape) ~= "MutableShape")
+		then
 			error("ui:createShape(shape) expects a non-nil Shape or MutableShape", 2)
 		end
 

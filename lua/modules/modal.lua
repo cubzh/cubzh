@@ -613,8 +613,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 
 			if modalContent.icon ~= nil then
 				if type(modalContent.icon) == "string" then
-					local icon = ui:frame({ 
-						color = Color(0, 0, 0, 0) 
+					local icon = ui:frame({
+						color = Color(0, 0, 0, 0),
 					})
 					local iconTxt = ui:createText(modalContent.icon, Color(255, 255, 255, 254))
 					iconTxt:setParent(icon)
@@ -632,8 +632,8 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 					table.insert(self._topLeft, icon)
 					self._icon = icon
 				elseif typeof(modalContent.icon) == "Data" then
-					local icon = ui:frame({ 
-						color = Color(0, 0, 0, 0) 
+					local icon = ui:frame({
+						color = Color(0, 0, 0, 0),
 					})
 
 					local img = ui:frame({ image = {
@@ -653,7 +653,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 					img.pos = { padding, padding }
 					icon.Width = size + padding * 2
 					icon.Height = size + padding * 2
-					
+
 					icon:setParent(self.topBar)
 					table.insert(self._topLeft, icon)
 					self._icon = icon
@@ -666,7 +666,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			end
 
 			if modalContent.title ~= nil and type(modalContent.title) == "string" then
-				local title = ui:createText( modalContent.title, {
+				local title = ui:createText(modalContent.title, {
 					color = theme.textColor,
 					outline = 0.4,
 					-- bold = true,
@@ -861,7 +861,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			+ theme.padding * 4
 
 		if self._title and modalContent.title then
-			self._title.Text = modalContent.title 
+			self._title.Text = modalContent.title
 		end
 
 		-- Start from max size
@@ -971,7 +971,10 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 			previous = element
 		end
 
-		local availableWidthForTopCenter = self.background.Width - theme.modalTopBarPadding * 2 - theme.padding * 2 - topLeftRightWidth * 2
+		local availableWidthForTopCenter = self.background.Width
+			- theme.modalTopBarPadding * 2
+			- theme.padding * 2
+			- topLeftRightWidth * 2
 		local topCenterElementsWidth = 0
 		local topCenterElementsTextWidth = 0
 		for i, element in ipairs(self._topCenter) do
@@ -987,7 +990,7 @@ modal.create = function(_, content, maxWidth, maxHeight, position, uikit)
 				topbarHeight = element.Height
 			end
 		end
-		
+
 		if topCenterElementsWidth > availableWidthForTopCenter then
 			local nonTextWidth = topCenterElementsWidth - topCenterElementsTextWidth
 			local textScale = (availableWidthForTopCenter - nonTextWidth) / topCenterElementsTextWidth
