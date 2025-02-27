@@ -71,7 +71,7 @@ Mesh* mesh_new(void) {
     return m;
 }
 
-bool mesh_retain(const Mesh *m) {
+bool mesh_retain(Mesh *m) {
     return transform_retain(m->transform);
 }
 
