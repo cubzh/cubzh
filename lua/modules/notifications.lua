@@ -5,6 +5,10 @@ mod.createBadge = function(_, config)
 	local defaultConfig = {
 		count = 42,
 		ui = require("uikit"),
+		height = 0, -- forces badge height if not 0
+		padding = 6, -- left and right padding
+		vPadding = 0,
+		type = "notifications", -- "notifications" or "logs"
 	}
 
 	ok, err = pcall(function()
@@ -16,19 +20,38 @@ mod.createBadge = function(_, config)
 
 	local ui = config.ui
 
-	local badge = ui:frameNotificationBadge()
-	local badgeLabel = ui:createText("", { font = Font.Noto, size = "small", color = Color.White })
+	local badge
+	local textColor
+	if config.type == "logs" then
+		badge = ui:frameLogsBadge()
+		textColor = Color.Black
+	else
+		badge = ui:frameNotificationsBadge()
+		textColor = Color.White
+	end
+	local badgeLabel = ui:createText("", { font = Font.Noto, size = "small", color = textColor })
 	badgeLabel:setParent(badge)
 	badge.parentDidResize = function(self)
 		local parent = self.parent
 		if parent == nil then
 			return
 		end
-		self.Width = badgeLabel.Width + theme.paddingTiny * 2
-		self.Height = badgeLabel.Height
+
+		local textScale = 1
+		badgeLabel.object.Scale = textScale
+		if config.height > 0 then
+			if badgeLabel.Height + config.vPadding * 2 > config.height then
+				textScale = (config.height - config.vPadding * 2) / badgeLabel.Height
+				badgeLabel.object.Scale = textScale
+			end
+		end
+
+		local height = badgeLabel.Height + config.vPadding * 2
+		self.Width =  math.max(height, badgeLabel.Width + config.padding * 2)
+		self.Height = height
 		badgeLabel.pos = {
-			theme.paddingTiny,
-			1,
+			self.Width * 0.5 - badgeLabel.Width * 0.5,
+			self.Height * 0.5 - badgeLabel.Height * 0.5,
 		}
 		badge.pos.X = -self.Width * 0.5
 		badge.pos.Y = parent.Height * 0.9 - badge.Height * 0.5
@@ -364,6 +387,9 @@ mod.createModalContent = function(_, config)
 				end
 				loadedNotifications = notifications
 				nbLoadedNotifications = #notifications
+				if type(scroll.flush) ~= "function" then
+					return
+				end
 				scroll:flush()
 				scroll:refresh()
 
