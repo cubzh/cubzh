@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "utils.h"
+#include "texture.h"
 
 #define MATERIAL_FLAG_NONE 0
 #define MATERIAL_FLAG_OPAQUE 1
@@ -17,7 +18,8 @@
 #define MATERIAL_FLAG_UNLIT 4
 
 struct _Material {
-    uint32_t diffuse;       /* 4 bytes */
+    Texture* textures[MaterialTexture_Count];
+    uint32_t albedo;        /* 4 bytes */
     uint32_t emissive;      /* 4 bytes */
     float metallic;         /* 4 bytes */
     float roughness;        /* 4 bytes */
@@ -40,24 +42,29 @@ static bool _material_get_flag(const Material *m, const uint8_t flag) {
 
 Material* material_new(void) {
     Material* m = (Material*)malloc(sizeof(Material));
-    m->diffuse = 0xFFFFFFFF;
+    m->albedo = 0xFFFFFFFF;
     m->emissive = 0x00000000;
     m->metallic = 0.0f;
     m->roughness = 0.0f;
     m->alphaCutout = 0.5f;
     m->refCount = 1;
     m->flags = MATERIAL_FLAG_OPAQUE;
+    memset(m->textures, 0, MaterialTexture_Count * sizeof(Texture*));
     return m;
 }
 
 void material_free(Material* m) {
+    for (int i = 0; i < MaterialTexture_Count; ++i) {
+        if (m->textures[i] != NULL) {
+            texture_release(m->textures[i]);
+        }
+    }
     free(m);
 }
 
-bool material_retain(const Material* m) {
-    Material* mat = (Material*)m;
-    if (mat->refCount < UINT16_MAX) {
-        ++(mat->refCount);
+bool material_retain(Material* m) {
+    if (m->refCount < UINT16_MAX) {
+        ++(m->refCount);
         return true;
     }
     cclog_error("Material: maximum refCount reached!");
@@ -70,12 +77,12 @@ void material_release(Material* m) {
     }
 }
 
-void material_set_diffuse(Material* m, const uint32_t rgba) {
-    m->diffuse = rgba;
+void material_set_albedo(Material* m, const uint32_t rgba) {
+    m->albedo = rgba;
 }
 
-uint32_t material_get_diffuse(const Material* m) {
-    return m->diffuse;
+uint32_t material_get_albedo(const Material* m) {
+    return m->albedo;
 }
 
 void material_set_metallic(Material* m, const float value) {
@@ -132,4 +139,18 @@ void material_set_unlit(Material* m, const bool value) {
 
 bool material_is_unlit(const Material* m) {
     return _material_get_flag(m, MATERIAL_FLAG_UNLIT);
+}
+
+void material_set_texture(Material* m, MaterialTexture slot, Texture* texture) {
+    if (m->textures[slot] != NULL) {
+        texture_release(m->textures[slot]);
+    }
+    m->textures[slot] = texture;
+    if (texture != NULL) {
+        texture_retain(texture);
+    }
+}
+
+Texture* material_get_texture(const Material* m, MaterialTexture slot) {
+    return m->textures[slot];
 }
