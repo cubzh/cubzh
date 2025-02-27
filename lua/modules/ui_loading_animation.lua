@@ -61,6 +61,7 @@ mod.create = function(self, config)
 				frame = newFrame
 				offset = framePercentage * frame
 				for _, q in pairs(loadingInstances) do
+					-- TODO: q.Offset might be nil sometimes
 					q.Offset:Set(0, offset)
 				end
 			end
