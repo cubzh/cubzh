@@ -128,8 +128,8 @@ void _scene_register_removed_transform(Scene *sc, Transform *t) {
 Scene *scene_new(Weakptr *g) {
     Scene *sc = (Scene *)malloc(sizeof(Scene));
     if (sc != NULL) {
-        sc->root = transform_make(PointTransform);
-        sc->system = transform_make(HierarchyTransform);
+        sc->root = transform_new(PointTransform);
+        sc->system = transform_new(HierarchyTransform);
         sc->map = NULL;
         sc->rtree = rtree_new(RTREE_NODE_MIN_CAPACITY, RTREE_NODE_MAX_CAPACITY);
         sc->wptr = NULL;

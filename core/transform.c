@@ -19,6 +19,7 @@
 #include "quad.h"
 #include "scene.h"
 #include "utils.h"
+#include "mesh.h"
 
 #define TRANSFORM_DIRTY_NONE 0
 // local mtx, ltw & wtl matrices are dirty, and children down the hierarchy need refresh
@@ -128,7 +129,6 @@ static void _transform_refresh_local_position(Transform *t);
 static void _transform_refresh_position(Transform *t);
 static void _transform_refresh_local_rotation(Transform *t);
 static void _transform_refresh_rotation(Transform *t);
-static void _transform_compute_SRT(Matrix4x4 *mtx, const float3 *s, Quaternion *r, const float3 *t);
 static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty);
 static bool _transform_vec_equals(const float3 *f,
                                   const float x,
@@ -166,7 +166,7 @@ static void _transform_free(Transform *const t);
 
 // MARK: - Lifecycle -
 
-Transform *transform_make(TransformType type) {
+Transform *transform_new(TransformType type) {
     Transform *t = (Transform *)malloc(sizeof(Transform));
     if (t == NULL) {
         return NULL;
@@ -199,8 +199,8 @@ Transform *transform_make(TransformType type) {
     return t;
 }
 
-Transform *transform_make_with_ptr(TransformType type, void *ptr, pointer_free_function ptrFreeFn) {
-    Transform *t = transform_make(type);
+Transform *transform_new_with_ptr(TransformType type, void *ptr, pointer_free_function ptrFreeFn) {
+    Transform *t = transform_new(type);
     t->ptr = ptr;
     t->ptr_free = ptrFreeFn;
     return t;
@@ -416,23 +416,21 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
             rigidbody_get_rtree_leaf(rb) == NULL) {
 
             if (type == ShapeTransform) {
-                Shape *s = (Shape *)transform_get_ptr(t);
-                if (s != NULL) {
-                    shape_compute_world_collider(s, collider, refreshParents);
-                }
+                shape_compute_world_collider((Shape *)transform_get_ptr(t), collider, refreshParents);
             } else {
                 float3 offset = float3_zero;
 
                 if (type == QuadTransform) {
-                    Quad *q = (Quad *)transform_get_ptr(t);
-                    if (q != NULL) {
-                        offset.x = -quad_get_anchor_x(q) * quad_get_width(q);
-                        offset.y = -quad_get_anchor_y(q) * quad_get_height(q);
-                    }
+                    const Quad *q = (Quad *)transform_get_ptr(t);
+                    offset.x = -quad_get_anchor_x(q) * quad_get_width(q);
+                    offset.y = -quad_get_anchor_y(q) * quad_get_height(q);
+                } else if (type == MeshTransform) {
+                    const float3 pivot = mesh_get_pivot((Mesh *)transform_get_ptr(t));
+                    offset = (float3){ -pivot.x, -pivot.y, -pivot.z };
                 }
 
                 if (rigidbody_is_dynamic(rb)) {
-                    transform_utils_box_to_dynamic_collider(
+                    transform_utils_aabox_local_to_dynamic_collider(
                         t,
                         rigidbody_get_collider(rb),
                         collider,
@@ -440,12 +438,12 @@ RigidBody *transform_get_or_compute_world_aligned_collider(Transform *t,
                         PHYSICS_SQUARIFY_DYNAMIC_COLLIDER ? MinSquarify : NoSquarify,
                         refreshParents);
                 } else {
-                    transform_utils_box_to_static_collider(t,
-                                                           rigidbody_get_collider(rb),
-                                                           collider,
-                                                           &offset,
-                                                           NoSquarify,
-                                                           refreshParents);
+                    transform_utils_aabox_local_to_static_collider(t,
+                                                                   rigidbody_get_collider(rb),
+                                                                   collider,
+                                                                   &offset,
+                                                                   NoSquarify,
+                                                                   refreshParents);
                 }
             }
         } else {
@@ -878,6 +876,45 @@ const Matrix4x4 *transform_get_mtx(Transform *t) {
 
 /// MARK: - Utils -
 
+void transform_utils_compute_SRT(Matrix4x4 *mtx,
+                                 const float3 *s,
+                                 Quaternion *r,
+                                 const float3 *t) {
+    quaternion_op_normalize(r);
+
+    const float xx = r->y * r->y;
+    const float xy = r->y * r->z;
+    const float xz = r->y * r->x;
+    const float xw = -r->y * r->w;
+
+    const float yy = r->z * r->z;
+    const float yz = r->z * r->x;
+    const float yw = -r->z * r->w;
+
+    const float zz = r->x * r->x;
+    const float zw = -r->x * r->w;
+
+    mtx->x1y1 = s->x * (1.0f - 2.0f * (yy + zz));
+    mtx->x1y2 = s->x * (2.0f * (xy - zw));
+    mtx->x1y3 = s->x * (2.0f * (xz + yw));
+    mtx->x1y4 = 0.0f;
+
+    mtx->x2y1 = s->y * (2.0f * (xy + zw));
+    mtx->x2y2 = s->y * (1.0f - 2.0f * (xx + zz));
+    mtx->x2y3 = s->y * (2.0f * (yz - xw));
+    mtx->x2y4 = 0.0f;
+
+    mtx->x3y1 = s->z * (2.0f * (xz - yw));
+    mtx->x3y2 = s->z * (2.0f * (yz + xw));
+    mtx->x3y3 = s->z * (1.0f - 2.0f * (xx + yy));
+    mtx->x3y4 = 0.0f;
+
+    mtx->x4y1 = t->x;
+    mtx->x4y2 = t->y;
+    mtx->x4y3 = t->z;
+    mtx->x4y4 = 1.0f;
+}
+
 void transform_utils_position_ltw(Transform *t, const float3 *pos, float3 *result) {
     matrix4x4_op_multiply_vec_point(result, pos, t->ltw);
 }
@@ -988,12 +1025,12 @@ void transform_utils_move_children(Transform *from, Transform *to, bool keepWorl
     }
 }
 
-void transform_utils_box_to_aabb(Transform *t,
-                                 const Box *b,
-                                 Box *aab,
-                                 const float3 *offset,
-                                 SquarifyType squarify,
-                                 const bool refreshParents) {
+void transform_utils_aabox_local_to_world(Transform *t,
+                                          const Box *b,
+                                          Box *aab,
+                                          const float3 *offset,
+                                          SquarifyType squarify,
+                                          const bool refreshParents) {
 
     transform_refresh(t, false, refreshParents); // refresh ltw for intra-frame calculations
 #if TRANSFORM_AABOX_AABB_MODE == 0
@@ -1007,12 +1044,12 @@ void transform_utils_box_to_aabb(Transform *t,
 #endif
 }
 
-void transform_utils_box_to_static_collider(Transform *t,
-                                            const Box *b,
-                                            Box *aab,
-                                            const float3 *offset,
-                                            SquarifyType squarify,
-                                            const bool refreshParents) {
+void transform_utils_aabox_local_to_static_collider(Transform *t,
+                                                    const Box *b,
+                                                    Box *aab,
+                                                    const float3 *offset,
+                                                    SquarifyType squarify,
+                                                    const bool refreshParents) {
 
     transform_refresh(t, false, refreshParents); // refresh ltw for intra-frame calculations
 #if TRANSFORM_AABOX_STATIC_COLLIDER_MODE == 0
@@ -1026,12 +1063,12 @@ void transform_utils_box_to_static_collider(Transform *t,
 #endif
 }
 
-void transform_utils_box_to_dynamic_collider(Transform *t,
-                                             const Box *b,
-                                             Box *aab,
-                                             const float3 *offset,
-                                             SquarifyType squarify,
-                                             const bool refreshParents) {
+void transform_utils_aabox_local_to_dynamic_collider(Transform *t,
+                                                     const Box *b,
+                                                     Box *aab,
+                                                     const float3 *offset,
+                                                     SquarifyType squarify,
+                                                     const bool refreshParents) {
 
     transform_refresh(t, false, refreshParents); // refresh ltw for intra-frame calculations
 #if TRANSFORM_AABOX_DYNAMIC_COLLIDER_MODE == 0
@@ -1058,12 +1095,15 @@ Shape *transform_utils_get_shape(Transform *t) {
 void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out) {
     *out = *t->ltw;
 
-    if (transform_get_type(t) == ShapeTransform) {
-        const float3 pivot = shape_get_pivot((Shape *)t->ptr);
+    const TransformType type = transform_get_type(t);
+
+    if (type == ShapeTransform || type == MeshTransform) {
+        const float3 pivot = type == ShapeTransform ? shape_get_pivot((Shape *)t->ptr) :
+                             mesh_get_pivot((Mesh *)t->ptr);
         out->x4y1 -= t->ltw->x1y1 * pivot.x + t->ltw->x2y1 * pivot.y + t->ltw->x3y1 * pivot.z;
         out->x4y2 -= t->ltw->x1y2 * pivot.x + t->ltw->x2y2 * pivot.y + t->ltw->x3y2 * pivot.z;
         out->x4y3 -= t->ltw->x1y3 * pivot.x + t->ltw->x2y3 * pivot.y + t->ltw->x3y3 * pivot.z;
-    } else if (transform_get_type(t) == QuadTransform) {
+    } else if (type == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
         const float anchorX = quad_get_anchor_x(q) * quad_get_width(q);
         const float anchorY = quad_get_anchor_y(q) * quad_get_height(q);
@@ -1076,12 +1116,15 @@ void transform_utils_get_model_ltw(const Transform *t, Matrix4x4 *out) {
 void transform_utils_get_model_wtl(const Transform *t, Matrix4x4 *out) {
     *out = *t->wtl;
 
-    if (transform_get_type(t) == ShapeTransform) {
-        const float3 pivot = shape_get_pivot((Shape *)t->ptr);
+    const TransformType type = transform_get_type(t);
+
+    if (type == ShapeTransform || type == MeshTransform) {
+        const float3 pivot = type == ShapeTransform ? shape_get_pivot((Shape *)t->ptr) :
+                             mesh_get_pivot((Mesh *)t->ptr);
         out->x4y1 += pivot.x;
         out->x4y2 += pivot.y;
         out->x4y3 += pivot.z;
-    } else if (transform_get_type(t) == QuadTransform) {
+    } else if (type == QuadTransform) {
         const Quad *q = (Quad *)t->ptr;
         out->x4y1 += quad_get_anchor_x(q) * quad_get_width(q);
         out->x4y2 += quad_get_anchor_y(q) * quad_get_height(q);
@@ -1142,19 +1185,22 @@ void transform_utils_box_fit_recurse(Transform *t,
     while (n != NULL) {
         child = (Transform *)doubly_linked_list_node_pointer(n);
 
-        if (transform_get_type(child) == ShapeTransform) {
-            Shape *s = (Shape *)child->ptr;
+        const TransformType type = transform_get_type(child);
+
+        if (type == ShapeTransform || type == MeshTransform) {
 
             transform_refresh(child, false, false); // refresh mtx for intra-frame calculations
-            if (applyTransaction) {
-                shape_apply_current_transaction(s, true);
+            if (type == ShapeTransform && applyTransaction) {
+                shape_apply_current_transaction((Shape *)child->ptr, true);
             }
 
             Matrix4x4 child_mtx = mtx;
             matrix4x4_op_multiply(&child_mtx, child->mtx);
 
-            const Box model = shape_get_model_aabb(s);
-            const float3 offset = shape_get_pivot(s);
+            const Box model = type == ShapeTransform ? shape_get_model_aabb((Shape *)child->ptr) :
+                              *mesh_get_model_aabb((Mesh *)child->ptr);
+            const float3 offset = type == ShapeTransform ? shape_get_pivot((Shape *)child->ptr) :
+                                  mesh_get_pivot((Mesh *)child->ptr);
             Box aabb;
             box_to_aabox2(&model, &aabb, &child_mtx, &offset, NoSquarify);
 
@@ -1168,6 +1214,29 @@ void transform_utils_box_fit_recurse(Transform *t,
         }
 
         n = doubly_linked_list_node_next(n);
+    }
+}
+
+void transform_utils_set_mtx(Transform *t, const Matrix4x4 *mtx) {
+    transform_set_local_position(t, mtx->x4y1, mtx->x4y2, mtx->x4y3);
+
+    Matrix4x4 rot; matrix4x4_get_rotation(mtx, &rot);
+    Quaternion q; rotation_matrix_to_quaternion(&rot, &q);
+    transform_set_local_rotation(t, &q);
+
+    float3 scale; matrix4x4_get_scaleXYZ(mtx, &scale);
+    transform_set_local_scale_vec(t, &scale);
+
+    *t->mtx = *mtx;
+    _transform_reset_dirty(t, TRANSFORM_DIRTY_MTX);
+}
+
+bool transform_utils_has_shadow(const Transform *t) {
+    switch(t->type) {
+        case ShapeTransform: return shape_has_shadow((Shape*)t->ptr);
+        case QuadTransform: return quad_has_shadow((Quad*)t->ptr);
+        case MeshTransform: return mesh_has_shadow((Mesh*)t->ptr);
+        default: return false;
     }
 }
 
@@ -1366,52 +1435,13 @@ static void _transform_refresh_rotation(Transform *t) {
     }
 }
 
-static void _transform_compute_SRT(Matrix4x4 *mtx,
-                                   const float3 *s,
-                                   Quaternion *r,
-                                   const float3 *t) {
-    quaternion_op_normalize(r);
-
-    const float xx = r->y * r->y;
-    const float xy = r->y * r->z;
-    const float xz = r->y * r->x;
-    const float xw = -r->y * r->w;
-
-    const float yy = r->z * r->z;
-    const float yz = r->z * r->x;
-    const float yw = -r->z * r->w;
-
-    const float zz = r->x * r->x;
-    const float zw = -r->x * r->w;
-
-    mtx->x1y1 = s->x * (1.0f - 2.0f * (yy + zz));
-    mtx->x1y2 = s->x * (2.0f * (xy - zw));
-    mtx->x1y3 = s->x * (2.0f * (xz + yw));
-    mtx->x1y4 = 0.0f;
-
-    mtx->x2y1 = s->y * (2.0f * (xy + zw));
-    mtx->x2y2 = s->y * (1.0f - 2.0f * (xx + zz));
-    mtx->x2y3 = s->y * (2.0f * (yz - xw));
-    mtx->x2y4 = 0.0f;
-
-    mtx->x3y1 = s->z * (2.0f * (xz - yw));
-    mtx->x3y2 = s->z * (2.0f * (yz + xw));
-    mtx->x3y3 = s->z * (1.0f - 2.0f * (xx + yy));
-    mtx->x3y4 = 0.0f;
-
-    mtx->x4y1 = t->x;
-    mtx->x4y2 = t->y;
-    mtx->x4y3 = t->z;
-    mtx->x4y4 = 1.0f;
-}
-
 /// note: here, local transformations must be up-to-date
 static void _transform_refresh_matrices(Transform *t, bool hierarchyDirty) {
     const bool dirty = _transform_get_dirty(t, TRANSFORM_DIRTY_MTX);
 
     if (dirty) {
         /// compute local mtx
-        _transform_compute_SRT(t->mtx, &t->localScale, t->localRotation, &t->localPosition);
+        transform_utils_compute_SRT(t->mtx, &t->localScale, t->localRotation, &t->localPosition);
 
         _transform_reset_dirty(t, TRANSFORM_DIRTY_MTX);
 
