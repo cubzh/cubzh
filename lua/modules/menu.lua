@@ -43,6 +43,8 @@ TOP_BAR_HEIGHT = 40
 CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
+DEV_MODE = System.LocalUserIsAuthor and System.ServerIsInDevMode
+
 -- VARS
 
 minified = not System.IsHomeAppRunning
@@ -1421,6 +1423,96 @@ function refreshChat()
 	end
 end
 
+-- DEV MODE / AI BUTTON
+
+if DEV_MODE == true then
+	aiBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+	aiBtn:setParent(topBar)
+
+	aiIcon = ui:frame({
+		image = {
+			data = Data:FromBundle("images/icon-ai.png"),
+			alpha = true,
+		},
+	})
+	aiIcon.Width = 50
+	aiIcon.Height = 50
+
+	aiIcon.parentDidResize = function(self)
+		local parent = self.parent
+		self.Height = parent.Height - PADDING * 2
+		self.Width = self.Height
+		self.pos = { PADDING, PADDING }
+	end
+	aiIcon:setParent(aiBtn)
+
+	aiBtn.onPress = topBarBtnPress
+	aiBtn.onCancel = topBarBtnRelease
+	aiBtn.onRelease = function(self)
+		topBarBtnRelease(self)
+
+		if aiInput == nil then
+			aiInput = ui:createTextInput("", "What do you want to do? ✨",
+			{ 
+				textSize = "small", 
+				returnKeyType = "send" 
+			})
+			aiInput:setParent(background)
+			aiInput:setColor(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4))
+			aiInput:setColorPressed(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4))
+			aiInput:setColorFocused(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4))
+
+			aiInput.parentDidResize = function(self)
+				local parent = self.parent
+				self.Width = math.min(600, parent.Width - PADDING * 2)
+				self.pos = {parent.Width * 0.5 - self.Width * 0.5, Screen.SafeArea.Bottom + PADDING}
+			end
+			aiInput:parentDidResize()
+
+			local posY = aiInput.pos.Y
+			aiInput.pos.Y -= 100
+			ease:outBack(aiInput.pos, 0.2, {
+				onDone = function()
+					aiInput:focus()
+				end,
+			}).Y = posY
+
+			aiInput.onSubmit = function(self)
+				if self.Text == "" then
+					aiInput:remove()
+					aiInput = nil
+					return
+				end
+				local body = {
+					prompt = self.Text,
+				}
+				local headers = {}
+				headers["Content-Type"] = "application/json"
+				print("sending: " .. body.prompt)
+				HTTP:Post("http://localhost", headers, body, function(res)
+					if res.StatusCode ~= 200 then
+						print("error: " .. res.StatusCode)
+						return
+					end
+					local data = JSON:Decode(res.Body)
+					if data.type == "chat" then
+						print("AI: " .. data.output)
+					elseif data.type == "code" then
+						print("TODO: publish code")
+					end
+				end)
+				self.Text = ""
+			end
+			
+		else
+			ease:cancel(aiInput)
+			aiInput:remove()
+			aiInput = nil
+		end
+		
+	end
+end
+
 cubzhBtn.onPress = topBarBtnPress
 cubzhBtn.onCancel = topBarBtnRelease
 cubzhBtn.onRelease = function(self)
@@ -1811,7 +1903,17 @@ topBar.parentDidResize = function(self)
 		chatBtn.Height = height
 		chatBtn.Width = height
 		chatBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = chatBtn
 		width += chatBtn.Width
+	end
+
+	-- AI BUTTON
+
+	if aiBtn ~= nil and aiBtn:isVisible() then
+		aiBtn.Height = height
+		aiBtn.Width = height
+		aiBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		width += aiBtn.Width
 	end
 
 	self.Width = width
