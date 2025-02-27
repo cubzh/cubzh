@@ -5,7 +5,12 @@ go 1.24.0
 // For local development of objectstorage
 // replace github.com/voxowl/objectstorage => ../../../../objectstorage
 
-require github.com/voxowl/objectstorage v0.0.3
+replace github.com/cubzh/cubzh/deps/deptool/utils v0.0.1 => ./utils
+
+require (
+	github.com/cubzh/cubzh/deps/deptool/utils v0.0.1
+	github.com/voxowl/objectstorage v0.0.3
+)
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.2 // indirect

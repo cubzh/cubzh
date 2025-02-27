@@ -1,9 +1,11 @@
-module cu.bzh/tools/deptool/cmd
+module github.com/cubzh/cubzh/deps/deptool/cmd
 
 go 1.24.0
 
-// Use the local copy of the deptool package
+// Use the local copies of packages
 replace github.com/cubzh/cubzh/deps/deptool v0.0.1 => ../
+
+replace github.com/cubzh/cubzh/deps/deptool/utils v0.0.1 => ../utils
 
 require (
 	github.com/cubzh/cubzh/deps/deptool v0.0.1
@@ -23,6 +25,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.14 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.77.1 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
+	github.com/cubzh/cubzh/deps/deptool/utils v0.0.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/voxowl/objectstorage v0.0.3 // indirect

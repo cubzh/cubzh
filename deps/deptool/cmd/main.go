@@ -17,14 +17,6 @@ const (
 
 func main() {
 
-	// get path of the executable
-	executablePath, err := os.Executable()
-	if err != nil {
-		fmt.Println("failed to get executable path:", err)
-		os.Exit(1)
-	}
-	fmt.Println("executable path:", executablePath)
-
 	var rootCmd = &cobra.Command{
 		Use:     "deps",
 		Short:   "Dependencies management tool for Cubzh",
@@ -53,6 +45,17 @@ func main() {
 		}
 		downloadCmd.Flags().BoolP("force", "f", false, "Force download even if files already exist locally")
 		rootCmd.AddCommand(downloadCmd)
+	}
+
+	// deptool activate
+	{
+		var activateCmd = &cobra.Command{
+			Use:   "activate <dependency> <version>",
+			Short: "Activate a version of dependency",
+			Args:  cobra.ExactArgs(2),
+			RunE:  activateCmdFunc,
+		}
+		rootCmd.AddCommand(activateCmd)
 	}
 
 	if err := rootCmd.Execute(); err != nil {
@@ -133,6 +136,23 @@ func downloadCmdFunc(cmd *cobra.Command, args []string) error {
 	return deptool.DownloadArtifacts(objectStorage, depsDirPath, depName, version, platform, forceFlag)
 }
 
+// deptool upload <dependency> <version> <platform>
+// example: deptool upload libluau 0.661 macos
+func activateCmdFunc(cmd *cobra.Command, args []string) error {
+	depName := args[0]
+	version := args[1]
+
+	// find git repo root directory
+	gitRepoRootDir, err := findPathToFirstParentGitRepo()
+	if err != nil {
+		return err
+	}
+
+	depsDirPath := filepath.Join(gitRepoRootDir, "deps")
+
+	return deptool.ActivateDependency(depsDirPath, depName, version)
+}
+
 //
 // utility functions
 //
@@ -147,14 +167,18 @@ func getObjectStorageCredentialsFromEnvVars() (string, string, error) {
 }
 
 // findPathToFirstParentGitRepo finds the path to the first parent git repository
-// returns an error if no git repository is found
+// starting from the current working directory.
+// Returns an error if no git repository is found after <limit> iterations.
 func findPathToFirstParentGitRepo() (string, error) {
-	limit := 100
-	// Find the first parent directory that is a git repository
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	limit := 20
+
+	// get current working directory
+	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
+
+	// Find the first parent directory that is a git repository
 	// fmt.Println("🔍 searching for git repo in:", dir)
 	for dir != "." {
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {

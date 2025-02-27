@@ -85,7 +85,7 @@ else
 fi
 
 # --- Create symlink to source code for bazel to find it ---
-ln -s ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
+ln -sf ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
 
 # --- Build ---
 
@@ -158,10 +158,10 @@ echo "🛠️ Building Luau for $platform_to_build... (${archs_to_build[@]})"
 # build for each architecture
 for arch in "${archs_to_build[@]}"; do
   
-  readonly OUTPUT_DIR="$version/prebuilt/$platform_to_build/$arch"
-  readonly OUTPUT_DIR_LIB_DEBUG="$OUTPUT_DIR/lib-Debug"
-  readonly OUTPUT_DIR_LIB_RELEASE="$OUTPUT_DIR/lib-Release"
-  readonly OUTPUT_DIR_INCLUDE="$OUTPUT_DIR/include"
+  OUTPUT_DIR="$version/prebuilt/$platform_to_build/$arch"
+  OUTPUT_DIR_LIB_DEBUG="$OUTPUT_DIR/lib-Debug"
+  OUTPUT_DIR_LIB_RELEASE="$OUTPUT_DIR/lib-Release"
+  OUTPUT_DIR_INCLUDE="$OUTPUT_DIR/include"
 
   # recreate output directories
   rm -rf $OUTPUT_DIR

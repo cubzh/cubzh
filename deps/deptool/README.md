@@ -1,6 +1,32 @@
 # Cubzh Dependencies Tool (deptool)
 
-## Setup access key
+## Basic usage
+
+### Download a dependency
+
+```sh
+# deptool download <dependency> <version> <platform>
+deptool download libluau 0.661 macos
+deptool download libluau 0.661 ios
+deptool download libluau 0.661 android
+deptool download libluau 0.661 windows
+deptool download libluau 0.661 linux
+```
+
+### Make downloaded dependency version active
+
+```sh
+# deptool activate <dependency> <version>
+deptool activate libluau 0.661
+deptool activate libluau 0.661
+deptool activate libluau 0.661
+deptool activate libluau 0.661
+deptool activate libluau 0.661
+```
+
+## Advanced usage
+
+### Setup access key (optional)
 
 Add those lines to your `~/.bashrc` or `~/.zshrc` file:
 
@@ -10,27 +36,9 @@ export CUBZH_DIGITALOCEAN_SPACES_AUTH_KEY="DO8019TZD8N66GJGUEE3"
 export CUBZH_DIGITALOCEAN_SPACES_AUTH_SECRET="OVVGXIdaEXRG8TPi2/TmI3Ji/h56nZgetMxeYw9aXlk"
 ```
 
-## Download dependencies
-
-```bash
-# move to the deptool directory
-cd cubzh/deps/deptool
-
-# download a dependency
-# deptool download <dependency> <platform> [<version>]
-deptool download libluau 0.661 android
-deptool download libluau 0.661 ios
-deptool download libluau 0.661 macos
-deptool download libluau 0.661 windows
-deptool download libluau 0.661 linux
-```
-
 ## Upload dependencies
 
 ```bash
-# move to the deptool directory
-cd cubzh/deps/deptool
-
 # upload a dependency
 # deptool upload <dependency> <platform> [<version>]
 deptool upload libluau 0.661 android

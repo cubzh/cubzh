@@ -34,9 +34,5 @@ func isPlatformNameValid(name string) bool {
 }
 
 func constructDepArtifactsPath(depName, version, platform string) string {
-	return filepath.Join("deps", depName, version, "prebuilt", platform)
-}
-
-func constructDepArtifactsPathNew(depName, version, platform string) string {
 	return filepath.Join(depName, version, "prebuilt", platform)
 }
