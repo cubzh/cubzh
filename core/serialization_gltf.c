@@ -19,6 +19,79 @@
 #include "camera.h"
 #include "mesh.h"
 #include "material.h"
+#include "texture.h"
+
+static Texture* _serialization_gltf_load_texture(const cgltf_image* image, const TextureType type) {
+    if (image == NULL) {
+        return NULL;
+    }
+
+    void* data;
+    size_t size;
+    Texture *t = NULL;
+    if (image->buffer_view != NULL) { // embedded image data
+        data = ((const char*)image->buffer_view->buffer->data) + image->buffer_view->offset;
+        size = image->buffer_view->size;
+        t = texture_new_raw(data, size, type);
+    } else if (image->uri != NULL) { // external image file
+        FILE* file = fopen(image->uri, "rb");
+        if (file == NULL) {
+            return NULL;
+        }
+
+        fseek(file, 0, SEEK_END);
+        size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+
+        data = malloc(size);
+        if (data == NULL) {
+            fclose(file);
+            return NULL;
+        }
+
+        if (fread(data, 1, size, file) != size) {
+            free(data);
+            fclose(file);
+            return NULL;
+        }
+
+        t = texture_new_raw(data, size, type);
+        free(data);
+        fclose(file);
+    } else {
+        return NULL;
+    }
+
+    return t;
+}
+
+Asset *_serialization_gltf_new_asset(Transform *t) {
+    Asset *asset = (Asset*)malloc(sizeof(Asset));
+    switch(transform_get_type(t)) {
+        case PointTransform:
+            asset->type = AssetType_Object;
+            asset->ptr = t;
+            break;
+        case CameraTransform:
+            asset->type = AssetType_Camera;
+            asset->ptr = transform_get_ptr(t);
+            break;
+        case LightTransform:
+            asset->type = AssetType_Light;
+            asset->ptr = transform_get_ptr(t);
+            break;
+        case MeshTransform:
+            asset->type = AssetType_Mesh;
+            asset->ptr = transform_get_ptr(t);
+            break;
+        default:
+            asset->type = AssetType_Unknown;
+            asset->ptr = NULL;
+            vx_assert_d(false); // if not supported, should've been skipped already
+            break;
+    }
+    return asset;
+}
 
 bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_MASK_T filter, DoublyLinkedList **out) {
     vx_assert_d(*out == NULL);
@@ -140,6 +213,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                 const cgltf_attribute* normalAttr = NULL;
                 const cgltf_attribute* uvAttr = NULL;
                 const cgltf_attribute* colorAttr = NULL;
+                const cgltf_attribute* tangentAttr = NULL;
                 
                 for (size_t i = 0; i < primitive->attributes_count; i++) {
                     switch (primitive->attributes[i].type) {
@@ -156,6 +230,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                             colorAttr = &primitive->attributes[i];
                             break;
                         case cgltf_attribute_type_tangent:
+                            tangentAttr = &primitive->attributes[i];
+                            break;
                         case cgltf_attribute_type_joints:
                         case cgltf_attribute_type_weights:
                         case cgltf_attribute_type_custom:
@@ -169,14 +245,13 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     const cgltf_accessor* normalAccessor = normalAttr ? normalAttr->data : NULL;
                     const cgltf_accessor* uvAccessor = uvAttr ? uvAttr->data : NULL;
                     const cgltf_accessor* colorAccessor = colorAttr ? colorAttr->data : NULL;
+                    const cgltf_accessor* tangentAccessor = tangentAttr ? tangentAttr->data : NULL;
 
                     const uint32_t vertexCount = (uint32_t)posAccessor->count;
                     Vertex* vertices = (Vertex*)malloc(vertexCount * sizeof(Vertex));
                     
                     for (size_t k = 0; k < vertexCount; ++k) {
                         cgltf_accessor_read_float(posAccessor, k, &vertices[k].x, 3);
-
-                        vertices[k].unused = 0.0f;
                         
                         if (normalAccessor != NULL) {
                             cgltf_accessor_read_float(normalAccessor, k, &vertices[k].nx, 3);
@@ -191,6 +266,18 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                         } else {
                             vertices[k].u = 0.0f;
                             vertices[k].v = 0.0f;
+                        }
+
+                        if (tangentAccessor != NULL) {
+                            float tangent[4];
+                            cgltf_accessor_read_float(tangentAccessor, k, tangent, 4);
+                            vertices[k].tx = tangent[0] * tangent[3]; // pre-apply handedness
+                            vertices[k].ty = tangent[1] * tangent[3];
+                            vertices[k].tz = tangent[2] * tangent[3];
+                        } else {
+                            vertices[k].tx = 1.0f; // default tangent aligned with X axis
+                            vertices[k].ty = 0.0f;
+                            vertices[k].tz = 0.0f;
                         }
 
                         if (colorAccessor != NULL) {
@@ -303,7 +390,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
                         if (gltf_material->has_pbr_metallic_roughness) {
                             const cgltf_pbr_metallic_roughness* pbr = &gltf_material->pbr_metallic_roughness;
-                            material_set_diffuse(material, 
+                            material_set_albedo(material, 
                                 utils_float_to_rgba(
                                     pbr->base_color_factor[0],
                                     pbr->base_color_factor[1], 
@@ -312,15 +399,52 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                 
                             material_set_metallic(material, pbr->metallic_factor);
                             material_set_roughness(material, pbr->roughness_factor);
+
+                            // albedo texture
+                            if (pbr->base_color_texture.texture != NULL) {
+                                Texture* texture = _serialization_gltf_load_texture(pbr->base_color_texture.texture->image, TextureType_Albedo);
+                                if (texture != NULL) {
+                                    material_set_texture(material, MaterialTexture_Albedo, texture);
+                                    texture_release(texture);
+                                }
+                            }
+
+                            // metallic-roughness map
+                            if (pbr->metallic_roughness_texture.texture != NULL) {
+                                Texture* texture = _serialization_gltf_load_texture(pbr->metallic_roughness_texture.texture->image, TextureType_Metallic);
+                                if (texture != NULL) {
+                                    material_set_texture(material, MaterialTexture_Metallic, texture);
+                                    texture_release(texture);
+                                }
+                            }
                         }
 
-                        const float emissiveStrength = gltf_material->has_emissive_strength ? gltf_material->emissive_strength.emissive_strength : 0.0f;
+                        const float emissiveStrength = gltf_material->has_emissive_strength ? 
+                            gltf_material->emissive_strength.emissive_strength : 0.0f;
                         material_set_emissive(material,
                             utils_float_to_rgba(
                                 gltf_material->emissive_factor[0] * emissiveStrength,
                                 gltf_material->emissive_factor[1] * emissiveStrength,
                                 gltf_material->emissive_factor[2] * emissiveStrength,
                                 0.0f));
+
+                        // emissive texture
+                        if (gltf_material->emissive_texture.texture != NULL) {
+                            Texture* texture = _serialization_gltf_load_texture(gltf_material->emissive_texture.texture->image, TextureType_Emissive);
+                            if (texture != NULL) {
+                                material_set_texture(material, MaterialTexture_Emissive, texture);
+                                texture_release(texture);
+                            }
+                        }
+
+                        // normal map
+                        if (gltf_material->normal_texture.texture != NULL) {
+                            Texture* texture = _serialization_gltf_load_texture(gltf_material->normal_texture.texture->image, TextureType_Normal);
+                            if (texture != NULL) {
+                                material_set_texture(material, MaterialTexture_Normal, texture);
+                                texture_release(texture);
+                            }
+                        }
 
                         switch (gltf_material->alpha_mode) {
                             case cgltf_alpha_mode_opaque:
@@ -370,7 +494,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
             Light *l = light_new();
             light_set_color(l, node->light->color[0], node->light->color[1], node->light->color[2]);
-            light_set_intensity(l, node->light->intensity);
+            light_set_intensity(l, CLAMP01(node->light->intensity));
             switch(node->light->type) {
                 case cgltf_light_type_directional:
                     light_set_type(l, LightType_Directional);
@@ -384,9 +508,9 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                 default:
                     break;
             }
-            light_set_range(l, node->light->range);
-            light_set_angle(l, node->light->spot_outer_cone_angle);
-            light_set_hardness(l, node->light->spot_inner_cone_angle / node->light->spot_outer_cone_angle);
+            light_set_range(l, node->light->range > 0.0f ? node->light->range : LIGHT_DEFAULT_RANGE);
+            light_set_angle(l, node->light->spot_outer_cone_angle > 0.0f ? node->light->spot_outer_cone_angle : LIGHT_DEFAULT_ANGLE);
+            light_set_hardness(l, node->light->spot_inner_cone_angle / light_get_angle(l));
 
             transforms[i] = light_get_transform(l);
             transform_set_name(transforms[i], node->light->name);
@@ -456,29 +580,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
             const cgltf_node *node = &data->nodes[j];
 
             if (node->parent == NULL) {
-                Asset *asset = (Asset*)malloc(sizeof(Asset));
-                switch(transform_get_type(transforms[j])) {
-                    case PointTransform:
-                        asset->type = AssetType_Object;
-                        asset->ptr = transforms[j];
-                        break;
-                    case CameraTransform:
-                        asset->type = AssetType_Camera;
-                        asset->ptr = transform_get_ptr(transforms[j]);
-                        break;
-                    case LightTransform:
-                        asset->type = AssetType_Light;
-                        asset->ptr = transform_get_ptr(transforms[j]);
-                        break;
-                    case MeshTransform:
-                        asset->type = AssetType_Mesh;
-                        asset->ptr = transform_get_ptr(transforms[j]);
-                        break;
-                    default:
-                        vx_assert_d(false); // if not supported, should've been skipped already
-                        continue;
-                }
-                doubly_linked_list_push_last(*out, asset);
+                doubly_linked_list_push_last(*out, _serialization_gltf_new_asset(transforms[j]));
             } else {
                 Transform* parentTransform = NULL;
                 const cgltf_node* currentParent = node->parent;
@@ -501,8 +603,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                 *(const float3*)currentParent->scale : float3_one;
                             const float3 position = currentParent->has_translation ? 
                                 *(const float3*)currentParent->translation : float3_zero;
-                            const Quaternion rotation = currentParent->has_rotation ? 
-                                *(const Quaternion*)currentParent->rotation : quaternion_identity;
+                            Quaternion rotation = currentParent->has_rotation ?
+                                *(Quaternion*)currentParent->rotation : quaternion_identity;
                             
                             transform_utils_compute_SRT(&nodeMtx, &scale, &rotation, &position);
                         }
@@ -524,6 +626,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
                 if (parentTransform != NULL) {
                     transform_set_parent(transforms[j], parentTransform, false);
+                } else {
+                    doubly_linked_list_push_last(*out, _serialization_gltf_new_asset(transforms[j]));
                 }
             }
         }
