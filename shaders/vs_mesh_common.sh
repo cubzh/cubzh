@@ -19,6 +19,7 @@ $output v_color0, v_texcoord0, v_texcoord1
 $output v_color0, v_texcoord0
     #define v_uv v_texcoord0.xy
     #define v_cutout v_texcoord0.z
+    #define v_albedoFlag v_texcoord0.w
 #endif
 
 #if MESH_VARIANT_MRT_LIGHTING == 0
@@ -37,6 +38,7 @@ uniform vec4 u_params;
 #include "./include/game_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
+#include "./include/mesh_lib.sh"
 #endif
 
 void main() {
@@ -72,6 +74,7 @@ void main() {
     v_normal = wnormal;
 #else
     v_cutout = u_cutout;
+    v_albedoFlag = unpackMeshMetadata_albedoFlag(u_metadata);
 #endif // MESH_VARIANT_MRT_LIGHTING
 
 #endif // IS_SHADOW_PASS

@@ -31,7 +31,7 @@ typedef enum {
 typedef struct _Mesh Mesh;
 
 Mesh* mesh_new(void);
-bool mesh_retain(const Mesh *m);
+bool mesh_retain(Mesh *m);
 void mesh_release(Mesh *m);
 void mesh_free(Mesh* m);
 
