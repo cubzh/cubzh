@@ -14,8 +14,9 @@ extern "C" {
 #include "material.h"
 
 typedef struct {
-    float x, y, z, unused;
+    float x, y, z;
     float nx, ny, nz;
+    float tx, ty, tz;
     float u, v;
     uint32_t rgba;
 } Vertex;
@@ -31,11 +32,11 @@ typedef enum {
 typedef struct _Mesh Mesh;
 
 Mesh* mesh_new(void);
-bool mesh_retain(const Mesh *m);
+bool mesh_retain(Mesh *m);
 void mesh_release(Mesh *m);
 void mesh_free(Mesh* m);
 
-Transform* mesh_get_transform(Mesh* m);
+Transform* mesh_get_transform(const Mesh* m);
 void mesh_set_vertex_buffer(Mesh* m, Vertex* vertices, size_t count); // takes ownership
 const Vertex* mesh_get_vertex_buffer(const Mesh* m);
 uint32_t mesh_get_vertex_count(const Mesh* m);
