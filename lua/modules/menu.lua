@@ -444,7 +444,7 @@ end
 
 function refreshDisplay()
 	if cppMenuIsActive then
-		topBar:hide()
+		hideTopBar()
 
 		if activeModal then
 			activeModal:hide()
@@ -456,7 +456,7 @@ function refreshDisplay()
 			alertModal:hide()
 		end
 	else
-		topBar:show()
+		showTopBar()
 		
 		if activeModal then
 			activeModal:show()
@@ -2436,6 +2436,9 @@ end)
 
 function showTopBar()
 	if Environment.CUBZH_MENU == "disabled" then
+		return
+	end
+	if not Client.LoggedIn and Environment.USER_AUTH ~= "disabled" then
 		return
 	end
 	topBar:show()
