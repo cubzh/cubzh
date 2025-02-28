@@ -37,7 +37,7 @@ done
 
 os_name=""
 case "$OSTYPE" in
-  darwin*)  os_name="macos" ;; 
+  darwin*)  os_name="macos" ;;
   linux*)   os_name="linux" ;;
   msys*|cygwin*|mingw*) os_name="windows" ;;
   *)        os_name="unknown: $OSTYPE" ;;
