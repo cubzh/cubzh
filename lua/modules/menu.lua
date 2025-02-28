@@ -895,31 +895,9 @@ function layoutNotification()
 		return
 	end
 
-	-- display notification between visible top bar icons
-	local startX = Screen.SafeArea.Left
-	local endX = Screen.Width - Screen.SafeArea.Right
+	local x = topBar.Position.X
 
-	if chatBtn:isVisible() then
-		local p = absNodePos(chatIcon)
-		startX = p.X + chatIcon.Width + PADDING
-	end
-
-	if pezhBtn:isVisible() then
-		local p = absNodePos(pezhShape)
-		endX = p.X - PADDING
-	elseif connBtn:isVisible() then
-		local p = absNodePos(connShape)
-		endX = p.X - PADDING
-	elseif cubzhBtn:isVisible() then
-		local shape = cubzhBtnShape or settingsIcon
-		local p = absNodePos(shape)
-		endX = p.X - PADDING
-	end
-
-	local availableWidth = endX - startX
-	local centerX = startX + availableWidth * 0.5
-
-	notificationText.object.MaxWidth = availableWidth - notificationIconSize - notificationIconPadding * 3 - 20 -- extra margin
+	notificationText.object.MaxWidth = math.min(Screen.Width * 0.8, 300)
 
 	notificationFrame.Height = math.max(
 		notificationIconSize + notificationPadding * 4,
@@ -947,16 +925,16 @@ function layoutNotification()
 	notificationText.pos = { notificationIconSize + notificationIconPadding * 2, y }
 
 	notificationFrame.pos = {
-		centerX - notificationFrame.Width * 0.5,
-		parent.Height - System.SafeAreaTop - notificationFrame.Height - theme.paddingTiny,
+		x,
+		topBar.pos.Y - notificationFrame.Height - PADDING,
 	}
 end
 
 function bumpNotification()
 	ease:cancel(notificationFrame.pos)
-	local posY = notificationFrame.pos.Y
-	notificationFrame.pos.Y = notificationFrame.pos.Y + 100
-	ease:outBack(notificationFrame.pos, 0.3).Y = posY
+	local posX = notificationFrame.pos.X
+	notificationFrame.pos.X = notificationFrame.pos.X - 100
+	ease:outBack(notificationFrame.pos, 0.3).X = posX
 end
 
 function hideNotification()
@@ -969,8 +947,8 @@ function hideNotification()
 			notificationTick:Remove()
 			notificationTick = nil
 		end,
-	}).Y =
-		Screen.Height
+	}).X = -notificationFrame.Width
+		
 end
 
 notificationFrame.parentDidResize = function()
