@@ -2020,7 +2020,7 @@ function ui_init()
 		self.Width = w + padding * 2
 		self.Height = h + padding * 2
 		self.LocalPosition =
-			{ padding + Screen.SafeArea.Left, Screen.Height - self.Height - padding - Screen.SafeArea.Top, 0 }
+			{ padding + Screen.SafeArea.Left, Menu.Position.Y - self.Height - padding, 0 }
 
 		if visibilityMenu ~= nil then
 			visibilityMenu:refresh()
