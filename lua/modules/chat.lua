@@ -80,7 +80,7 @@ local chatMessageStatusColors = {
 	ok = Color.White,
 	error = Color.Red,
 	reported = Color.Yellow,
-	pending = Color(255, 255, 255, 0.3),
+	pending = Color(255, 255, 255, 0.5),
 }
 
 local pushFormattedLog = function(log)
@@ -183,6 +183,12 @@ local createChat = function(_, config)
 	config = require("config"):merge(getDefaultConfig(), config)
 
 	local ui = config.uikit
+
+	local smallTextRef = ui:createText("A", {
+		size = "small",
+	})
+	smallTextRef:setParent(nil)
+
 	local theme = config.theme
 
 	local space = ui:createText(" ", Color.White, "small")
@@ -200,11 +206,11 @@ local createChat = function(_, config)
 	local inputNode
 
 	if hasInput then
-		inputNode = ui:createTextInput("", "say something…", { textSize = "small", returnKeyType = "send" })
+		inputNode = ui:createTextInput("", "say something…", { textSize = smallTextRef.object.FontSize * 0.75, returnKeyType = "send" })
 		inputNode:setParent(node)
-		inputNode:setColor(Color(0, 0, 0, 0.1), Color.White, Color(255, 255, 255, 0.7))
-		inputNode:setColorPressed(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
-		inputNode:setColorFocused(Color(0, 0, 0, 0.4), Color.White, Color(255, 255, 255, 0.5))
+		inputNode:setColor(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
+		inputNode:setColorPressed(Color(10, 10, 10, 0.9), Color.White, Color(27, 29, 28, 0), Color(255, 255, 255, 0.5))
+		inputNode:setColorFocused(Color(10, 10, 10, 0.9), Color.White, Color(27, 29, 28, 0), Color(255, 255, 255, 0.5))	
 
 		inputNode.Text = config.inputText
 
@@ -281,10 +287,15 @@ local createChat = function(_, config)
 		end
 	end
 
+	local solo = Players.Max == 1
 	local createUIChatMessage = function(log, ui)
 		local node = ui:createFrame(Color(0, 0, 0, 0))
 		node.localUUID = log.localUUID
 		node.status = log.status
+
+		if solo and log.status == "pending" then
+			log.status = "ok"
+		end
 
 		local message = log.message
 
@@ -301,36 +312,33 @@ local createChat = function(_, config)
 		-- Prefix: empty by default, can be "to"/"from"
 		-- Head: empty by default, shape of the head of the player
 		-- Firstline: message, if too wide, cut the end
-		local uiTextTime = ui:createText("", color, "small")
+		local uiTextTime = ui:createText("", {
+			color = color, 
+			size = smallTextRef.object.FontSize * 0.75,
+			outline = 0.3,
+			weight = "light",
+		})
 
 		if config.time then
 			uiTextTime.Text = "[" .. string.sub(log.date, 12, 16) .. "] " -- get HH:MM
 		end
-
-		local uiText = ui:createText("", color, "small")
+		
+		local uiText = ui:createText("", {
+			color = color, 
+			size = smallTextRef.object.FontSize * 0.75,
+			outline = 0.3,
+			weight = "light",
+		})
 
 		if log.senderUsername then
 			message = log.senderUsername .. ": " .. message
 		end
 
-		local uiHead
-		if config.heads then
-			if log.senderUserID or log.senderUsername then
-				uiHead = require("ui_avatar"):getHead(
-					log.senderUserID or log.senderUsername,
-					nil,
-					ui,
-					{ spherized = true } -- TODO: use false, but ui_avatar needs to be fixed
-				)
-			end
-		end
-
 		uiText.Text = message
 		node.text = uiText
 
-		for _, elem in pairs({ uiTextTime, uiHead, uiText }) do
-			elem:setParent(node)
-		end
+		uiTextTime:setParent(node)
+		uiText:setParent(node)
 
 		node.parentDidResize = function(node)
 			if not node.parent then
@@ -344,11 +352,6 @@ local createChat = function(_, config)
 			uiTextTime.pos.X = x
 			x = x + uiTextTime.Width
 
-			if uiHead then
-				uiHead.Width = space.Width * 2 -- size of an emoji
-				uiHead.pos.X = x
-				x = x + uiHead.Width + space.Width
-			end
 			uiText.pos.X = x
 
 			uiText.Width = node.Width - x
@@ -358,9 +361,6 @@ local createChat = function(_, config)
 
 			uiTextTime.pos.Y = node.Height - uiTextTime.Height
 
-			if uiHead then
-				uiHead.pos.Y = uiTextTime.pos.Y + uiTextTime.Height * 0.5 - uiHead.Height * 0.5
-			end
 			uiText.pos.Y = node.Height - uiText.Height
 		end
 		node:parentDidResize()

@@ -29,12 +29,12 @@ BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
 BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
 ALERT_BACKGROUND_COLOR_ON = Color(0, 0, 0, 200)
 ALERT_BACKGROUND_COLOR_OFF = Color(0, 0, 0, 0)
-CHAT_SCREEN_WIDTH_RATIO = 0.3
+CHAT_SCREEN_WIDTH_RATIO = 0.4
 CHAT_MAX_WIDTH = 600
-CHAT_MIN_WIDTH = 250
-CHAT_SCREEN_HEIGHT_RATIO = 0.25
+CHAT_MIN_WIDTH = 200
+CHAT_SCREEN_HEIGHT_RATIO = 0.33
 CHAT_MIN_HEIGHT = 160
-CHAT_MAX_HEIGHT = 400
+CHAT_MAX_HEIGHT = 500
 CONNECTION_RETRY_DELAY = 5.0 -- in seconds
 PADDING = theme.padding
 PADDING_BIG = 9
@@ -43,8 +43,12 @@ TOP_BAR_HEIGHT = 40
 CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
+DEV_MODE = System.LocalUserIsAuthor and System.ServerIsInDevMode
+AI_ASSISTANT_ENABLED = false -- feature is not ready yet
+
 -- VARS
 
+minified = not System.IsHomeAppRunning
 wasActive = nil
 modalWasShown = false
 alertWasShown = false
@@ -133,7 +137,7 @@ function maxModalWidth()
 end
 
 function maxModalHeight()
-	local availableHeight = Screen.Height - Screen.SafeArea.Bottom - topBar.Height
+	local availableHeight = topBar.Position.Y - Screen.SafeArea.Bottom
 	local minusFixedMargin = availableHeight - MODAL_MARGIN * 2
 	local percentage = availableHeight * 0.9
 	local max = 700
@@ -142,7 +146,7 @@ end
 
 function updateModalPosition(modal)
 	local vMin = Screen.SafeArea.Bottom + MODAL_MARGIN
-	local vMax = Screen.Height - topBar.Height - MODAL_MARGIN
+	local vMax = topBar.Position.Y - MODAL_MARGIN
 	local vCenter = vMin + (vMax - vMin) * 0.5
 	modal.pos = { Screen.Width * 0.5 - modal.Width * 0.5, vCenter - modal.Height * 0.5 }
 end
@@ -151,6 +155,8 @@ function closeModal()
 	if activeModal ~= nil then
 		activeModal:close()
 		activeModal = nil
+		activeModalKey = nil
+		refreshButtons()
 	end
 end
 
@@ -290,6 +296,7 @@ function showModal(key, config)
 			activeModal = nil
 			activeModalKey = nil
 			refreshChat()
+			refreshButtons()
 			triggerCallbacks()
 		end
 
@@ -297,6 +304,7 @@ function showModal(key, config)
 	end
 
 	refreshChat()
+	refreshButtons()
 	triggerCallbacks()
 
 	return modal, content
@@ -436,6 +444,8 @@ end
 
 function refreshDisplay()
 	if cppMenuIsActive then
+		topBar:hide()
+
 		if activeModal then
 			activeModal:hide()
 		end
@@ -445,10 +455,9 @@ function refreshDisplay()
 		if alertModal then
 			alertModal:hide()
 		end
-
-		chatBtn:hide()
-		pezhBtn:hide()
 	else
+		topBar:show()
+		
 		if activeModal then
 			activeModal:show()
 		end
@@ -465,7 +474,53 @@ function refreshDisplay()
 			chatBtn:hide()
 		end
 
-		pezhBtn:show()
+		if not minified then
+			pezhBtn:show()
+		end
+	end
+end
+
+function refreshButtons()
+	if activeModalKey == nil then
+		if chat ~= nil then
+			chatIcon:hide()
+			chatIconSelected:show()
+		else
+			chatIcon:show()
+			chatIconSelected:hide()
+		end
+	else
+		if activeModalKey == MODAL_KEYS.CHAT then
+			chatIcon:hide()
+			chatIconSelected:show()
+		else
+			chatIcon:show()
+			chatIconSelected:hide()
+		end
+	end
+
+	if activeModalKey == MODAL_KEYS.NOTIFICATIONS then
+		notificationsIcon:hide()
+		notificationsIconSelected:show()
+	else
+		notificationsIcon:show()
+		notificationsIconSelected:hide()
+	end
+
+	if activeModalKey == MODAL_KEYS.SETTINGS then
+		if cubzhBtn.iconSelected then
+			cubzhBtn.icon:hide()
+			cubzhBtn.iconSelected:show()
+		end
+	else
+		if cubzhBtn.iconSelected then
+			cubzhBtn.icon:show()
+			cubzhBtn.iconSelected:hide()
+		end
+	end
+
+	if activeModalKey == MODAL_KEYS.CUBZH_MENU then
+		-- TODO
 	end
 end
 
@@ -506,7 +561,21 @@ settingsBtn.onRelease = function()
 	end
 end
 
-settingsIcon = ui:createText("⚙️", Color.White, "big")
+local tmp = ui:createText("⚙️", Color.White, "big")
+local size = math.max(tmp.Width, tmp.Height)
+tmp:remove()
+
+local settingsIcon = ui:frame({ image = {
+	data = Data:FromBundle("images/icon-settings.png"),
+	alpha = true,
+} })
+settingsIcon.Width = size
+settingsIcon.Height = size
+settingsIcon:setParent(settingsBtn)
+-- settingsIcon.parentDidResize = btnContentParentDidResize
+-- cubzhBtn.icon = settingsIcon
+
+-- settingsIcon = ui:createText("⚙️", Color.White, "big")
 settingsIcon:setParent(settingsBtn)
 
 settingsBtn.getMinSize = function(_)
@@ -828,31 +897,9 @@ function layoutNotification()
 		return
 	end
 
-	-- display notification between visible top bar icons
-	local startX = Screen.SafeArea.Left
-	local endX = Screen.Width - Screen.SafeArea.Right
+	local x = topBar.Position.X
 
-	if chatBtn:isVisible() then
-		local p = absNodePos(chatIcon)
-		startX = p.X + chatIcon.Width + PADDING
-	end
-
-	if pezhBtn:isVisible() then
-		local p = absNodePos(pezhShape)
-		endX = p.X - PADDING
-	elseif connBtn:isVisible() then
-		local p = absNodePos(connShape)
-		endX = p.X - PADDING
-	elseif cubzhBtn:isVisible() then
-		local shape = cubzhBtnShape or settingsIcon
-		local p = absNodePos(shape)
-		endX = p.X - PADDING
-	end
-
-	local availableWidth = endX - startX
-	local centerX = startX + availableWidth * 0.5
-
-	notificationText.object.MaxWidth = availableWidth - notificationIconSize - notificationIconPadding * 3 - 20 -- extra margin
+	notificationText.object.MaxWidth = math.min(Screen.Width * 0.8, 300)
 
 	notificationFrame.Height = math.max(
 		notificationIconSize + notificationPadding * 4,
@@ -880,16 +927,16 @@ function layoutNotification()
 	notificationText.pos = { notificationIconSize + notificationIconPadding * 2, y }
 
 	notificationFrame.pos = {
-		centerX - notificationFrame.Width * 0.5,
-		parent.Height - System.SafeAreaTop - notificationFrame.Height - theme.paddingTiny,
+		x,
+		topBar.pos.Y - notificationFrame.Height - PADDING,
 	}
 end
 
 function bumpNotification()
 	ease:cancel(notificationFrame.pos)
-	local posY = notificationFrame.pos.Y
-	notificationFrame.pos.Y = notificationFrame.pos.Y + 100
-	ease:outBack(notificationFrame.pos, 0.3).Y = posY
+	local posX = notificationFrame.pos.X
+	notificationFrame.pos.X = notificationFrame.pos.X - 100
+	ease:outBack(notificationFrame.pos, 0.3).X = posX
 end
 
 function hideNotification()
@@ -902,8 +949,8 @@ function hideNotification()
 			notificationTick:Remove()
 			notificationTick = nil
 		end,
-	}).Y =
-		Screen.Height
+	}).X = -notificationFrame.Width
+		
 end
 
 notificationFrame.parentDidResize = function()
@@ -956,7 +1003,16 @@ end
 
 -- TOP BAR
 
-topBar = ui:createFrame(Color(0, 0, 0, 0.7))
+topBar = ui:frame({
+	image = {
+		data = Data:FromBundle("images/menu-background.png"),
+		slice9 = { 0.5, 0.5 },
+		slice9Scale = 1.0,
+		alpha = true,
+	},
+})
+
+-- menu-background.png
 topBar:setParent(background)
 topBar:hide()
 
@@ -1018,15 +1074,29 @@ if System.IsHomeAppRunning then
 	settingsIcon.Height = 50
 	settingsIcon:setParent(cubzhBtn)
 	settingsIcon.parentDidResize = btnContentParentDidResize
+	cubzhBtn.icon = settingsIcon
+
+	local settingsIconSelected =
+		ui:frame({ image = {
+			data = Data:FromBundle("images/icon-settings-selected.png"),
+			alpha = true,
+		} })
+	settingsIconSelected.Width = 50
+	settingsIconSelected.Height = 50
+	settingsIconSelected:setParent(cubzhBtn)
+	settingsIconSelected.parentDidResize = btnContentParentDidResize
+	settingsIconSelected:hide()
+	cubzhBtn.iconSelected = settingsIconSelected
 else
-	local homeIcon = ui:frame({ image = {
+	local exitIcon = ui:frame({ image = {
 		data = Data:FromBundle("images/icon-exit.png"),
 		alpha = true,
 	} })
-	homeIcon.Width = 50
-	homeIcon.Height = 50
-	homeIcon:setParent(cubzhBtn)
-	homeIcon.parentDidResize = btnContentParentDidResize
+	exitIcon.Width = 50
+	exitIcon.Height = 50
+	exitIcon:setParent(cubzhBtn)
+	exitIcon.parentDidResize = btnContentParentDidResize
+	cubzhBtn.icon = exitIcon
 end
 
 -- CONNECTIVITY BTN
@@ -1130,8 +1200,100 @@ function connectionIndicatorStartAnimation()
 	end
 end
 
-chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+-- NOTIFICATIONS
 
+notificationsBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+notificationsBtn:setParent(topBar)
+if minified then
+	notificationsBtn:hide()
+end
+
+notificationsIcon = ui:frame({
+	image = {
+		data = Data:FromBundle("images/icon-bell.png"),
+		alpha = true,
+	},
+})
+notificationsIcon.Width = 50
+notificationsIcon.Height = 50
+notificationsIcon:setParent(notificationsBtn)
+
+notificationsIconSelected =
+	ui:frame({ image = {
+		data = Data:FromBundle("images/icon-bell-selected.png"),
+		alpha = true,
+	} })
+notificationsIconSelected.Width = 50
+notificationsIconSelected.Height = 50
+notificationsIconSelected:setParent(notificationsBtn)
+notificationsIconSelected:hide()
+
+notificationsIcon.parentDidResize = function(self)
+	local parent = self.parent
+	self.Height = parent.Height - PADDING * 2
+	self.Width = self.Height
+	self.pos = { PADDING, PADDING }
+
+	notificationsIconSelected.Height = parent.Height - PADDING * 2
+	notificationsIconSelected.Width = self.Height
+	notificationsIconSelected.pos = { PADDING, PADDING }
+end
+
+local badge = require("notifications"):createBadge({
+	count = 0,
+	ui = ui,
+	type = "notifications",
+	height = 16,
+	padding = 3,
+	vPadding = 0,
+})
+
+badge.internalParentDidResize = badge.parentDidResize
+badge.parentDidResize = function(self)
+	self:internalParentDidResize()
+	self.pos.X = self.parent.Width * 0.70 - self.Width * 0.5
+	self.pos.Y = self.parent.Height * 0.70 - self.Height * 0.5
+end
+
+badge:setParent(notificationsBtn)
+
+local function refreshBellCount()
+	if notificationsReq ~= nil then
+		notificationsReq:Cancel()
+	end
+	notificationsReq = require("user"):getUnreadNotificationCount({
+		callback = function(count, err)
+			notificationsReq = nil
+			if err ~= nil then
+				return
+			end
+			badge:setCount(count)
+		end,
+	})
+end
+
+if notificationCountListeners == nil then
+	notificationCountListeners = {}
+	local l = LocalEvent:Listen(LocalEvent.Name.NotificationCountDidChange, refreshBellCount)
+	table.insert(notificationCountListeners, l)
+	l = LocalEvent:Listen(LocalEvent.Name.AppDidBecomeActive, refreshBellCount)
+	table.insert(notificationCountListeners, l)
+end
+
+refreshBellCount()
+
+notificationsBtn.onPress = topBarBtnPress
+notificationsBtn.onCancel = topBarBtnRelease
+notificationsBtn.onRelease = function(self)
+	topBarBtnRelease(self)
+	showModal(MODAL_KEYS.NOTIFICATIONS)
+	menu:sendHomeDebugEvent("User presses NOTIFICATIONS button")
+	badge:setCount(0)
+end
+
+-- CHAT
+
+chatBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 chatBtn:setParent(topBar)
 
 chatIcon = ui:frame({ image = {
@@ -1141,11 +1303,201 @@ chatIcon = ui:frame({ image = {
 chatIcon.Width = 50
 chatIcon.Height = 50
 chatIcon:setParent(chatBtn)
+
+chatIconSelected = ui:frame({ image = {
+	data = Data:FromBundle("images/icon-chat-selected.png"),
+	alpha = true,
+} })
+chatIconSelected.Width = 50
+chatIconSelected.Height = 50
+chatIconSelected:setParent(chatBtn)
+chatIconSelected:hide()
+
 chatIcon.parentDidResize = function(self)
 	local parent = self.parent
 	self.Height = parent.Height - PADDING * 2
 	self.Width = self.Height
 	self.pos = { PADDING, PADDING }
+
+	chatIconSelected.Height = parent.Height - PADDING * 2
+	chatIconSelected.Width = self.Height
+	chatIconSelected.pos = { PADDING, PADDING }
+end
+
+chatBadge = nil
+
+function updateChatBadge(nbLogs, errorLogs, warningLogs)
+	local totalLogs = nbLogs + errorLogs + warningLogs
+	if totalLogs == 0 then
+		removeChatBadge()
+		return
+	end
+	if chatBadge ~= nil then
+		chatBadge:setCount(totalLogs)
+		return
+	end
+
+	chatBadge = require("notifications"):createBadge({
+		count = totalLogs,
+		ui = ui,
+		type = "logs",
+		height = 16,
+		padding = 3,
+		vPadding = 0,
+	})
+	chatBadge.internalParentDidResize = chatBadge.parentDidResize
+	chatBadge.parentDidResize = function(self)
+		self:internalParentDidResize()
+		self.pos.X = math.max(self.parent.Width * 0.5, self.parent.Width * 0.70 - self.Width * 0.5)
+		self.pos.Y = self.parent.Height * 0.70 - self.Height * 0.5
+	end
+	chatBadge:setParent(chatBtn)
+end
+
+function removeChatBadge()
+	if chatBadge ~= nil then
+		chatBadge:remove()
+		chatBadge = nil
+	end
+end
+
+local unreadLogs = 0
+local unreadErrorLogs = 0
+local unreadWarningLogs = 0
+local logCountRefreshTimer
+updateChatBadge(unreadLogs, unreadErrorLogs, unreadWarningLogs)
+LocalEvent:Listen(LocalEvent.Name.Log, function(log)
+	if chatDisplayed then
+		return
+	end
+	unreadLogs += 1
+	if logCountRefreshTimer ~= nil then
+		return
+	end
+	logCountRefreshTimer = Timer(0.1, function()
+		logCountRefreshTimer = nil
+		updateChatBadge(unreadLogs, unreadErrorLogs, unreadWarningLogs)
+	end)
+end)
+
+function resetLogCount()
+	unreadLogs = 0
+	unreadErrorLogs = 0
+	unreadWarningLogs = 0
+	updateChatBadge(unreadLogs, unreadErrorLogs, unreadWarningLogs)
+end
+
+-- displayes chat as expected based on state
+function refreshChat()
+	if chatDisplayed and cppMenuIsActive == false then
+		if activeModal then
+			removeChat()
+		else
+			if chat == nil then
+				resetLogCount()
+			end
+			createChat()
+		end
+	else
+		removeChat()
+	end
+end
+
+-- DEV MODE / AI BUTTON
+
+if DEV_MODE == true and AI_ASSISTANT_ENABLED == true then
+	aiBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
+	aiBtn:setParent(topBar)
+
+	aiIcon = ui:frame({
+		image = {
+			data = Data:FromBundle("images/icon-ai.png"),
+			alpha = true,
+		},
+	})
+	aiIcon.Width = 50
+	aiIcon.Height = 50
+
+	aiIcon.parentDidResize = function(self)
+		local parent = self.parent
+		self.Height = parent.Height - PADDING * 2
+		self.Width = self.Height
+		self.pos = { PADDING, PADDING }
+	end
+	aiIcon:setParent(aiBtn)
+
+	aiBtn.onPress = topBarBtnPress
+	aiBtn.onCancel = topBarBtnRelease
+	aiBtn.onRelease = function(self)
+		topBarBtnRelease(self)
+
+		if aiInput == nil then
+			aiInput = ui:createTextInput("", "What do you want to do? ✨",
+			{ 
+				textSize = "small", 
+				returnKeyType = "send" 
+			})
+			aiInput:setParent(background)
+			-- background, text, placeholder, border
+			aiInput:setColor(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
+			aiInput:setColorPressed(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
+			aiInput:setColorFocused(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
+
+			aiInput.parentDidResize = function(self)
+				local parent = self.parent
+				self.Width = math.min(600, parent.Width - PADDING * 2)
+				self.pos = {parent.Width * 0.5 - self.Width * 0.5, Screen.SafeArea.Bottom + PADDING}
+			end
+			aiInput:parentDidResize()
+
+			local posY = aiInput.pos.Y
+			aiInput.pos.Y -= 100
+			ease:outBack(aiInput.pos, 0.2, {
+				onDone = function()
+					aiInput:focus()
+				end,
+			}).Y = posY
+
+			aiInput.onSubmit = function(self)
+				if self.Text == "" then
+					aiInput:remove()
+					aiInput = nil
+					return
+				end
+				local body = {
+					prompt = self.Text,
+					script = System.Script,
+				}
+				local headers = {}
+				headers["Content-Type"] = "application/json"
+				print("sending: " .. body.prompt)
+				HTTP:Post("http://localhost", headers, body, function(res)
+					if res.StatusCode ~= 200 then
+						print("error: " .. res.StatusCode)
+						return
+					end
+					local data = JSON:Decode(res.Body)
+					if data.type == "chat" then
+						print("AI: " .. data.output)
+					elseif data.type == "code" then
+						if aiInput ~= nil then
+							ease:cancel(aiInput)
+							aiInput:remove()
+							aiInput = nil
+						end
+						System:PublishScript(data.output)
+					end
+				end)
+				self.Text = ""
+			end
+			
+		else
+			ease:cancel(aiInput)
+			aiInput:remove()
+			aiInput = nil
+		end
+		
+	end
 end
 
 cubzhBtn.onPress = topBarBtnPress
@@ -1169,6 +1521,7 @@ chatBtn.onRelease = function(self)
 		chatDisplayed = not chatDisplayed
 		refreshChat()
 	end
+	refreshButtons()
 end
 
 -- hide chat button by default
@@ -1197,47 +1550,47 @@ pezhBtn.onRelease = function(self)
 	sfx("coin_1", { Volume = 0.75, Pitch = 1.0, Spatialized = false })
 end
 
+if minified then
+	pezhBtn:hide()
+	pezhShape:setParent(nil)
+end
+
 -- CHAT
 
+local chatBackgroundData
 function createChat()
 	if chat ~= nil then
 		return -- chat already created
 	end
-	chat = ui:createFrame(Color(0, 0, 0, 0.3))
-	chat:setParent(background)
 
-	local btnChatFullscreen = ui:createButton("⇱", { textSize = "small", unfocuses = false })
-	btnChatFullscreen.onRelease = function()
-		showModal(MODAL_KEYS.CHAT)
+	if chatBackgroundData == nil then
+		chatBackgroundData = Data:FromBundle("images/chat-background.png")
 	end
-	btnChatFullscreen:setColor(Color(0, 0, 0, 0.5))
-	btnChatFullscreen:hide()
+	chat = ui:frame({
+		image = {
+			data = chatBackgroundData,
+			slice9 = { 0.5, 0.5 },
+			slice9Scale = 1.0,
+			alpha = true,
+		},
+	})
+
+	-- chat = ui:createFrame(Color(0, 0, 0, 0.8))
+	chat:setParent(background)
 
 	console = require("chat"):create({
 		uikit = ui,
 		time = false,
 		onSubmitEmpty = function()
 			hideChat()
+			refreshButtons()
 		end,
-		onFocus = function()
-			if chat == nil then
-				return
-			end
-			chat.Color = Color(0, 0, 0, 0.5)
-			btnChatFullscreen:show()
-		end,
-		onFocusLost = function()
-			if chat == nil then
-				return
-			end
-			chat.Color = Color(0, 0, 0, 0.3)
-			btnChatFullscreen:hide()
-		end,
+		onFocus = function() end,
+		onFocusLost = function() end,
 	})
 	console.Width = 200
 	console.Height = 500
 	console:setParent(chat)
-	btnChatFullscreen:setParent(chat)
 
 	chat.parentDidResize = function()
 		local w = Screen.Width * CHAT_SCREEN_WIDTH_RATIO
@@ -1254,9 +1607,7 @@ function createChat()
 		console.Height = chat.Height - theme.paddingTiny * 2
 
 		console.pos = { theme.paddingTiny, theme.paddingTiny }
-		chat.pos = { theme.padding, Screen.Height - Screen.SafeArea.Top - chat.Height - theme.padding }
-
-		btnChatFullscreen.pos = { chat.Width + theme.paddingTiny, chat.Height - btnChatFullscreen.Height }
+		chat.pos = { theme.padding, topBar.pos.Y - chat.Height - PADDING }
 	end
 	chat:parentDidResize()
 end
@@ -1268,21 +1619,7 @@ function removeChat()
 	local c = chat
 	chat = nil
 	console = nil
-	btnChatFullscreen = nil
 	c:remove()
-end
-
--- displayes chat as expected based on state
-function refreshChat()
-	if chatDisplayed and cppMenuIsActive == false then
-		if activeModal then
-			removeChat()
-		else
-			createChat()
-		end
-	else
-		removeChat()
-	end
 end
 
 function showChat(input)
@@ -1501,38 +1838,72 @@ end
 topBar.parentDidResize = function(self)
 	local height = TOP_BAR_HEIGHT
 
+	self.Height = height
+	self.pos = {
+		Screen.SafeArea.Left + PADDING,
+		Screen.Height - System.SafeAreaTop - self.Height - PADDING,
+	}
+
+	local width = cubzhBtn.Width
+
+	cubzhBtn.pos = { 0, 0 }
+
+	-- SETTINGS / EXPERIENCE EXIT
+
 	cubzhBtn.Height = height
 	cubzhBtn.Width = height
-
-	connBtn.Height = height
-	connBtn.Width = height
-
-	self.Width = Screen.Width
-	if self:isVisible() then
-		self.Height = System.SafeAreaTop + height
-	else
-		self.Height = System.SafeAreaTop
-	end
-	self.pos.Y = Screen.Height - self.Height
-
-	cubzhBtn.pos.X = self.Width - Screen.SafeArea.Right - cubzhBtn.Width
-	connBtn.pos.X = cubzhBtn.pos.X - connBtn.Width
+	local previousBtn = cubzhBtn
 
 	-- PEZH BUTTON
 
-	pezhBtn.Height = height
-	pezhBtn.Width = height
+	if pezhBtn:isVisible() then
+		pezhBtn.Height = height
+		pezhBtn.Width = height
+		pezhBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = pezhBtn
+		width += pezhBtn.Width
+	end
+
+	-- NOTIFICATIONS BUTTON
+
+	if notificationsBtn:isVisible() then
+		notificationsBtn.Height = height
+		notificationsBtn.Width = height
+		notificationsBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = notificationsBtn
+		width += notificationsBtn.Width
+	end
+
+	-- CONNECTION BUTTON
 
 	if connBtn:isVisible() then
-		pezhBtn.pos.X = connBtn.pos.X - pezhBtn.Width
-	else
-		pezhBtn.pos.X = cubzhBtn.pos.X - pezhBtn.Width
+		connBtn.Height = height
+		connBtn.Width = height
+		connBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = connBtn
+		width += connBtn.Width
 	end
 
 	-- CHAT BUTTON
 
-	chatBtn.Height = height
-	chatBtn.Width = height
+	if chatBtn:isVisible() then
+		chatBtn.Height = height
+		chatBtn.Width = height
+		chatBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		previousBtn = chatBtn
+		width += chatBtn.Width
+	end
+
+	-- AI BUTTON
+
+	if aiBtn ~= nil and aiBtn:isVisible() then
+		aiBtn.Height = height
+		aiBtn.Width = height
+		aiBtn.pos = { previousBtn.pos.X + previousBtn.Width, 0 }
+		width += aiBtn.Width
+	end
+
+	self.Width = width
 end
 topBar:parentDidResize()
 
@@ -1937,6 +2308,10 @@ local mt = {
 	__index = function(_, k)
 		if k == "Height" then
 			return topBar.Height
+		elseif k == "Width" then
+			return topBar.Width
+		elseif k == "Position" then
+			return Number2(topBar.pos.X, topBar.pos.Y)
 		end
 	end,
 	__newindex = function()
@@ -2019,6 +2394,7 @@ LocalEvent:Listen(LocalEvent.Name.CppMenuStateChanged, function(_)
 	refreshDisplay()
 	triggerCallbacks()
 	refreshChat()
+	refreshButtons()
 end)
 
 LocalEvent:Listen(LocalEvent.Name.ServerConnectionSuccess, function()

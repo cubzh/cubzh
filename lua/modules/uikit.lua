@@ -1110,12 +1110,12 @@ function createUI(system)
 		local h
 		h = str.Height + paddingAndBorder * 2
 		node.border.Height = h
-		node.background.Height = h - theme.textInputBorderSize * 2
+		node.background.Height = h
 
 		textContainer.Width = node.Width - border * 2
 		textContainer.Height = node.Height - border * 2
 
-		textContainer.pos = { border, border, 0 }
+		textContainer.pos = { border, border }
 
 		placeholder.pos = { padding, textContainer.Height * 0.5 - placeholder.Height * 0.5, 0 }
 		str.pos = { padding, textContainer.Height * 0.5 - str.Height * 0.5, 0 }
@@ -1244,13 +1244,31 @@ function createUI(system)
 		})
 	end
 
+	local frameLogsBadgeQuadData
+	ui.frameLogsBadge = function(self)
+		if self ~= ui then
+			error("ui:frameNotification(): use `:`", 2)
+		end
+		if frameLogsBadgeQuadData == nil then
+			frameLogsBadgeQuadData = Data:FromBundle("images/badge-white.png")
+		end
+		return ui.frame(self, {
+			image = {
+				data = frameLogsBadgeQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				alpha = true,
+			},
+		})
+	end
+
 	local frameNotificationBadgeQuadData
-	ui.frameNotificationBadge = function(self)
+	ui.frameNotificationsBadge = function(self)
 		if self ~= ui then
 			error("ui:frameNotification(): use `:`", 2)
 		end
 		if frameNotificationBadgeQuadData == nil then
-			frameNotificationBadgeQuadData = Data:FromBundle("images/notification_badge.png")
+			frameNotificationBadgeQuadData = Data:FromBundle("images/badge-red.png")
 		end
 		return ui.frame(self, {
 			image = {
@@ -1668,6 +1686,7 @@ function createUI(system)
 			config = conf:merge(defaultConfig, config, {
 				acceptTypes = {
 					size = { "number", "string" },
+					weight = { "string" },
 				},
 			})
 		end)
@@ -1726,7 +1745,7 @@ function createUI(system)
 		end
 
 		t.Format = {
-			weight = config.bold and "bold" or "regular",
+			weight = config.weight ~= nil and config.weight or (config.bold and "bold" or "regular"),
 			slant = config.italic and "italic" or "regular",
 			alignment = config.alignment,
 		}
@@ -1870,12 +1889,32 @@ function createUI(system)
 		node.state = State.Idle
 		node.object = Object()
 
-		node.border = self:createFrame()
+		if textInputBorderQuadData == nil then
+			textInputBorderQuadData = Data:FromBundle("images/text-input-border.png")
+		end
+		node.border = self:frame({
+			image = {
+				data = textInputBorderQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				cutout = true,
+			},
+		})
 		node.border:setParent(node)
 
-		node.background = self:createFrame()
+		if textInputBackgroundQuadData == nil then
+			textInputBackgroundQuadData = Data:FromBundle("images/text-input-background.png")
+		end
+		node.background = self:frame({
+			image = {
+				data = textInputBackgroundQuadData,
+				slice9 = { 0.5, 0.5 },
+				slice9Scale = DEFAULT_SLICE_9_SCALE,
+				cutout = true,
+			},
+		})
 		node.background:setParent(node)
-		node.background.pos = { theme.textInputBorderSize, theme.textInputBorderSize, 0 }
+		node.background.pos = { 0, 0 }
 
 		local textContainer = ui:createFrame(Color.transparent)
 		textContainer:setParent(node)
@@ -1945,14 +1984,14 @@ function createUI(system)
 
 		node._setWidth = function(self, newWidth)
 			self.border.Width = newWidth
-			self.background.Width = newWidth - theme.textInputBorderSize * 2
+			self.background.Width = newWidth
 		end
 
 		node.Width = theme.textInputDefaultWidth
 
 		node._setHeight = function(_, _)
 			-- self.border.Height = newHeight
-			-- self.background.Height = newHeight - theme.textInputBorderSize * 2
+			-- self.background.Height = newHeight
 		end
 
 		node._text = function(self)
@@ -1993,10 +2032,14 @@ function createUI(system)
 
 		node.Width = 200
 
-		node.setColor = function(self, background, text, placeholder, doNotrefresh)
+		node.setColor = function(self, background, text, placeholder, border, doNotrefresh)
 			if background ~= nil then
 				node.colors = { Color(background), Color(background) }
-				node.colors[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				if border ~= nil then
+					node.colors[2] = border
+				else
+					node.colors[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				end
 			end
 			if text ~= nil then
 				node.textColor = Color(text)
@@ -2009,10 +2052,14 @@ function createUI(system)
 			end
 		end
 
-		node.setColorPressed = function(self, background, text, placeholder, doNotrefresh)
+		node.setColorPressed = function(self, background, text, placeholder, border, doNotrefresh)
 			if background ~= nil then
 				node.colorsPressed = { Color(background), Color(background) }
-				node.colorsPressed[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				if border ~= nil then
+					node.colorsPressed[2] = border
+				else
+					node.colorsPressed[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				end
 			end
 			if text ~= nil then
 				node.textColorPressed = Color(text)
@@ -2025,10 +2072,14 @@ function createUI(system)
 			end
 		end
 
-		node.setColorFocused = function(self, background, text, placeholder, doNotrefresh)
+		node.setColorFocused = function(self, background, text, placeholder, border, doNotrefresh)
 			if background ~= nil then
 				node.colorsFocused = { Color(background), Color(background) }
-				node.colorsFocused[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				if border ~= nil then
+					node.colorsFocused[2] = border
+				else
+					node.colorsFocused[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				end
 			end
 			if text ~= nil then
 				node.textColorFocused = Color(text)
@@ -2041,10 +2092,14 @@ function createUI(system)
 			end
 		end
 
-		node.setColorDisabled = function(self, background, text, placeholder, doNotrefresh)
+		node.setColorDisabled = function(self, background, text, placeholder, border,doNotrefresh)
 			if background ~= nil then
 				node.colorsDisabled = { Color(background), Color(background) }
-				node.colorsDisabled[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				if border ~= nil then
+					node.colorsDisabled[2] = border
+				else
+					node.colorsDisabled[2]:ApplyBrightnessDiff(theme.textInputBorderBrightnessDiff)
+				end
 			end
 			if text ~= nil then
 				node.textColorDisabled = Color(text)
@@ -2057,23 +2112,32 @@ function createUI(system)
 			end
 		end
 
-		node:setColor(theme.textInputBackgroundColor, theme.textInputTextColor, theme.textInputPlaceholderColor, true)
+		node:setColor(
+			theme.textInputBackgroundColor,
+			theme.textInputTextColor,
+			theme.textInputPlaceholderColor,
+			nil, 
+			true
+		)
 		node:setColorPressed(
 			theme.textInputBackgroundColorPressed,
 			theme.textInputTextColorPressed,
 			theme.textInputPlaceholderColorPressed,
+			nil,
 			true
 		)
 		node:setColorFocused(
 			theme.textInputBackgroundColorFocused,
 			theme.textInputTextColorFocused,
 			theme.textInputPlaceholderColorFocused,
+			nil,
 			true
 		)
 		node:setColorDisabled(
 			theme.textInputBackgroundColorDisabled,
 			theme.textInputTextColorDisabled,
 			theme.textInputPlaceholderColorDisabled,
+			nil,
 			true
 		)
 
