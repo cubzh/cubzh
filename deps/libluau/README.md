@@ -29,7 +29,9 @@ To be run from cubzh/cubzh repo root dir
 
 # linux
 # From cubzh/cubzh repo root dir
-docker run --rm -v $(pwd):/cubzh -w /cubzh/deps/libluau --entrypoint /bin/bash --platform linux/amd64 voxowl/bazel:8.1.1 ./build.sh -p linux
+docker run --rm -v $(pwd):/cubzh -w /cubzh/deps/libluau --entrypoint /bin/bash --platform linux/amd64 voxowl/bazel:8.1.1 ./build.sh -p linux -v 0.661
+# With source override
+docker run --rm -v $(pwd):/cubzh -v /Users/gaetan/projects/gdevillele/luau:/src -w /cubzh/deps/libluau --entrypoint /bin/bash --platform linux/amd64 voxowl/bazel:8.1.1 ./build.sh -p linux -v head -s /src
 # bazel build //deps/libluau:luau --platforms=//:linux_x86_64
 
 # wasm
