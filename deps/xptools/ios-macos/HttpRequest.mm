@@ -14,42 +14,14 @@
 // xptools
 #include "vxlog.h"
 
-// -------------------------------------------------------------
-
-@interface HttpRequestWrapper : NSObject
-- (instancetype)initWithCppObject:(vx::HttpRequest_SharedPtr)object;
-- (vx::HttpRequest_SharedPtr)getCppObject;
-@end
-
-@interface HttpRequestWrapper ()
-@property (nonatomic) vx::HttpRequest_SharedPtr cppObject;
-@end
-
-@implementation HttpRequestWrapper
-
-- (instancetype)initWithCppObject:(vx::HttpRequest_SharedPtr)object {
-    if (self = [super init]) {
-        _cppObject = object;
-    }
-    return self;
-}
-
-- (vx::HttpRequest_SharedPtr)getCppObject {
-    return _cppObject;
-}
-
-@end
-
-// -------------------------------------------------------------
-
 @interface NetworkManager : NSObject <NSURLSessionDataDelegate>
 @property (nonatomic, strong, readonly) NSURLSession *session;
 + (instancetype)sharedManager;
-- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request forHttpRequest:(vx::HttpRequest_SharedPtr)httpReq;
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request forHttpRequest:(vx::HttpRequest_SharedPtr*)httpReqPtr;
 @end
 
 @implementation NetworkManager {
-    NSMutableDictionary<NSNumber *, vx::HttpRequest_SharedPtr> *_taskMap;
+    NSMutableDictionary<NSNumber *, NSValue *> *_taskMap;
 }
 
 @synthesize session = _session;
@@ -74,10 +46,10 @@
     return self;
 }
 
-- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request forHttpRequest:(vx::HttpRequest_SharedPtr)httpReq {
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request forHttpRequest:(vx::HttpRequest_SharedPtr*)httpReqPtr {
     NSURLSessionDataTask *task = [self.session dataTaskWithRequest:request];
     @synchronized (_taskMap) {
-        _taskMap[@(task.taskIdentifier)] = httpReq;
+        _taskMap[@(task.taskIdentifier)] = [NSValue valueWithPointer: httpReqPtr];
     }
     return task;
 }
@@ -86,28 +58,29 @@
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completionHandler {
     @synchronized (_taskMap) {
-        vx::HttpRequest_SharedPtr httpReq = _taskMap[@(dataTask.taskIdentifier)];
-        if (httpReq) {
-            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-            
-            // Set response status code
-            httpReq->getResponse().setStatusCode(httpResponse.statusCode);
-            
-            // Set response headers
-            NSDictionary *headers = httpResponse.allHeaderFields;
-            std::unordered_map<std::string, std::string> responseHeaders;
-            for (NSString *key in headers) {
-                NSString *value = headers[key];
-                responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
-            }
-            httpReq->getResponse().setHeaders(responseHeaders);
-            
-            // Initialize response body
-            httpReq->getResponse().setBytes("");
-            httpReq->getResponse().setSuccess(true);
-            
-            // Call callback for the first time with headers
-            httpReq->callCallback();
+        NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+        if (httpReqPtr) {
+//            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+//            
+//            // Set response status code
+//            httpReq->getResponse().setStatusCode(httpResponse.statusCode);
+//            
+//            // Set response headers
+//            NSDictionary *headers = httpResponse.allHeaderFields;
+//            std::unordered_map<std::string, std::string> responseHeaders;
+//            for (NSString *key in headers) {
+//                NSString *value = headers[key];
+//                responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
+//            }
+//            httpReq->getResponse().setHeaders(responseHeaders);
+//            
+//            // Initialize response body
+//            httpReq->getResponse().setBytes("");
+//            httpReq->getResponse().setSuccess(true);
+//            
+//            // Call callback for the first time with headers
+//            httpReq->callCallback();
         }
     }
     completionHandler(NSURLSessionResponseAllow);
@@ -115,24 +88,26 @@
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
     @synchronized (_taskMap) {
-        vx::HttpRequest_SharedPtr httpReq = _taskMap[@(dataTask.taskIdentifier)];
-        if (httpReq) {
-            // Append new data to existing response
-            std::string newBytes(reinterpret_cast<const char*>(data.bytes), data.length);
-            std::string currentBytes = httpReq->getResponse().getBytes();
-            currentBytes.append(newBytes);
-            httpReq->getResponse().setBytes(currentBytes);
-            
-            // Call callback with the updated data
-            httpReq->callCallback();
+        NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+        if (httpReqPtr) {
+//            // Append new data to existing response
+//            std::string newBytes(reinterpret_cast<const char*>(data.bytes), data.length);
+//            std::string currentBytes = httpReq->getResponse().getBytes();
+//            currentBytes.append(newBytes);
+//            httpReq->getResponse().setBytes(currentBytes);
+//            
+//            // Call callback with the updated data
+//            httpReq->callCallback();
         }
     }
 }
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
     @synchronized (_taskMap) {
-        vx::HttpRequest_SharedPtr httpReq = _taskMap[@(task.taskIdentifier)];
-        if (httpReq) {
+        NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+        if (httpReqPtr) {
             if (error) {
                 vxlog_error("HTTP request failed: %s", error.localizedDescription.UTF8String);
                 httpReq->getResponse().setSuccess(false);
@@ -156,10 +131,12 @@
 namespace vx {
 
 void HttpRequest::_sendAsync() {
+
     HttpRequest_SharedPtr httpReq = this->_weakSelf.lock();
     if (httpReq == nullptr) {
         return;
     }
+    HttpRequest_SharedPtr *httpReqPtr = new HttpRequest_SharedPtr(httpReq);
 
     @autoreleasepool {
         NSString *urlString = [NSString stringWithUTF8String:httpReq->constructURLString().c_str()];
@@ -190,7 +167,7 @@ void HttpRequest::_sendAsync() {
         }
 
         // Create task with the NetworkManager
-        NSURLSessionDataTask *task = [[NetworkManager sharedManager] dataTaskWithRequest:request forHttpRequest:httpReq];
+        NSURLSessionDataTask *task = [[NetworkManager sharedManager] dataTaskWithRequest:request forHttpRequest:httpReqPtr];
 
         httpReq->_attachPlatformObject((__bridge_retained void*)task);
         httpReq->setStatus(HttpRequest::Status::PROCESSING);
