@@ -1437,9 +1437,10 @@ if DEV_MODE == true then
 				returnKeyType = "send" 
 			})
 			aiInput:setParent(background)
-			aiInput:setColor(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4))
-			aiInput:setColorPressed(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4))
-			aiInput:setColorFocused(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4))
+			-- background, text, placeholder, border
+			aiInput:setColor(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
+			aiInput:setColorPressed(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
+			aiInput:setColorFocused(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
 
 			aiInput.parentDidResize = function(self)
 				local parent = self.parent

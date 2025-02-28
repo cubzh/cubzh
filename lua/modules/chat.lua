@@ -208,9 +208,9 @@ local createChat = function(_, config)
 	if hasInput then
 		inputNode = ui:createTextInput("", "say something…", { textSize = smallTextRef.object.FontSize * 0.75, returnKeyType = "send" })
 		inputNode:setParent(node)
-		inputNode:setColor(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4))
-		inputNode:setColorPressed(Color(10, 10, 10, 0.9), Color.White, Color(27, 29, 28, 0))
-		inputNode:setColorFocused(Color(10, 10, 10, 0.9), Color.White, Color(27, 29, 28, 0))
+		inputNode:setColor(Color(10, 10, 10, 0.9), Color.White, Color(255, 255, 255, 0.4), Color(255, 255, 255, 0.5))
+		inputNode:setColorPressed(Color(10, 10, 10, 0.9), Color.White, Color(27, 29, 28, 0), Color(255, 255, 255, 0.5))
+		inputNode:setColorFocused(Color(10, 10, 10, 0.9), Color.White, Color(27, 29, 28, 0), Color(255, 255, 255, 0.5))	
 
 		inputNode.Text = config.inputText
 
