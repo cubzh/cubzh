@@ -362,8 +362,8 @@ vec3 getDeferredPreLitColor(vec3 opaque, vec3 lights) {
 	return opaque + lights;
 }
 
-/// Non-volume (quad, font) variant: no AO, no face shading
-vec4 getNonVolumeVertexLitColor(vec4 color, float lightValue, vec3 lightRGB, vec3 skybox, float clipZ) {
+/// Non-voxel variant: no vertex AO, no face shading
+vec4 getNonVoxelVertexLitColor(vec4 color, float lightValue, vec3 lightRGB, vec3 skybox, float clipZ) {
 	vec3 ambient = skybox * u_skyAmbientFactor;
 	vec3 lit = _litBlend(color.xyz, lightValue, lightRGB * VOXEL_LIGHT_RGB_PRE_FACTOR, skybox, ambient);
 
