@@ -44,6 +44,7 @@ CUBZH_MENU_MAIN_BUTTON_HEIGHT = 60
 CUBZH_MENU_SECONDARY_BUTTON_HEIGHT = 40
 
 DEV_MODE = System.LocalUserIsAuthor and System.ServerIsInDevMode
+AI_ASSISTANT_ENABLED = false -- feature is not ready yet
 
 -- VARS
 
@@ -1404,7 +1405,7 @@ end
 
 -- DEV MODE / AI BUTTON
 
-if DEV_MODE == true then
+if DEV_MODE == true and AI_ASSISTANT_ENABLED == true then
 	aiBtn = ui:createFrame(_DEBUG and _DebugColor() or Color.transparent)
 	aiBtn:setParent(topBar)
 
