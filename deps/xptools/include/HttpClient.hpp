@@ -70,6 +70,11 @@ public:
                               const HttpRequestOpts& opts,
                               HttpRequestCallback callback);
 
+    HttpRequest_SharedPtr GET_stream(const URL& url,
+                                     const std::unordered_map<std::string, std::string>& headers,
+                                     const HttpRequestOpts& opts,
+                                     HttpRequestCallback callback);
+
     /// Sends a GET request
     ///
     /// Callback example:

@@ -69,6 +69,22 @@ Client.OnStart = function()
 	avatarCameraFollowHomeScroll = false
 	avatarCameraX = 0
 
+	local req = HTTP:GetStream("https://api.cu.bzh/ping", function(resp)
+		if resp.StatusCode ~= 200 then
+			print("[🐞][ping] status not 200: " .. resp.StatusCode)
+			return
+		end
+		print("[🐞][ping] response: " .. resp.Body:ToString())
+	end)
+
+	-- local req = HTTP:Get("https://api.cu.bzh/ping", function(resp)
+	-- 	if resp.StatusCode ~= 200 then
+	-- 		print("[🐞][ping] status not 200: " .. resp.StatusCode)
+	-- 		return
+	-- 	end
+	-- 	print("[🐞][ping] response: " .. resp.Body:ToString())
+	-- end)
+
 	function getAvatarCameraTargetPosition(h, w, hWithoutMargin)
 		if avatarCameraTarget == nil then
 			return nil
@@ -2284,7 +2300,10 @@ function home()
 							local previousAvatarCameraX = avatarCameraX
 							avatarCameraX = padding + avatarWidth * 0.5
 
-							usernameFrame.pos = { x + infoWidth - usernameFrame.Width, y + usernameHeight * 0.5 - usernameFrame.Height * 0.5 }
+							usernameFrame.pos = {
+								x + infoWidth - usernameFrame.Width,
+								y + usernameHeight * 0.5 - usernameFrame.Height * 0.5,
+							}
 
 							if editUsernameBtn then
 								editUsernameBtn.pos = {
