@@ -94,6 +94,47 @@ HttpRequest_SharedPtr HttpClient::GET(const URL& url,
         return nullptr;
     }
 
+    // this function (HttpClient::GET) doesn't support streaming yet
+    if (opts.getStreamMode() == true) {
+        return nullptr;
+    }
+
+    const bool secure = url.scheme() == VX_HTTPS_SCHEME;
+
+    HttpRequest_SharedPtr req = HttpRequest::make("GET",
+                                                  url.host(),
+                                                  url.port(),
+                                                  url.path(),
+                                                  url.queryParams(),
+                                                  secure);
+    req->setHeaders(headers);
+    req->setCallback(callback);
+    req->setOpts(opts);
+
+    if (opts.getSendNow()) {
+        req->sendAsync();
+    }
+
+    return req;
+}
+
+// Function to dev & debug HTTP streaming (multiple callback)
+HttpRequest_SharedPtr HttpClient::GET_stream(const URL& url,
+                                             const std::unordered_map<std::string, std::string>& headers,
+                                             const HttpRequestOpts& opts,
+                                             HttpRequestCallback callback) {
+    vxlog_debug("[🐞][C++][HttpClient::GET_stream]");
+
+    if (url.isValid() == false) {
+        return nullptr;
+    }
+
+    // When calling this function (HttpClient::GET_stream) streamMode MUST be true
+    if (opts.getStreamMode() == false) {
+        vxlog_debug("[🐞][⚠️][HttpClient::GET_stream] opts.streamMode must be true");
+        return nullptr;
+    }
+
     const bool secure = url.scheme() == VX_HTTPS_SCHEME;
 
     HttpRequest_SharedPtr req = HttpRequest::make("GET",
