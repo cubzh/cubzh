@@ -15,6 +15,7 @@ namespace vx {
 
 HttpResponse::HttpResponse() :
 _success(false),
+_responseType(HTTPResponseType::DEFAULT),
 _statusCode(0),
 _headers(),
 _bytes(),
@@ -30,6 +31,14 @@ void HttpResponse::setSuccess(const bool& success) {
 
 const bool& HttpResponse::getSuccess() const {
     return _success;
+}
+
+void HttpResponse::setResponseType(const HTTPResponseType& type) {
+    _responseType = type;
+}
+
+const HTTPResponseType& HttpResponse::getResponseType() const {
+    return _responseType;
 }
 
 void HttpResponse::setStatusCode(const uint16_t& statusCode) {

@@ -14,13 +14,18 @@
 // xptools
 #include "vxlog.h"
 
-@interface NetworkManager : NSObject
+@interface NetworkManager : NSObject <NSURLSessionDataDelegate>
 @property (nonatomic, strong, readonly) NSURLSession *session;
 + (instancetype)sharedManager;
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request forHttpRequest:(vx::HttpRequest_SharedPtr*)httpReqPtr;
 @end
 
-@implementation NetworkManager
+@implementation NetworkManager {
+    NSMutableDictionary<NSNumber *, NSValue *> *_taskMap;
+}
+
 @synthesize session = _session;
+
 + (instancetype)sharedManager {
     static NetworkManager *sharedManager = nil;
     static dispatch_once_t onceToken;
@@ -29,24 +34,142 @@
     });
     return sharedManager;
 }
+
 - (instancetype)init {
     self = [super init];
     if (self) {
         NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration defaultSessionConfiguration];
         configuration.HTTPShouldSetCookies = NO;
-        _session = [NSURLSession sessionWithConfiguration:configuration];
+        _session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
+        _taskMap = [NSMutableDictionary dictionary];
     }
     return self;
 }
+
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request forHttpRequest:(vx::HttpRequest_SharedPtr*)httpReqPtr {
+    NSURLSessionDataTask *task = [self.session dataTaskWithRequest:request];
+    @synchronized (_taskMap) {
+        _taskMap[@(task.taskIdentifier)] = [NSValue valueWithPointer: httpReqPtr];
+    }
+    return task;
+}
+
+#pragma mark - NSURLSessionDataDelegate
+
+- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completionHandler {
+    vxlog_debug("🐞 [didReceiveResponse] ⭐️");
+    @synchronized (_taskMap) {
+        NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+        if (httpReqPtr) {
+//            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+//
+//            // Set response status code
+//            httpReq->getResponse().setStatusCode(httpResponse.statusCode);
+//
+//            // Set response headers
+//            NSDictionary *headers = httpResponse.allHeaderFields;
+//            std::unordered_map<std::string, std::string> responseHeaders;
+//            for (NSString *key in headers) {
+//                NSString *value = headers[key];
+//                responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
+//            }
+//            httpReq->getResponse().setHeaders(responseHeaders);
+//
+//            // Initialize response body
+//            httpReq->getResponse().setBytes("");
+//            httpReq->getResponse().setSuccess(true);
+//
+//            // Call callback for the first time with headers
+//            httpReq->callCallback();
+        }
+    }
+    completionHandler(NSURLSessionResponseAllow);
+}
+
+- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
+    vxlog_debug("🐞 [didReceiveData] ⭐️");
+    @synchronized (_taskMap) {
+        NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+        if (httpReqPtr) {
+//            // Append new data to existing response
+//            std::string newBytes(reinterpret_cast<const char*>(data.bytes), data.length);
+//            std::string currentBytes = httpReq->getResponse().getBytes();
+//            currentBytes.append(newBytes);
+//            httpReq->getResponse().setBytes(currentBytes);
+//
+//            // Call callback with the updated data
+//            httpReq->callCallback();
+        }
+    }
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
+    vxlog_debug("🐞 [didCompleteWithError] ⭐️");
+    @synchronized (_taskMap) {
+        NSValue* dictValue = _taskMap[@(task.taskIdentifier)];
+        if (dictValue == nil) {
+            vxlog_error("🐞 [didCompleteWithError] HttpRequest not found in taskMap");
+            return;
+        }
+        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+        if (httpReqPtr == nullptr) {
+            vxlog_error("🐞 [didCompleteWithError] HttpRequest pointer is nullptr");
+            return;
+        }
+
+    }
+
+//        if (error) {
+//            vxlog_error("HTTP request failed: %s", error.localizedDescription.UTF8String);
+//            httpReq->getResponse().setSuccess(false);
+//            httpReq->setStatus(vx::HttpRequest::Status::FAILED);
+//        } else {
+//            httpReq->setStatus(vx::HttpRequest::Status::DONE);
+//        }
+//
+//        // Final callback
+//        httpReq->callCallback();
+//
+//        // Clean up
+//        httpReq->_detachPlatformObject();
+//        [_taskMap removeObjectForKey:@(task.taskIdentifier)];
+
+//        ====================================================================
+
+//        NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+//        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+//        if (httpReqPtr) {
+//            if (error) {
+//                vxlog_error("HTTP request failed: %s", error.localizedDescription.UTF8String);
+//                httpReq->getResponse().setSuccess(false);
+//                httpReq->setStatus(vx::HttpRequest::Status::FAILED);
+//            } else {
+//                httpReq->setStatus(vx::HttpRequest::Status::DONE);
+//            }
+//
+//            // Final callback
+//            httpReq->callCallback();
+//
+//            // Clean up
+//            httpReq->_detachPlatformObject();
+//            [_taskMap removeObjectForKey:@(task.taskIdentifier)];
+//        }
+//    }
+}
+
 @end
 
 namespace vx {
 
 void HttpRequest::_sendAsync() {
+
     HttpRequest_SharedPtr httpReq = this->_weakSelf.lock();
     if (httpReq == nullptr) {
         return;
     }
+    HttpRequest_SharedPtr *httpReqPtr = new HttpRequest_SharedPtr(httpReq);
 
     @autoreleasepool {
         NSString *urlString = [NSString stringWithUTF8String:httpReq->constructURLString().c_str()];
@@ -76,44 +199,51 @@ void HttpRequest::_sendAsync() {
             [request setHTTPBody:bodyData];
         }
 
-        // DO NOT USE DEFAULT COOKIE STORE
-        // NSURLSession *session = [NSURLSession sharedSession];
-        NSURLSession *session = [NetworkManager sharedManager].session;
+        NSURLSessionDataTask *task = nil;
 
-        NSURLSessionDataTask *task = [session dataTaskWithRequest:request
-                                                completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-            if (error) {
-                vxlog_error("HTTP request failed: %s", error.localizedDescription.UTF8String);
-                httpReq->setStatus(HttpRequest::Status::FAILED);
-            } else {
-                httpReq->_detachPlatformObject();
-                if (httpReq->getStatus() != HttpRequest::Status::PROCESSING) {
-                    return;
+        if ((*httpReqPtr)->getOpts().getStreamResponse()) {
+            // Create task with the NetworkManager
+            task = [[NetworkManager sharedManager] dataTaskWithRequest:request forHttpRequest:httpReqPtr];
+        } else {
+            // TODO: !!! send regular HTTP request
+            // DO NOT USE DEFAULT COOKIE STORE
+            // NSURLSession *session = [NSURLSession sharedSession];
+            NSURLSession *session = [NetworkManager sharedManager].session;
+            task = [session dataTaskWithRequest:request
+                              completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                if (error) {
+                    vxlog_error("HTTP request failed: %s", error.localizedDescription.UTF8String);
+                    httpReq->setStatus(HttpRequest::Status::FAILED);
+                } else {
+                    httpReq->_detachPlatformObject();
+                    if (httpReq->getStatus() != HttpRequest::Status::PROCESSING) {
+                        return;
+                    }
+                    NSHTTPURLResponse *httpResponse = static_cast<NSHTTPURLResponse *>(response);
+
+                    // Set response status code
+                    httpReq->getResponse().setStatusCode(static_cast<uint16_t>(httpResponse.statusCode));
+
+                    // Set response headers
+                    NSDictionary *headers = httpResponse.allHeaderFields;
+                    std::unordered_map<std::string, std::string> responseHeaders;
+                    for (NSString *key in headers) {
+                        NSString *value = headers[key];
+                        responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
+                    }
+                    httpReq->getResponse().setHeaders(responseHeaders);
+
+                    // Set response body
+                    std::string bodyBytes(reinterpret_cast<const char*>(data.bytes), data.length);
+                    httpReq->getResponse().setBytes(bodyBytes);
+
+                    httpReq->getResponse().setSuccess(true);
+                    httpReq->setStatus(HttpRequest::Status::DONE);
                 }
-                NSHTTPURLResponse *httpResponse = static_cast<NSHTTPURLResponse *>(response);
 
-                // Set response status code
-                httpReq->getResponse().setStatusCode(static_cast<uint16_t>(httpResponse.statusCode));
-
-                // Set response headers
-                NSDictionary *headers = httpResponse.allHeaderFields;
-                std::unordered_map<std::string, std::string> responseHeaders;
-                for (NSString *key in headers) {
-                    NSString *value = headers[key];
-                    responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
-                }
-                httpReq->getResponse().setHeaders(responseHeaders);
-
-                // Set response body
-                std::string bodyBytes(reinterpret_cast<const char*>(data.bytes), data.length);
-                httpReq->getResponse().setBytes(bodyBytes);
-
-                httpReq->getResponse().setSuccess(true);
-                httpReq->setStatus(HttpRequest::Status::DONE);
-            }
-
-            httpReq->callCallback();
-        }];
+                httpReq->callCallback();
+            }];
+        }
 
         httpReq->_attachPlatformObject((__bridge_retained void*)task);
         httpReq->setStatus(HttpRequest::Status::PROCESSING);

@@ -299,8 +299,12 @@ const std::string& HttpRequest::getBodyBytes() const {
     return this->_bodyBytes;
 }
 
+const HttpRequestOpts& HttpRequest::getOpts() const {
+    return _opts;
+}
+
 void HttpRequest::setOpts(const HttpRequestOpts& opts) {
-    this->_opts = HttpRequestOpts(opts);
+    _opts = HttpRequestOpts(opts);
 }
 
 void HttpRequest::setHeaders(const std::unordered_map<std::string, std::string>& headers) {
