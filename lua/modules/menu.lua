@@ -443,6 +443,8 @@ end
 
 function refreshDisplay()
 	if cppMenuIsActive then
+		topBar:hide()
+
 		if activeModal then
 			activeModal:hide()
 		end
@@ -452,10 +454,9 @@ function refreshDisplay()
 		if alertModal then
 			alertModal:hide()
 		end
-
-		chatBtn:hide()
-		pezhBtn:hide()
 	else
+		topBar:show()
+		
 		if activeModal then
 			activeModal:show()
 		end
