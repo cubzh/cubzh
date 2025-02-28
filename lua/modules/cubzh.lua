@@ -2263,7 +2263,6 @@ function home()
 								local size = math.max(editUsernameBtn.Width, editUsernameBtn.Height)
 								editUsernameBtn.Width = size
 								editUsernameBtn.Height = size
-								usernameWidth = usernameWidth + padding + editAvatarBtn.Width
 								usernameHeight = math.max(usernameHeight, editUsernameBtn.Height)
 							end
 
@@ -2289,7 +2288,7 @@ function home()
 
 							if editUsernameBtn then
 								editUsernameBtn.pos = {
-									usernameFrame.pos.X + usernameFrame.Width + padding,
+									usernameFrame.pos.X - editUsernameBtn.Width - padding,
 									y + usernameHeight * 0.5 - editUsernameBtn.Height * 0.5,
 								}
 							end
