@@ -1463,6 +1463,7 @@ if DEV_MODE == true then
 				end
 				local body = {
 					prompt = self.Text,
+					script = System.Script,
 				}
 				local headers = {}
 				headers["Content-Type"] = "application/json"
@@ -1476,7 +1477,12 @@ if DEV_MODE == true then
 					if data.type == "chat" then
 						print("AI: " .. data.output)
 					elseif data.type == "code" then
-						print("TODO: publish code")
+						if aiInput ~= nil then
+							ease:cancel(aiInput)
+							aiInput:remove()
+							aiInput = nil
+						end
+						System:PublishScript(data.output)
 					end
 				end)
 				self.Text = ""
