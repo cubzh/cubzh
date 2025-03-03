@@ -11,6 +11,7 @@ const ( // Supported dependencies
 
 	// Supported platforms
 	PlatformAll     = "all"
+	PlatformSource  = "source"
 	PlatformAndroid = "android"
 	PlatformIOS     = "ios"
 	PlatformMacos   = "macos"
@@ -22,7 +23,7 @@ const ( // Supported dependencies
 
 var (
 	supportedDependencies = []string{DependencyLibLuau}
-	supportedPlatforms    = []string{PlatformAndroid, PlatformIOS, PlatformMacos, PlatformWindows, PlatformLinux}
+	supportedPlatforms    = []string{PlatformSource, PlatformAndroid, PlatformIOS, PlatformMacos, PlatformWindows, PlatformLinux}
 )
 
 func isDependencyNameValid(name string) bool {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/cubzh/cubzh/deps/deptool"
 	"github.com/spf13/cobra"
@@ -56,6 +57,17 @@ func main() {
 			RunE:  activateCmdFunc,
 		}
 		rootCmd.AddCommand(activateCmd)
+	}
+
+	// deptool autoconfig
+	{
+		var autoconfigCmd = &cobra.Command{
+			Use:   "autoconfig <platform> [<cubzh repo root dir path>]",
+			Short: "Autoconfigure the dependencies",
+			Args:  cobra.RangeArgs(1, 2),
+			RunE:  autoconfigCmdFunc,
+		}
+		rootCmd.AddCommand(autoconfigCmd)
 	}
 
 	if err := rootCmd.Execute(); err != nil {
@@ -151,6 +163,50 @@ func activateCmdFunc(cmd *cobra.Command, args []string) error {
 	depsDirPath := filepath.Join(gitRepoRootDir, "deps")
 
 	return deptool.ActivateDependency(depsDirPath, depName, version)
+}
+
+// deptool autoconfig platforms [<cubzh repo root dir path>]
+// example: deptool autoconfig macos,ios,android,windows,linux
+func autoconfigCmdFunc(cmd *cobra.Command, args []string) error {
+	platforms := []string{}
+	if len(args) > 0 {
+		platforms = strings.Split(args[0], ",")
+	}
+	if len(platforms) == 0 {
+		return fmt.Errorf("platform is required")
+	}
+
+	cubzhRepoRootDirPath := ""
+	if len(args) > 1 {
+		cubzhRepoRootDirPath = args[1]
+	} else {
+		// find git repo root directory
+		var err error
+		cubzhRepoRootDirPath, err = findPathToFirstParentGitRepo()
+		if err != nil {
+			return err
+		}
+	}
+	if cubzhRepoRootDirPath == "" {
+		return fmt.Errorf("cubzh repo root dir path is empty")
+	}
+
+	// construct object storage client
+	opts := deptool.DigitalOceanObjectStorageClientOpts{}
+	authKey, authSecret, err := getObjectStorageCredentialsFromEnvVars()
+	if err == nil {
+		opts.AuthKey = authKey
+		opts.AuthSecret = authSecret
+	}
+	objectStorage, err := deptool.NewDigitalOceanObjectStorageClient(opts)
+	if err != nil {
+		return err
+	}
+
+	depsDirPath := filepath.Join(cubzhRepoRootDirPath, "deps")
+	configJsonFilePath := filepath.Join(cubzhRepoRootDirPath, "bundle", "config.json")
+
+	return deptool.Autoconfigure(objectStorage, depsDirPath, configJsonFilePath, platforms)
 }
 
 //

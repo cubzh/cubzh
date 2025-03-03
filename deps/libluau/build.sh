@@ -62,10 +62,11 @@ if [ -z "$src_override" ]; then
   fi
 fi
 
+export DEPENDENCY_VERSION_PATH="${SCRIPT_PARENT_DIR_PATH}/${version}"
+
 # If src_override is not provided, check whether the source code is present locally and download it if needed
 if [ -z "$src_override" ]; then
   # Make sure the Luau source code is present
-  DEPENDENCY_VERSION_PATH="${SCRIPT_PARENT_DIR_PATH}/${version}"
   SOURCE_CODE_PATH="${DEPENDENCY_VERSION_PATH}/src"
 
   # check presence of ./src directory
@@ -83,9 +84,6 @@ else
   # -s is provided
   SOURCE_CODE_PATH="${src_override}"
 fi
-
-# --- Create symlink to source code for bazel to find it ---
-ln -sf ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
 
 # --- Build ---
 
@@ -118,9 +116,10 @@ elif [ "$platform" == "linux" ]; then
   platform_to_build="linux"
   archs_to_build=("x86_64")
 
-# elif [ "$platform" == "wasm" ]; then
-  # platform_to_build="wasm"
-  # archs_to_build=("wasm")
+# Special case: keep the source code.
+# This is used for wasm builds.
+elif [ "$platform" == "source" ]; then
+  platform_to_build="source"
 
 else
   echo "⚠️ Unsupported platform name: $platform"
@@ -149,49 +148,84 @@ elif [ "$platform" == "ios" ]; then
 elif [ "$platform" == "linux" ]; then
   artifact_name="libluau-default.a"
 
-# elif [ "$platform" == "wasm" ]; then
-#   artifact_name="libluau-default.a"
 fi
 
-echo "🛠️ Building Luau for $platform_to_build... (${archs_to_build[@]})"
+if [ "$platform" == "source" ]; then
 
-# build for each architecture
-for arch in "${archs_to_build[@]}"; do
-  
-  OUTPUT_DIR="$version/prebuilt/$platform_to_build/$arch"
-  OUTPUT_DIR_LIB_DEBUG="$OUTPUT_DIR/lib-Debug"
-  OUTPUT_DIR_LIB_RELEASE="$OUTPUT_DIR/lib-Release"
+  echo "🛠️ Building Luau for [$platform_to_build]..."
+
+  # src is a special case. We don't prebuild it yet, and keep the source code.
+  OUTPUT_DIR="$version/prebuilt/source"
   OUTPUT_DIR_INCLUDE="$OUTPUT_DIR/include"
-
-  # recreate output directories
-  rm -rf $OUTPUT_DIR
-  mkdir -p $OUTPUT_DIR_LIB_DEBUG
-  mkdir -p $OUTPUT_DIR_LIB_RELEASE
+  export OUTPUT_DIR_SRC="$OUTPUT_DIR/src"
+  mkdir -p $OUTPUT_DIR
   mkdir -p $OUTPUT_DIR_INCLUDE
+  mkdir -p $OUTPUT_DIR_SRC
 
-  # build library (DEBUG)
-  bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
-  mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_DEBUG/$artifact_destination_name
+  # copy the source code to the output directory
+  # cp -r ${DEPENDENCY_VERSION_PATH}/src/* ${DEPENDENCY_VERSION_PATH}/prebuilt/source/src
 
-  # build library (RELEASE)
-  bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
-  mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_RELEASE/$artifact_destination_name
+  find ${DEPENDENCY_VERSION_PATH}/src -type f \( -name "*.h" -o -name "*.hpp" -o -name "*.c" -o -name "*.cpp" \) -exec sh -c 'mkdir -p "${2}/$(dirname ${1#${3}/})" && cp "${1}" "${2}/$(dirname ${1#${3}/})"' _ {} ${DEPENDENCY_VERSION_PATH}/prebuilt/source/src ${DEPENDENCY_VERSION_PATH}/src \;
 
   # move the header files to the output directory
   # copy and merge all include directories from src tree to output directory
-  for dir in ${SCRIPT_PARENT_DIR_PATH}/src/*/include/; do
+  for dir in ${OUTPUT_DIR_SRC}/*/include/; do
     if [ -d "$dir" ]; then
       cp -r "$dir"* "$OUTPUT_DIR_INCLUDE/"
     fi
   done
 
-done
+else
 
-# --- Clean up ---
+  echo "🛠️ Building Luau for [$platform_to_build] (${archs_to_build[@]})"
 
-# Remove the symlink
-rm ${SCRIPT_PARENT_DIR_PATH}/src
+  # Create symlink to source code for bazel to find it
+  # ln -sf ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
+  # Copy instead, as symlinks don't work on Windows
+  rm -rf ${SCRIPT_PARENT_DIR_PATH}/src
+  cp -rf ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
+
+  # Build for each architecture
+  for arch in "${archs_to_build[@]}"; do
+
+      OUTPUT_DIR="$version/prebuilt/$platform_to_build/$arch"
+      OUTPUT_DIR_LIB_DEBUG="$OUTPUT_DIR/lib-Debug"
+      OUTPUT_DIR_LIB_RELEASE="$OUTPUT_DIR/lib-Release"
+      OUTPUT_DIR_INCLUDE="$OUTPUT_DIR/include"
+
+      # recreate output directories
+      rm -rf $OUTPUT_DIR
+      mkdir -p $OUTPUT_DIR_LIB_DEBUG
+      mkdir -p $OUTPUT_DIR_LIB_RELEASE
+      mkdir -p $OUTPUT_DIR_INCLUDE
+
+      # build library (DEBUG)
+      bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
+      mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_DEBUG/$artifact_destination_name
+
+      # build library (RELEASE)
+      bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
+      mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_RELEASE/$artifact_destination_name
+
+      # move the header files to the output directory
+      # copy and merge all include directories from src tree to output directory
+      for dir in ${SCRIPT_PARENT_DIR_PATH}/src/*/include/; do
+        if [ -d "$dir" ]; then
+          cp -r "$dir"* "$OUTPUT_DIR_INCLUDE/"
+        fi
+      done
+
+  done
+
+  # Cleanup: remove the symlink
+  # rm -rf ${SCRIPT_PARENT_DIR_PATH}/src
+
+fi
 
 # --- The End ---
 
-echo "✅ Done. $platform_to_build | ${archs_to_build[@]}"
+if [ -z "${archs_to_build:-}" ]; then
+  echo "✅ Done. [$platform_to_build]"
+else
+  echo "✅ Done. [$platform_to_build] (${archs_to_build[@]})"
+fi

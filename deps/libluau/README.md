@@ -29,7 +29,7 @@ To be run from cubzh/cubzh repo root dir
 
 # linux
 # From cubzh/cubzh repo root dir
-docker run --rm -v $(pwd):/cubzh -w /cubzh/deps/libluau --entrypoint /bin/bash --platform linux/amd64 voxowl/bazel:8.1.0 ./build.sh -p linux
+docker run --rm -v $(pwd):/cubzh -w /cubzh/deps/libluau --entrypoint /bin/bash --platform linux/amd64 voxowl/bazel:8.1.1 ./build.sh -p linux
 # bazel build //deps/libluau:luau --platforms=//:linux_x86_64
 
 # wasm
