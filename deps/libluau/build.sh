@@ -35,6 +35,19 @@ while getopts ":p:v:s:" opt; do
   esac
 done
 
+os_name=""
+case "$OSTYPE" in
+  darwin*)  os_name="macos" ;; 
+  linux*)   os_name="linux" ;;
+  msys*|cygwin*|mingw*) os_name="windows" ;;
+  *)        os_name="unknown: $OSTYPE" ;;
+esac
+
+if [ "$os_name" == "unknown" ]; then
+  echo "❌ Unsupported OS: $OSTYPE"
+  exit 1
+fi
+
 # Validate parameters
 
 # `platform` is required
@@ -178,6 +191,15 @@ if [ "$platform" == "source" ]; then
 else
 
   echo "🛠️ Building Luau for [$platform_to_build] (${archs_to_build[@]})"
+
+  # # --- Create symlink to source code for bazel to find it ---
+  # if [ "$os_name" == "windows" ]; then
+  #   # Note: symlinks don't work on Windows, so we perform a copy instead
+  #   rm -rf ${SCRIPT_PARENT_DIR_PATH}/src
+  #   cp -rf ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
+  # elif [ "$os_name" == "macos" ] || [ "$os_name" == "linux" ]; then
+  #   ln -sf ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
+  # fi
 
   # Create symlink to source code for bazel to find it
   # ln -sf ${SOURCE_CODE_PATH} ${SCRIPT_PARENT_DIR_PATH}/src
