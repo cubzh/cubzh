@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/cubzh/cubzh/deps/deptool/utils"
 )
@@ -35,42 +34,48 @@ func ActivateDependency(depsDirPath, depName, version string) error {
 	symlinkPath := filepath.Join(depDirPath, ACTIVE_DEPENDENCY_SYMLINK_NAME)
 
 	// if on windows, use mklink
-	if runtime.GOOS == "windows" {
+	// if runtime.GOOS == "windows" {
 
-		// remove existing "active" copy if it exists
-		if _, err := os.Stat(symlinkPath); err == nil {
-			err = os.RemoveAll(symlinkPath) // Use RemoveAll to handle non-empty directories
-			if err != nil {
-				return fmt.Errorf("failed to remove existing _active_: %w", err)
-			}
-		}
-
-		// creating symlinks on windows requires admin privileges,
-		// therefore we do a copy of the dependency version directory instead
-		err = utils.CopyDirectory(depVersionDirPath, symlinkPath)
+	// remove existing "active" copy if it exists
+	if _, err := os.Stat(symlinkPath); err == nil {
+		err = os.RemoveAll(symlinkPath) // Use RemoveAll to handle non-empty directories
 		if err != nil {
-			return fmt.Errorf("failed to copy dependency version directory: %w", err)
+			return fmt.Errorf("failed to remove existing _active_: %w", err)
 		}
-
-	} else if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
-
-		// remove existing "active" copy if it exists
-		if _, err := os.Lstat(symlinkPath); err == nil {
-			err = os.Remove(symlinkPath)
-			if err != nil {
-				return fmt.Errorf("failed to remove existing _active_: %w", err)
-			}
-		}
-
-		// create a symlink to the requested version
-		err = os.Symlink(depVersionDirPath, symlinkPath)
-		if err != nil {
-			return fmt.Errorf("failed to create symlink: %w", err)
-		}
-
-	} else {
-		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
+
+	// create a fresh "active" directory
+	err = os.MkdirAll(symlinkPath, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create _active_ directory: %w", err)
+	}
+
+	// creating symlinks on windows requires admin privileges,
+	// therefore we do a copy of the dependency version directory instead
+	err = utils.CopyDirectory(depVersionDirPath, symlinkPath)
+	if err != nil {
+		return fmt.Errorf("failed to copy dependency version directory: %w", err)
+	}
+
+	// } else if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
+
+	// 	// remove existing "active" copy if it exists
+	// 	if _, err := os.Lstat(symlinkPath); err == nil {
+	// 		err = os.Remove(symlinkPath)
+	// 		if err != nil {
+	// 			return fmt.Errorf("failed to remove existing _active_: %w", err)
+	// 		}
+	// 	}
+
+	// 	// create a symlink to the requested version
+	// 	err = os.Symlink(depVersionDirPath, symlinkPath)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to create symlink: %w", err)
+	// 	}
+
+	// } else {
+	// 	return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	// }
 
 	return nil // success
 }
