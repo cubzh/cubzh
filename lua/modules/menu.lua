@@ -2430,9 +2430,9 @@ end)
 
 -- sign up / sign in flow
 
--- function hideTopBar()
--- 	topBar:hide()
--- end
+function hideTopBar()
+	topBar:hide()
+end
 
 function showTopBar()
 	if Environment.CUBZH_MENU == "disabled" then
