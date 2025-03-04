@@ -53,7 +53,7 @@ void test_rtree_node_get_aabb(void) {
     Rtree *r = rtree_new(2, 4);
     Box *b = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 3.0f);
     uint16_t groups = 4, collidesWith = 3;
-    Transform *t = transform_make(HierarchyTransform);
+    Transform *t = transform_new(HierarchyTransform);
     rtree_create_and_insert(r, b, groups, collidesWith, (void *)t);
     RtreeNode *root = rtree_get_root(r);
     const float3 aabbMin = {0.0f, 0.0f, 0.0f};
@@ -92,7 +92,7 @@ void test_rtree_create_and_insert(void) {
     Rtree *r = rtree_new(2, 4);
     Box *b = box_new_2(0.0f, 0.0f, 0.0f, 1.0f, 2.0f, 3.0f);
     uint16_t groups = 4, collidesWith = 3;
-    Transform *t = transform_make(HierarchyTransform);
+    Transform *t = transform_new(HierarchyTransform);
     rtree_create_and_insert(r, b, groups, collidesWith, (void *)t);
     RtreeNode *root = rtree_get_root(r);
     const float3 aabbMin = {0.0f, 0.0f, 0.0f};

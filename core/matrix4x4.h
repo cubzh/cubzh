@@ -14,6 +14,8 @@ extern "C" {
 #include "float4.h"
 
 // matrix mode is column-major
+// Note: column-row notation here (X:column, Y:row) ; as opposed to standard notation row-column such as Mij
+// TODO: refacto this into row-column notation
 typedef struct Matrix4x4 {
     float x1y1, x1y2, x1y3, x1y4, // 1st column
         x2y1, x2y2, x2y3, x2y4,   // 2nd column

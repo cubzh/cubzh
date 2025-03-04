@@ -514,7 +514,7 @@ Client.OnStart = function()
 	collisionGroup_item = 1
 
 	local loadConfig = { useLocal = true, mutable = true }
-	Assets:Load(Environment.itemFullname, AssetType.Any, function(assets)
+	Assets:Load(Environment.itemFullname, function(assets)
 		local shapesNotParented = {}
 
 		local t
@@ -575,7 +575,7 @@ Client.OnStart = function()
 		Pointer.Drag2End = drag2End
 		Screen.DidResize = didResize
 		Screen.DidResize(Screen.Width, Screen.Height)
-	end, loadConfig)
+	end, AssetType.AnyObject, loadConfig)
 
 	updateWearableShapesPosition = function()
 		local parents = utils:equipmentParents(Player, itemCategory)
