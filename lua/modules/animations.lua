@@ -177,7 +177,7 @@ setmetatable(animationsModule, mt)
 local anims
 LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 	for animations, animationsPrivateFields in pairs(privateFields) do
-		anims = animationsPrivateFields.anims
+		anims = animationsPrivateFields.playing
 		if anims ~= nil then
 			for name, anim in pairs(anims) do
 				if anim.IsPlaying == false then
