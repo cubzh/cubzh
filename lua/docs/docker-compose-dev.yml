@@ -12,7 +12,7 @@ services:
             # - ./content:/www
             - ./content/404.yml:/www/404.yml
             - ./content/cubzh-file-format.md:/www/cubzh-file-format.md
-            - ./content/cubzhcheatsheet.yml:/www/cubzhcheatsheet.yml
+            - ./content/sample-scripts.yml:/www/sample-scripts.yml
             - ./content/guides:/www/guides
             - ./content/images:/www/images
             - ./content/index.yml:/www/index.yml

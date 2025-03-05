@@ -2,9 +2,11 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Mi
 title: "Introduction"
 blocks:
     - text: |
-        [Cubzh](https://cu.bzh) is an all-in-one application for players and game creators (artists, developers).
+        [Cubzh](https://cu.bzh) is a platform where you can quickly build games and distribute them on all platforms (Windows, Mac, iOS, Android, web, Discord, and more).
 
-        This documentation contains everything you need to know as a developer to create your own realtime multiplayer games. 👾
+        It can be considered a real open alternative to Roblox.
+
+        This documentation contains everything developers need to know to create Cubzh games. 👾
 
     - title: "Cubes"
 
@@ -20,18 +22,16 @@ blocks:
 
     # - media: "/media/items.mp4"
 
-    - title: "Scripting language"
+    - title: "Luau"
 
     - text: |
-        The scripting language we use in [Cubzh](https://cu.bzh) is [Lua](https://www.lua.org).
+        [Cubzh](https://cu.bzh) scripts use the Luau programming language.
 
-        Lua is very solid and lighweight scripting language, it's been around since 1993. It's easy to learn and already used by other popular video game platforms like [Roblox](https://www.roblox.com) or [Core](https://www.coregames.com).
+        [Luau](https://luau.org) is derived from [Lua](https://www.lua.org) (5.1) which is a very solid and lighweight scripting language that's been around since 1993. It's easy to learn and already used by other popular video game platforms like [Roblox](https://www.roblox.com).
     
-        A default Lua script is generated when you create a new game. You can launch the game in debug mode and select `Edit code` in the pause menu to see it.
+        A default Lua script is generated when you create a new game. You can launch the game in edit mode and select "Edit code" in the pause menu to see it.
 
-        Don't worry if you've never used it. You'll be able to define custom things for your games in minutes. ☺️
-
-        (Cubzh uses Lua version [5.3](https://www.lua.org/manual/5.3/))
+        Don't worry if you're not familiar with it or even a complete code beginner. You'll get started building fun games in minutes. ☺️
 
     - subtitle: "Quick example: How to jump higher?"
 
@@ -60,15 +60,6 @@ blocks:
     - media: "/media/jump-higher.mp4"
 
     - text: 💡 Script comments start with `--`. Comments are not considered when running the script, they're only notes for developers.
-
-    - subtitle: "Uppercase variables"
-
-    - text : |
-        The case of the first letter of a variable or function name has special meaning in [Cubzh](https://cu.bzh).
-
-        Basically, if it starts with an uppercase character, it means it's a built-in variable, exposed by the platform. It also means you'll find it defined somewhere in [the reference](/reference). Think about it when you read through open source code. 🤓
-
-        As a consequence, you can't use names starting with uppercase letters for your own functions and variables. 
 
     - title: "Realtime multiplayer environment"
 
@@ -104,8 +95,10 @@ blocks:
 
     - text : |
         Ready to create your first game? 🙂
+        Head over to Guides and Sample Scripts to get started!
 
         ➡️ [Developer Guides](/guides)
+        ➡️ [Sample Scripts](/cubzhcheatsheet)
 
 
 

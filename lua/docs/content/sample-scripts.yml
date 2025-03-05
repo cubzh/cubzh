@@ -1,28 +1,69 @@
 keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Minecraft", "Roblox", "code", "documentation", "docs"]
-title: "Cubzh Cheat Sheet"
+title: "Sample Scripts"
 blocks:
     - text: |
-        The goal of this document is to show you in a single page most of the attributes and functions available.
+        This page contains a collection of sample scripts demoing a good variety of features available in [Cubzh](https://cu.bzh).
 
-        This list is not exaustive but is a great start to learn Cubzh if you are already an experienced developer.
+        This list is not exaustive but is a great start to learn Cubzh, or even later on when looking for a reference when implementing one new kind of feature.
 
-    - title: "Base Functions"
-
+    - title: "Script Structure"
+    - text: |
+        This is the overall structure of a Cubzh script:
     - code: |
+        -- Config table can be used to define the map, items you want to load, etc.
+        Config = { 
+            Map = "aduermael.rockies",
+        }
+
+        -- A single Cubzh script is by default executed on the client AND server.
+        -- A variable defined at the root level (local or global)
+        -- will exist on both client and server:
+        local someVariable = "hello"
+
+        -- Client properties will only be considered on the client:
+
+        function dropPlayerAboveCenterOfMap()
+            Player:SetParent(World)
+            Player.Position = Map.Size * Map.Scale * {0.5, 1, 0.5}
+        end
+
         Client.OnStart = function()
-            -- trigger once on start
+            print("game started!")
+            dropPlayerAboveCenterOfMap()
+        end
+
+        Client.Action1 = function()
+            if Player.IsOnGround then
+                Player.Velocity.Y = 100
+            end
         end
 
         Client.Tick = function(dt)
-            -- tick at each frame
+            -- tick at each frame, dt: time since last tick
+            if Player.Position.Y < -100 then
+                -- respawn player above center of the map when falling off the map
+                dropPlayerAboveCenterOfMap()
+            end
         end
 
-        Client.OnPlayerJoin = function(p)
-            print(p.Username.." joins the game.")
+        Client.DidReceiveEvent = function(event)
+            if event.message ~= nil then
+                print("received: " .. event.message)
+            end
         end
 
-        Client.OnPlayerLeave = function(p)
-            print(p.Username.." lefts the game.")
+        -- Server properties will only be considered on the server:
+
+        Server.OnStart = function()
+            visits = 0
+        end
+
+        Server.OnPlayerJoin = function(p)
+            -- Player `p` just joined the game, let's send a message:
+            visits += 1
+            local e = Event()
+            e.message = "Hello " .. p.Username .. "! You are the " .. visits .. "th player to join!"
+            e:SendTo(p)
         end
 
     - title: "World / Object"
