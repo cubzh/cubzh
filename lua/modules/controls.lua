@@ -17,7 +17,8 @@
 
 -- NOTES ON POINTER VISIBILITY
 
--- Available functions when Pointer.IsHidden:-- 	- Client.DirectionalPad
+-- Available functions when Pointer.IsHidden:-- 	
+--- - Client.DirectionalPad
 --	- Client.AnalogPad
 -- 	- Client.Action1 & Action1Release
 -- 	- Client.Action2 & Action2Release

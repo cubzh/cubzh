@@ -61,6 +61,8 @@
 							{{ end }}
 						{{ else if .Code }}
 							<pre>{{ .Code }}</pre>
+						{{ else if .HTML }}
+							<div class="html-content">{{ .HTML }}</div>
 						{{ else if .List }}
 							<ul>
 							{{ range .List }}
@@ -496,6 +498,8 @@
 													</div>
 												{{ else if .Code }}
 													<pre>{{ .Code }}</pre>
+												{{ else if .HTML }}
+													<div class="html-content">{{ .HTML }}</div>
 												{{ end }}
 											{{ end }}
 										</div>

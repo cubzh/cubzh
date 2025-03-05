@@ -217,6 +217,7 @@ type ContentBlock struct {
 	Text string `yaml:"text,omitempty" json:"text,omitempty"`
 	// Lua code
 	Code     string   `yaml:"code,omitempty" json:"code,omitempty"`
+	HTML     string   `yaml:"html,omitempty" json:"html,omitempty"`
 	List     []string `yaml:"list,omitempty" json:"list,omitempty"`
 	Title    string   `yaml:"title,omitempty" json:"title,omitempty"`
 	Subtitle string   `yaml:"subtitle,omitempty" json:"subtitle,omitempty"`

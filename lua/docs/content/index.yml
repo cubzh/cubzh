@@ -2,110 +2,102 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Mi
 title: "Introduction"
 blocks:
     - text: |
-        [Cubzh](https://cu.bzh) is an all-in-one application for players and game creators (artists, developers).
+        [Cubzh](https://cu.bzh) is a platform where you can quickly build games and distribute them on all platforms (Windows, Mac, iOS, Android, web, Discord, and more).
 
-        This documentation contains everything you need to know as a developer to create your own realtime multiplayer games. 👾
+        It can be considered a real open alternative to Roblox.
 
-    - title: "Cubes"
-
-    - text: |
-        In [Cubzh](https://cu.bzh), <u>everything</u> is made out of cubes. Terrain, avatars, items, vehicles... everything!
-
-        Mainly because it's quick and easy to create game assets with cubes:
-
-    - media: "/media/sword.mp4"
-
-    - text: |
-        Also because shapes made of 3D aligned cubes makes a pretty good standard for cross-game compatibility: 🙂
+        This documentation contains everything developers need to know to create Cubzh games. 👾
 
     # - media: "/media/items.mp4"
 
-    - title: "Scripting language"
+    - title: "Luau"
 
     - text: |
-        The scripting language we use in [Cubzh](https://cu.bzh) is [Lua](https://www.lua.org).
+        [Cubzh](https://cu.bzh) scripts use the Luau programming language.
 
-        Lua is very solid and lighweight scripting language, it's been around since 1993. It's easy to learn and already used by other popular video game platforms like [Roblox](https://www.roblox.com) or [Core](https://www.coregames.com).
+        [Luau](https://luau.org) is derived from [Lua](https://www.lua.org) (5.1) which is a very solid and lighweight scripting language that's been around since 1993. It's easy to learn and already used by other popular video game platforms like [Roblox](https://www.roblox.com).
     
-        A default Lua script is generated when you create a new game. You can launch the game in debug mode and select `Edit code` in the pause menu to see it.
+        A default Lua script is generated when you create a new game. You can launch the game in edit mode and select "Edit code" in the pause menu to see it.
 
-        Don't worry if you've never used it. You'll be able to define custom things for your games in minutes. ☺️
+        Don't worry if you're not familiar with it or even a complete code beginner. You'll get started building fun games in minutes. ☺️
 
-        (Cubzh uses Lua version [5.3](https://www.lua.org/manual/5.3/))
+    - subtitle: "Example: 20 line script + editing while playing with friends"
 
-    - subtitle: "Quick example: How to jump higher?"
-
-    - text: "Find where `Client.Action1` is defined in the default script:"
-
+    - media: "/media/jump-edit.mp4"
+    
     - code: |
-        -- function triggered when pressing the Action1 button
-        Client.Action1 = function()
-            -- Player represents the local player ingame avatar.
-            -- Test if Player is on ground before changing velocity,
-            -- otherwise, player could jump while in the air. :D
-            if Player.IsOnGround then
-                Player.Velocity.Y = 50
-            end
+        Config = {
+            Map = "aduermael.hills"
+        }
+
+        require("multi") -- module for real-time multiplayer
+
+        Client.OnStart = function()
+            local ambience = require("ambience")
+            ambience:set(ambience.noon)
+            
+            -- drop above center of map
+            Player:SetParent(World)
+            Player.Position = Map.Size * Map.Scale * {0.5, 1, 0.5}
         end
 
-    - text: "Edit this line:"
-
-    - code: "Player.Velocity.Y = 200 -- changed the value to jump higher"
-
-    - text : |
-        Use "Publish" button
-
-        The game will restart for all connected players (including yourself), everyone will now jump higher. 🙂
-
-    - media: "/media/jump-higher.mp4"
-
-    - text: 💡 Script comments start with `--`. Comments are not considered when running the script, they're only notes for developers.
-
-    - subtitle: "Uppercase variables"
-
-    - text : |
-        The case of the first letter of a variable or function name has special meaning in [Cubzh](https://cu.bzh).
-
-        Basically, if it starts with an uppercase character, it means it's a built-in variable, exposed by the platform. It also means you'll find it defined somewhere in [the reference](/reference). Think about it when you read through open source code. 🤓
-
-        As a consequence, you can't use names starting with uppercase letters for your own functions and variables. 
-
-    - title: "Realtime multiplayer environment"
-
-    - text : |
-        Games in [Cubzh](https://cu.bzh) are realtime multiplayer games by default.
-
-        It means you don't need a single line of code to make that work. It also means you don't have to worry about servers.
-
-        Also, there's always a debug server running as you work on your game. Your friends or random players can join and test things while you write code.
-
-        At any time, you can publish a new version of your game. Game servers are spinned up automatically based on player demand.
-
-    - media: "/media/mars.mp4"
+        Client.Action1 = function()
+            if Player.IsOnGround then
+                Player.Velocity.Y = 100 -- DEMO: changing this value
+            end
+        end
 
     - title: "Truly cross-platform"
 
     - text : |
-        No one should be left aside!
+        Isn't it better when everyone can play? 🙂
 
-        [Cubzh](https://cu.bzh) runs on Android, iOS, Mac & Windows. (Linux + web browsers coming next)
+        [Cubzh](https://cu.bzh) runs on Windows, Mac, iOS, Android, web browsers, Discord and even more platforms soon (Linux, Telegram, etc.).
 
-        While the game is cross-platform, we don't want developers to worry about making sure the game works fine on each one of them.
+        The scripting API is designed for developers to worry as little as possible about making sure their games work fine on each platform.
 
-        For example: a game designed on a desktop computer should be just as playable on mobile (and vice versa).
+        Pointer events abstracting mouse and touch events as well as other platform agnostic action inputs are here to smooth things out. Thus not preventing you from writing code that would be platform specific.
 
-        The scripting environment has been designed with that philosophy in mind.
+    - html: |
+        <center><video style="max-width:90%;" autoplay loop muted playsinline>
+            <source src="/media/cross-platform.mp4" type="video/mp4">
+        </video></center>
 
-        UI elements, inputs, everything will adapt automagically depending on the screen and touch, mouse and/or keyboard events.
+    - title: "Out of the box real-time multiplayer"
 
-    # - media: "/media/cross-platform.jpg"
+    - text : |
+        Games are definitely more fun with friends!
+
+        One line of code, like `require("multi")`, and you're good to go! 
+        <i style="color: #777;">(other open-source modules can offer real-time multiplayer synchronization too)</i>
+
+        You don't need to worry about servers, Cubzh handles that for you, spawning game server instances on demand.
+    
+    - media: "/media/glide-and-dance.mp4"
+    
+    - title: "Designed for Generative AI"
+
+    - text : |
+        We're just starting to scratch the surface of what's possible with generative AI, but Cubzh does intend to be the best gaming platform for it.
+
+        Cubzh's scripting ecosystem is designed for natural integration with AI code generation systems.
+
+        Get ready to vibe code games directly on your phone!
+        This featured is not yet available, but please reachout if you'd like to get early access.
+
+    - html: |
+        <center><div style="max-width: calc(min(90%, 500px));"><blockquote class="twitter-tweet" data-media-max-width="560"><p lang="en" dir="ltr">Many fun games have been made with AI since <a href="https://twitter.com/levelsio?ref_src=twsrc%5Etfw">@levelsio</a>&#39;s little project. 😁<br>Models are now good enough for this, it&#39;s so exciting!<br>Here, I&#39;m working on an AI-based game editor that runs on mobile. 📱🔥<br>(AI generation speed x4 in the video 🐇) <a href="https://t.co/vGxwjshOHZ">https://t.co/vGxwjshOHZ</a> <a href="https://t.co/TUswQL8KxX">pic.twitter.com/TUswQL8KxX</a></p>&mdash; Adrian Duermael (@aduermael) <a href="https://twitter.com/aduermael/status/1896039736223154393?ref_src=twsrc%5Etfw">March 2, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></div></center>
 
     - title: "Get started"
 
     - text : |
         Ready to create your first game? 🙂
+        Head over to Guides and Sample Scripts to get started!
 
         ➡️ [Developer Guides](/guides)
+        ➡️ [Sample Scripts](/sample-scripts)
+    
+    - media: "/media/sword.mp4"
 
 
 
