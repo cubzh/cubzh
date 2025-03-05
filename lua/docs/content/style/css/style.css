@@ -807,3 +807,8 @@ pre {
 #container #content h1:first-child {
   margin-top: 0;
 }
+
+.twitter-tweet {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
