@@ -2,49 +2,31 @@ keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "Mi
 title: "Guides"
 blocks:
     - text: |
-        Are you more of a hands-on learner? Then this section is for you!
+        Here's a collection of step-by-step tutorials to get started with Cubzh and get to know how to implement particular features (like playing sounds, adding a UI, etc).
 
-        Here, you'll find step-by-step tutorials of to learn the basics of Cubzh by making small games.
-
-        If you haven't installed Cubzh yet, checkout [the download page](https://cu.bzh/#get-cubzh).
+        You might also be interested in checking out [Sample Scripts](/sample-scripts) for raw code snippets. 
 
     - subtitle: "Quick know-hows"
 
     - text: |
-        - [Testing a multi-player game](/guides/quick/testing-multiplayer-game)
-        - [Adding sounds to your game (0.0.47+)](/guides/quick/adding-sounds)
-        - [Converting from default colors (0.0.46 > 0.0.47)](/guides/quick/converting-from-default-colors)
+        - [Testing a multiplayer game 🕹️🕹️](/guides/quick/testing-multiplayer-game)
+        - <b>How to create a User Interface (UI) 🖱️👆</b> `coming soon`
+        - <b>Collisions, Physics, Raycasting (quick overview) ⚡️🔧</b> `coming soon`
+        - [Playing sounds 🎶💥](/guides/quick/adding-sounds)
 
-    - subtitle: "Tutorials"
-
-    - text: |
-        - [<b>Tutorial n°1: Tutoworld</b>](/guides/tutorials/tutoworld) - Discover the fundamentals of coding a Cubzh game with this 10-minutes tutorial!
-        - [<b>Tutorial n°2: Lone Scoundrel</b>](/guides/tutorials/lone-scoundrel) - Learn more advanced techniques in this intermediate tutorial, like procedural generation or object pooling
-        - [<b>Tutorial n°3: Space Race</b>](/guides/tutorials/space-race) - Discover how to turn your Cubzh game multiplayer :)
-
-    - subtitle: "Handy Lua Snippets"
+    - subtitle: "Coding Curriculum"
 
     - text: |
-        <b>Scene setup</b>
+        Cubzh happens to be the perfect environment to learn coding, even for complete beginners.
+        Here's a 10-lesson curriculum that will take you from your first line of code to mastering real-time multiplayer game making.
 
-        - [Setting a fixed in-game daytime](/guides/snippets/setup-scene#setting-a-fixed-in-game-daytime)
-        - [Instantiating an item](/guides/snippets/setup-scene#instantiating-an-item)
-
-        <b>User actions</b>
-
-        - [Disable movement](/guides/snippets/user-actions#disable-movement)
- 
-        <b>Collisions/Triggers</b>
-
-        - [Setting the groups the player collides with](/guides/snippets/collisions-triggers#setting-the-groups-the-player-collides-with)
-        - [Detecting a collision between the player and an object](/guides/snippets/collisions-triggers#detecting-a-collision-between-the-player-and-an-object)
-        - [Basic raycasting (from player)](/guides/snippets/collisions-triggers#basic-raycasting-from-player)
- 
-        <b>UI</b>
-
-        - [Toggling between the in-game and UI pointers](/guides/snippets/ui#toggling-between-the-in-game-and-ui-pointers)
- 
-        <b>Miscellaneous</b>
-
-        - [Getting a random number in a range](/guides/snippets/misc#getting-a-random-number-in-a-range)
-    
+        - <b>First script! 📝</b> - Introduction to variables and functions. `coming soon`
+        - <b>First game! 👾</b> - Using what we've learned to create a simple game. `coming soon`
+        - <b>Loops and Conditions 🔁</b> - Test things, repeat things. `coming soon`
+        - <b>Arrays and Tables 📦</b> - How to store stuff. `coming soon`
+        - <b>Second game! 🕹️</b> - Let's create another game with all that knowledge. `coming soon`
+        - <b>Physics 🔧</b> - How to make objects move and detect collisions. `coming soon`
+        - <b>User Interface 🎨</b> - How to create a UI (text labels, buttons, input fields, etc). `coming soon`
+        - <b>Third game! 🎮</b> - Wow, 3rd game, it's getting serious! `coming soon`
+        - <b>Server and Events ✉️</b> - Understand what a server is, send events to other players. `coming soon`
+        - <b>Multiplayer Game 🎯</b> - There you are, building your first multiplayer game! 😮 `coming soon`
