@@ -7,6 +7,8 @@ privateFieldsMT = {
 }
 setmetatable(privateFields, privateFieldsMT)
 
+local animationFields = {}  -- Map from animation objects to their names and parent animations container
+
 local addOnPlayCallback = function(self, callback)
 	if type(callback) ~= "function" then
 		error("Animations:AddOnPlayCallback - first argument must be a function", 2)
@@ -85,8 +87,7 @@ local toggleGroups = function(animations)
 
 	for _, anim in pairs(playing) do
 		if anim then
-			groups = anim.Groups
-			for _, groupName in ipairs(groups) do
+			for _, groupName in ipairs(anim.Groups) do
 				otherAnimPlayingGroup = groupsPlaying[groupName]
 				if otherAnimPlayingGroup ~= nil then
 					-- print("**", groupName, "other:", otherAnimPlayingGroup.Priority, animName .. ":", anim.Priority)
@@ -116,13 +117,29 @@ local stopPlaying = function(animations, animName)
 	toggleGroups(animations)
 end
 
+local onAnimPlayCallback = function(anim)
+	local info = animationFields[anim]
+	if info then
+		startPlaying(info.animations, info.name, anim)
+	end
+end
+
+local onAnimStopCallback = function(anim)
+	if anim.RemoveWhenDone == true then
+		local info = animationFields[anim]
+		if info then
+			stopPlaying(info.animations, info.name)
+		end
+	end
+end
+
 animationsMT.__newindex = function(t, k, v)
 	if indexFunctions[k] ~= nil then
-		error("Animations." .. k .. " is read-only")
+		error(string.format("Animations.%s is read-only", k))
 	end
 
 	if v ~= nil and typeof(v) ~= "Animation" then
-		error("Animations." .. k .. " should be of type Animation", 2)
+		error(string.format("Animations.%s should be of type Animation", k), 2)
 	end
 
 	-- TODO: REMOVE CALLBACKS
@@ -133,34 +150,23 @@ animationsMT.__newindex = function(t, k, v)
 		return
 	end
 
-	local animations = t
-	local animName = k
+	-- Store animation info for callbacks
+	animationFields[v] = {
+		animations = t,
+		name = k
+	}
 
-	-- NOTE: could use same callback function for all
-	-- animations, indexing animations on anim pointers
-	v:AddOnPlayCallback(function(anim)
-		startPlaying(animations, animName, anim)
-	end)
-
-	v:AddOnStopCallback(function(anim)
-		if anim.RemoveWhenDone == true then
-			stopPlaying(animations, animName)
-		end
-	end)
+	-- Use the shared callback functions
+	v:AddOnPlayCallback(onAnimPlayCallback)
+	v:AddOnStopCallback(onAnimStopCallback)
 end
 
 local create = function(_)
 	local animations = {}
-	privateFields[animations] = {}
-
-	if privateFields[animations].anims == nil then
-		privateFields[animations].anims = {}
-	end
-
-	-- all playing animations, { animName = anim }
-	if privateFields[animations].playing == nil then
-		privateFields[animations].playing = {}
-	end
+	privateFields[animations] = {
+		anims = {},
+		playing = {}
+	}
 
 	setmetatable(animations, animationsMT)
 
@@ -174,12 +180,11 @@ local mt = {
 setmetatable(animationsModule, mt)
 
 -- tick for all Animations
-local anims
 LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
 	for animations, animationsPrivateFields in pairs(privateFields) do
-		anims = animationsPrivateFields.anims
-		if anims ~= nil then
-			for name, anim in pairs(anims) do
+		local playing = animationsPrivateFields.playing
+		if playing ~= nil then
+			for name, anim in pairs(playing) do
 				if anim.IsPlaying == false then
 					stopPlaying(animations, name)
 				else

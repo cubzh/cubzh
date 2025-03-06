@@ -14,17 +14,25 @@
 --- local config = { onDone = callback }
 --- -- triggers `callback` when done (after 1 second)
 --- ease:inSine(t, 1.0, config)
+--- -- You can also pause and resume animations:
+--- local instance = ease:inSine(t, 1.0)
+--- instance.x = 10.0
+--- instance:pause() -- pauses the animation
+--- instance:resume() -- resumes the animation
 
 ---@type ease
 
-local ease = {
-	instances = {},
-	nextID = 1,
-	object = Object(), -- used for tick
-	c1 = 1.70158,
-	c3 = 1.70158 + 1.0,
-	c4 = (2 * math.pi) / 3,
-}
+local ease = {}
+
+-- Pre-computed constants for improved performance
+local HALF_PI = math.pi * 0.5
+local PI = math.pi
+local TWO_PI_DIV_3 = (2 * math.pi) / 3
+local C1 = 1.70158
+local C3 = C1 + 1.0
+local NEXT_ID = 1
+local INSTANCES = {}
+local TICK_LISTENER = nil
 
 local rotation = Rotation()
 local color = Color(0, 0, 0)
@@ -33,11 +41,10 @@ local done
 local to
 local p
 
-ease._startIfNeeded = function(self)
-	if self.object.Tick == nil then
-		World:AddChild(self.object)
-		self.object.Tick = function(_, dt)
-			for _, instance in pairs(self.instances) do
+local function startTickListenerIfNeeded()
+	if TICK_LISTENER == nil then
+		TICK_LISTENER = LocalEvent:Listen(LocalEvent.Name.Tick, function(dt)
+			for _, instance in pairs(INSTANCES) do
 				done = false
 				instance.dt = instance.dt + dt
 				percent = instance.dt / instance.duration
@@ -69,17 +76,17 @@ ease._startIfNeeded = function(self)
 					if instance.onDone then
 						instance.onDone(instance.object)
 					end
-					self.instances[instance.id] = nil
+					INSTANCES[instance.id] = nil
 				end
 			end
-		end
+		end)
 	end
 end
 
 ease._common = function(self, object, duration, config)
 	local instance = {}
-	instance.id = self.nextID
-	self.nextID = self.nextID + 1
+	instance.id = NEXT_ID
+	NEXT_ID = NEXT_ID + 1
 	instance.dt = 0.0
 	instance.object = object
 	instance.duration = duration
@@ -100,7 +107,7 @@ ease._common = function(self, object, duration, config)
 		end
 	end
 
-	self.instances[instance.id] = instance
+	INSTANCES[instance.id] = instance
 
 	local m = {}
 	m.__newindex = function(t, k, v)
@@ -150,7 +157,7 @@ ease._common = function(self, object, duration, config)
 			error("ease: type not supported")
 		end
 
-		self:_startIfNeeded()
+		startTickListenerIfNeeded()
 	end
 
 	setmetatable(instance, m)
@@ -182,7 +189,7 @@ end
 ease.inSine = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
 	instance.fn = function(_, v)
-		return 1.0 - math.cos((v * math.pi) * 0.5)
+		return 1.0 - math.cos(v * HALF_PI)
 	end
 	return instance
 end
@@ -192,7 +199,7 @@ end
 ease.outSine = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
 	instance.fn = function(_, v)
-		return math.sin((v * math.pi) * 0.5)
+		return math.sin(v * HALF_PI)
 	end
 	return instance
 end
@@ -202,7 +209,7 @@ end
 ease.inOutSine = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
 	instance.fn = function(_, v)
-		return -(math.cos(math.pi * v) - 1.0) * 0.5
+		return -(math.cos(PI * v) - 1.0) * 0.5
 	end
 	return instance
 end
@@ -212,7 +219,7 @@ end
 ease.inBack = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
 	instance.fn = function(_, v)
-		return ease.c3 * v ^ 3 - ease.c1 * v ^ 2
+		return C3 * v ^ 3 - C1 * v ^ 2
 	end
 	return instance
 end
@@ -222,7 +229,8 @@ end
 ease.outBack = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
 	instance.fn = function(_, v)
-		return 1.0 + ease.c3 * (v - 1.0) ^ 3 + ease.c1 * (v - 1.0) ^ 2
+		local vm1 = v - 1.0
+		return 1.0 + C3 * vm1 ^ 3 + C1 * vm1 ^ 2
 	end
 	return instance
 end
@@ -232,7 +240,7 @@ end
 ease.inQuad = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
 	instance.fn = function(_, v)
-		return v * v
+		return v ^ 2
 	end
 	return instance
 end
@@ -242,7 +250,8 @@ end
 ease.outQuad = function(self, object, duration, config)
 	local instance = self:_common(object, duration, config)
 	instance.fn = function(_, v)
-		return 1.0 - (1.0 - v) * (1.0 - v)
+		local vm1 = 1.0 - v
+		return 1.0 - vm1 * vm1
 	end
 	return instance
 end
@@ -272,7 +281,7 @@ ease.outElastic = function(self, object, duration, config)
 		elseif v == 1 then
 			return 1
 		else
-			return 2 ^ (-10 * v) * math.sin((v * 10 - 0.75) * ease.c4) + 1
+			return 2 ^ (-10 * v) * math.sin((v * 10 - 0.75) * TWO_PI_DIV_3) + 1
 		end
 	end
 	return instance
@@ -288,7 +297,7 @@ ease.inElastic = function(self, object, duration, config)
 		elseif v == 1 then
 			return 1
 		else
-			return -(2 ^ (10 * v - 10) * math.sin((v * 10 - 10.75) * ease.c4))
+			return -(2 ^ (10 * v - 10) * math.sin((v * 10 - 10.75) * TWO_PI_DIV_3))
 		end
 	end
 	return instance
@@ -302,13 +311,13 @@ end
 --- instance:cancel()
 ease.cancel = function(self, object)
 	local toRemove = {}
-	for k, instance in pairs(self.instances) do
+	for k, instance in pairs(INSTANCES) do
 		if instance.object == object then
 			table.insert(toRemove, k)
 		end
 	end
 	for _, k in ipairs(toRemove) do
-		self.instances[k] = nil
+		INSTANCES[k] = nil
 	end
 end
 
