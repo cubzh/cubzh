@@ -24,6 +24,19 @@
 #define HTTP_OK 200
 #define HTTP_NOT_MODIFIED 304
 
+#if !defined(CUBZH_TARGET_WASM)
+#define CUBZH_TARGET_WASM 501
+#endif
+
+#if !defined(CUBZH_TARGET_WASM_DISCORD)
+#define CUBZH_TARGET_WASM_DISCORD 502
+#endif
+
+//
+#if !defined(__VX_TARGET)
+#define __VX_TARGET CUBZH_TARGET_WASM_DISCORD
+#endif
+
 namespace vx {
 
 /// singleton
