@@ -283,6 +283,9 @@ mod.create = function(self, config)
 						head:setNose({ index = avatarProperties.noseIndex })
 
 						local colors = avatar.skinColors[avatarProperties.skinColorIndex]
+						if colors == nil then
+							colors = Player.Avatar:getColors()
+						end
 						head:setColors({
 							skin1 = colors.skin1,
 							skin2 = colors.skin2,
@@ -479,6 +482,9 @@ mod.create = function(self, config)
 						head:setNose({ index = noseIndex })
 
 						local colors = avatar.skinColors[avatarProperties.skinColorIndex]
+						if colors == nil then
+							colors = Player.Avatar:getColors()
+						end
 						head:setColors({
 							skin1 = colors.skin1,
 							skin2 = colors.skin2,
