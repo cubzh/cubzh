@@ -1,7 +1,8 @@
 # ------------------------------
-# Android
+# Platforms
 # ------------------------------
 
+# Android
 platform(
     name = "android_arm",
     constraint_values = [
@@ -9,7 +10,6 @@ platform(
         "@platforms//cpu:armv7",
     ],
 )
-
 platform(
     name = "android_arm64",
     constraint_values = [
@@ -17,7 +17,6 @@ platform(
         "@platforms//cpu:arm64",
     ],
 )
-
 platform(
     name = "android_x86",
     constraint_values = [
@@ -48,7 +47,35 @@ platform(
 
 # ------------------------------
 # macOS
-# ------------------------------
+platform(
+    name = "macos_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+)
+platform(
+    name = "macos_x86_64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+# Windows
+
+
+# # Define the condition for macOS
+# config_setting(
+#     name = "is_macos",
+#     values = {"host_os": "darwin"},
+# )
+
+# # Define the condition for non-macOS (for completeness)
+# config_setting(
+#     name = "is_not_macos",
+#     values = {"host_os": "linux"},  # adjust this for other OS if needed
+# )
 
 platform(
     name = "macos_universal",
