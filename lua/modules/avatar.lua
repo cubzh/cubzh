@@ -633,6 +633,7 @@ mod.getPlayerHead = function(self, config)
 	-- head.load = avatar_load
 	-- head.loadEquipment = avatar_loadEquipment
 	head.setColors = avatar_setColors
+	head.getColors = avatar_getColors
 	head.setEyes = avatar_setEyes
 	head.setNose = avatar_setNose
 
@@ -717,6 +718,7 @@ mod.get = function(self, config, _, didLoadCallback_deprecated)
 	avatar.load = avatar_load
 	avatar.loadEquipment = avatar_loadEquipment
 	avatar.setColors = avatar_setColors
+	avatar.getColors = avatar_getColors
 	avatar.setEyes = avatar_setEyes
 	avatar.setNose = avatar_setNose
 	avatar.updateConfig = avatar_update_config
@@ -1066,6 +1068,23 @@ function avatar_loadEquipment(self, config)
 	end
 end
 
+function avatar_getColors(self, config)
+	local fields = avatarPrivateFields[self]
+	if fields == nil then
+		error("avatar:getColor(config) should be called with `:`", 2)
+	end
+	return {
+		skin1 = fields.palette[SKIN_1_PALETTE_INDEX].Color,
+		skin2 = fields.palette[SKIN_2_PALETTE_INDEX].Color,
+		cloth = fields.palette[CLOTH_PALETTE_INDEX].Color,
+		mouth = fields.palette[MOUTH_PALETTE_INDEX].Color,
+		eyes = fields.palette[EYES_PALETTE_INDEX].Color,
+		eyesWhite = fields.palette[EYES_WHITE_PALETTE_INDEX].Color,
+		eyesDark = fields.palette[EYES_DARK_PALETTE_INDEX].Color,
+		nose = fields.palette[NOSE_PALETTE_INDEX].Color,
+	}
+end
+
 function avatar_setColors(self, config)
 	local fields = avatarPrivateFields[self]
 	if fields == nil then
@@ -1138,10 +1157,16 @@ function avatar_setEyes(self, config)
 		else
 			head = self.Head
 		end
+
+		local eyeBlocksDepth = head.Depth - 2
+		if head.Depth == 12 then -- special case without nose
+			eyeBlocksDepth = head.Depth - 1
+		end
+
 		local b
 		for x = 4, head.Width - 5 do -- width -> left side when looking at face
 			for y = 3, head.Height - 5 do
-				b = head:GetBlock(x, y, head.Depth - 2)
+				b = head:GetBlock(x, y, eyeBlocksDepth)
 				if b then
 					b:Replace(SKIN_1_PALETTE_INDEX)
 				end
@@ -1150,7 +1175,7 @@ function avatar_setEyes(self, config)
 
 		local eyes = mod.eyes[config.index]
 		for _, e in ipairs(eyes) do
-			b = head:GetBlock(15 - e.x, e.y + 2, head.Depth - 2)
+			b = head:GetBlock(15 - e.x, e.y + 2, eyeBlocksDepth)
 			if b then
 				b:Replace(e.c)
 			end
@@ -1202,6 +1227,13 @@ function avatar_setNose(self, config)
 		for x = 8, head.Width - 9 do -- width -> left side when looking at face
 			for y = 3, head.Height - 5 do
 				if nodeBlocks[x][y] == nil then
+					-- quick fix for blocks beneath nose blocks,
+					-- they may not be using the correct palette index
+					local blockBeneath = head:GetBlock(x, y, depth - 1)
+					if blockBeneath ~= nil then
+						blockBeneath:Replace(SKIN_1_PALETTE_INDEX)
+					end
+
 					b = head:GetBlock(x, y, depth)
 					if b ~= nil then
 						b:Remove()
