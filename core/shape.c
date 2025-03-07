@@ -254,7 +254,7 @@ Shape *shape_make(void) {
 
     s->drawMode = SHAPE_DRAWMODE_DEFAULT;
     s->renderingFlags = SHAPE_RENDERING_FLAG_INNER_TRANSPARENT_FACES;
-    s->layers = 1; // CAMERA_LAYERS_DEFAULT
+    s->layers = CAMERA_LAYERS_DEFAULT;
 
     s->luaFlags = SHAPE_LUA_FLAG_NONE;
 
