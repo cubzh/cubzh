@@ -178,8 +178,8 @@ bool serialization_vox_save_shapes(Shape **shapes, const size_t nbShapes, FILE *
 #define _shapes_to_vox_error(msg)                                                                  \
     cclog_error(msg);                                                                              \
     color_palette_release(combinedPalette);                                                        \
-    for (unsigned int i = 0; i < nbShapes; ++i) {                                                  \
-        hash_uint32_int_free(paletteConversionMaps[i]);                                            \
+    for (unsigned int zzz = 0; zzz < nbShapes; ++zzz) {                                            \
+        hash_uint32_int_free(paletteConversionMaps[zzz]);                                          \
     }                                                                                              \
     free(paletteConversionMaps);                                                                   \
     return false;
@@ -227,11 +227,11 @@ bool serialization_vox_save_shapes(Shape **shapes, const size_t nbShapes, FILE *
     uint32_t nSHP_bytes = 12 + 8 * 1; // one model per nSHP
 
     // SIZE & XYZI chunk couples for each shape
-    for (unsigned int i = 0; i < nbShapes; ++i) {
+    for (unsigned int l = 0; l < nbShapes; ++l) {
 
-        const Shape *src = shapes[i];
+        const Shape *src = shapes[l];
         palette = shape_get_palette(src);
-        paletteConversionMap = paletteConversionMaps[i];
+        paletteConversionMap = paletteConversionMaps[l];
 
         shape_size = shape_get_allocated_size(src);
 
@@ -302,26 +302,26 @@ bool serialization_vox_save_shapes(Shape **shapes, const size_t nbShapes, FILE *
                         }
 
                         // ⚠️ y -> z, z -> y
-                        uint8_t x = (uint8_t)coords_in_shape.x;
-                        uint8_t y = (uint8_t)coords_in_shape.z;
-                        uint8_t z = (uint8_t)coords_in_shape.y;
-                        uint8_t c = (uint8_t)colorIndexInCombinedPalette + 1;
+                        uint8_t cx = (uint8_t)coords_in_shape.x;
+                        uint8_t cy = (uint8_t)coords_in_shape.z;
+                        uint8_t cz = (uint8_t)coords_in_shape.y;
+                        uint8_t cc = (uint8_t)colorIndexInCombinedPalette + 1;
 
                         // printf("block : %d, %d, %d - color: %d\n", x, y, z, c);
 
-                        if (fwrite(&x, sizeof(uint8_t), 1, out) != 1) {
+                        if (fwrite(&cx, sizeof(uint8_t), 1, out) != 1) {
                             _shapes_to_vox_error("failed to write x size")
                         }
 
-                        if (fwrite(&y, sizeof(uint8_t), 1, out) != 1) {
+                        if (fwrite(&cy, sizeof(uint8_t), 1, out) != 1) {
                             _shapes_to_vox_error("failed to write y size")
                         }
 
-                        if (fwrite(&z, sizeof(uint8_t), 1, out) != 1) {
+                        if (fwrite(&cz, sizeof(uint8_t), 1, out) != 1) {
                             _shapes_to_vox_error("failed to write z size")
                         }
 
-                        if (fwrite(&c, sizeof(uint8_t), 1, out) != 1) {
+                        if (fwrite(&cc, sizeof(uint8_t), 1, out) != 1) {
                             _shapes_to_vox_error("failed to write c size")
                         }
                     }
@@ -545,17 +545,14 @@ bool serialization_vox_save_shapes(Shape **shapes, const size_t nbShapes, FILE *
             _shapes_to_vox_error("failed to write RGBA children size")
         }
 
-        uint8_t zero = 0;
-
         // const ColorPalette *palette = shape_get_palette(shapes[0]);
-        const ColorPalette *palette = combinedPalette;
-        uint16_t nbColors = palette->count;
-
+        uint16_t nbColors = combinedPalette->count;
         RGBAColor color;
+        const uint8_t zero_uint8 = 0;
 
         for (int i = 0; i < 256; i++) {
             if (i < nbColors) {
-                color = color_palette_get_color(palette, (SHAPE_COLOR_INDEX_INT_T)i);
+                color = color_palette_get_color(combinedPalette, (SHAPE_COLOR_INDEX_INT_T)i);
                 // r
                 if (fwrite(&color.r, sizeof(uint8_t), 1, out) != 1) {
                     _shapes_to_vox_error("failed to write r")
@@ -574,7 +571,7 @@ bool serialization_vox_save_shapes(Shape **shapes, const size_t nbShapes, FILE *
                 }
             } else {
                 for (int j = 0; j < 4; j++) {
-                    if (fwrite(&zero, sizeof(uint8_t), 1, out) != 1) {
+                    if (fwrite(&zero_uint8, sizeof(uint8_t), 1, out) != 1) {
                         _shapes_to_vox_error("failed to write empty color")
                     }
                 }
