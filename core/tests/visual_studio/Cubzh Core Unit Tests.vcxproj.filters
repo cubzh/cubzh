@@ -145,6 +145,15 @@
     <ClCompile Include="..\..\quad.c">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\camera.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\light.c">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\world_text.c">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\acutest.h">
@@ -379,6 +388,15 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="..\..\quad.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\camera.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\light.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\world_text.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

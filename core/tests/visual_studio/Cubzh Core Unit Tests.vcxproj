@@ -22,6 +22,7 @@
     <ClInclude Include="..\..\block.h" />
     <ClInclude Include="..\..\blockChange.h" />
     <ClInclude Include="..\..\box.h" />
+    <ClInclude Include="..\..\camera.h" />
     <ClInclude Include="..\..\cclog.h" />
     <ClInclude Include="..\..\chunk.h" />
     <ClInclude Include="..\..\colors.h" />
@@ -46,6 +47,7 @@
     <ClInclude Include="..\..\index3d.h" />
     <ClInclude Include="..\..\inputs.h" />
     <ClInclude Include="..\..\int3.h" />
+    <ClInclude Include="..\..\light.h" />
     <ClInclude Include="..\..\magicavoxel.h" />
     <ClInclude Include="..\..\map_string_float3.h" />
     <ClInclude Include="..\..\matrix4x4.h" />
@@ -67,6 +69,7 @@
     <ClInclude Include="..\..\utils.h" />
     <ClInclude Include="..\..\vertextbuffer.h" />
     <ClInclude Include="..\..\weakptr.h" />
+    <ClInclude Include="..\..\world_text.h" />
     <ClInclude Include="..\acutest.h" />
     <ClInclude Include="..\test_block.h" />
     <ClInclude Include="..\test_blockChange.h" />
@@ -102,6 +105,7 @@
     <ClCompile Include="..\..\block.c" />
     <ClCompile Include="..\..\blockChange.c" />
     <ClCompile Include="..\..\box.c" />
+    <ClCompile Include="..\..\camera.c" />
     <ClCompile Include="..\..\cclog.c" />
     <ClCompile Include="..\..\chunk.c" />
     <ClCompile Include="..\..\colors.c" />
@@ -125,6 +129,7 @@
     <ClCompile Include="..\..\index3d.c" />
     <ClCompile Include="..\..\inputs.c" />
     <ClCompile Include="..\..\int3.c" />
+    <ClCompile Include="..\..\light.c" />
     <ClCompile Include="..\..\magicavoxel.c" />
     <ClCompile Include="..\..\map_string_float3.c" />
     <ClCompile Include="..\..\matrix4x4.c" />
@@ -146,6 +151,7 @@
     <ClCompile Include="..\..\utils.c" />
     <ClCompile Include="..\..\vertextbuffer.c" />
     <ClCompile Include="..\..\weakptr.c" />
+    <ClCompile Include="..\..\world_text.c" />
     <ClCompile Include="..\test_list.c" />
   </ItemGroup>
   <ItemGroup>
