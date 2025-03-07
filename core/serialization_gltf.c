@@ -9,9 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weverything"
 #define CGLTF_VALIDATE_ENABLE_ASSERTS DEBUG
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
+#pragma GCC diagnostic pop
 
 #include "cclog.h"
 #include "transform.h"
@@ -215,27 +218,28 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                 const cgltf_attribute* colorAttr = NULL;
                 const cgltf_attribute* tangentAttr = NULL;
                 
-                for (size_t i = 0; i < primitive->attributes_count; i++) {
-                    switch (primitive->attributes[i].type) {
+                for (size_t k = 0; k < primitive->attributes_count; k++) {
+                    switch (primitive->attributes[k].type) {
                         case cgltf_attribute_type_position:
-                            posAttr = &primitive->attributes[i];
+                            posAttr = &primitive->attributes[k];
                             break;
                         case cgltf_attribute_type_normal:
-                            normalAttr = &primitive->attributes[i];
+                            normalAttr = &primitive->attributes[k];
                             break;
                         case cgltf_attribute_type_texcoord:
-                            uvAttr = &primitive->attributes[i];
+                            uvAttr = &primitive->attributes[k];
                             break;
                         case cgltf_attribute_type_color:
-                            colorAttr = &primitive->attributes[i];
+                            colorAttr = &primitive->attributes[k];
                             break;
                         case cgltf_attribute_type_tangent:
-                            tangentAttr = &primitive->attributes[i];
+                            tangentAttr = &primitive->attributes[k];
                             break;
                         case cgltf_attribute_type_joints:
                         case cgltf_attribute_type_weights:
                         case cgltf_attribute_type_custom:
                         case cgltf_attribute_type_invalid:
+                        default:
                             break;
                     }
                 }

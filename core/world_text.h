@@ -104,7 +104,7 @@ bool world_text_is_slant_dirty(const WorldText *wt);
 
 void world_text_drawmode_set_outline_weight(WorldText *wt, float value);
 float world_text_drawmode_get_outline_weight(const WorldText *wt);
-void world_text_drawmode_set_outline_color(WorldText *wt, uint32_t value);
+void world_text_drawmode_set_outline_color(WorldText *wt, uint32_t rgb);
 uint32_t world_text_drawmode_get_outline_color(const WorldText *wt);
 
 #ifdef __cplusplus

@@ -41,7 +41,7 @@ void light_set_color(Light *l, const float r, const float g, const float b);
 float3 *light_get_color(const Light *l);
 void light_set_type(Light *l, LightType type);
 LightType light_get_type(const Light *l);
-void light_set_range(Light *l, const float area);
+void light_set_range(Light *l, const float value);
 float light_get_range(const Light *l);
 void light_set_hardness(Light *l, const float hardness);
 float light_get_hardness(const Light *l);
