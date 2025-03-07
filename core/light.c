@@ -105,7 +105,7 @@ float3 *light_get_color(const Light *l) {
 }
 
 void light_set_type(Light *l, LightType type) {
-    l->type = type;
+    l->type = (uint8_t)type;
 }
 
 LightType light_get_type(const Light *l) {

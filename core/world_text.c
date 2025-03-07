@@ -336,7 +336,7 @@ bool world_text_is_unlit(const WorldText *wt) {
 
 void world_text_set_type(WorldText *wt, TextType value) {
     if (wt->type != value) {
-        wt->type = value;
+        wt->type = (uint8_t)value;
         _world_text_set_dirty(wt, WORLDTEXT_GEOMETRY);
     }
 }
@@ -431,7 +431,7 @@ bool world_text_is_alignment_dirty(const WorldText *wt) {
 }
 
 void world_text_set_weight(WorldText *wt, float value) {
-    const uint8_t packed = CLAMP01F(value) * 255;
+    const uint8_t packed = (uint8_t)(CLAMP01F(value) * 255);
     if (wt->weight != packed) {
         wt->weight = packed;
         _world_text_set_dirty(wt, WORLDTEXT_GEOMETRY);
@@ -443,7 +443,7 @@ float world_text_get_weight(const WorldText *wt) {
 }
 
 void world_text_set_slant(WorldText *wt, float value) {
-    wt->slant = CLAMP01F(value) * 255;
+    wt->slant = (uint8_t)(CLAMP01F(value) * 255);
     _world_text_set_dirty(wt, WORLDTEXT_SLANT);
 }
 
@@ -467,7 +467,7 @@ void world_text_drawmode_set_outline_weight(WorldText *wt, float value) {
     if (wt->drawmodes == NULL && float_isZero(value, EPSILON_ZERO) == false) {
         world_text_toggle_drawmodes(wt, true);
     }
-    const uint8_t packed = CLAMP01F(value) * 255;
+    const uint8_t packed = (uint8_t)(CLAMP01F(value) * 255);
     if (wt->drawmodes->outlineWeight != packed) {
         wt->drawmodes->outlineWeight = packed;
         _world_text_set_dirty(wt, WORLDTEXT_GEOMETRY);
