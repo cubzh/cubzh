@@ -8,7 +8,6 @@
 
 #include <string.h>
 
-#include "vxconfig.h"
 #include "utils.h"
 
 #define WORLDTEXT_NONE 0

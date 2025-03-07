@@ -18,7 +18,6 @@ extern "C" {
 #include "chunk.h"
 #include "color_atlas.h"
 #include "color_palette.h"
-#include "config.h"
 #include "flood_fill_lighting.h"
 #include "index3d.h"
 #include "map_string_float3.h"

@@ -7,7 +7,6 @@
 #include "light.h"
 
 #include "transform.h"
-#include "vxconfig.h"
 
 struct _Light {
     Transform *transform;

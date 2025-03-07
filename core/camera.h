@@ -16,7 +16,7 @@ extern "C" {
 #include "float3.h"
 #include "matrix4x4.h"
 #include "shape.h"
-#include "vxconfig.h"
+#include "config.h"
 #include "plane.h"
 
 typedef struct _Camera Camera;

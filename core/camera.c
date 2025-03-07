@@ -13,8 +13,6 @@
 
 #include "config.h"
 #include "utils.h"
-#include "xptools.h"
-#include "vxconfig.h"
 #include "transform.h"
 #include "light.h"
 

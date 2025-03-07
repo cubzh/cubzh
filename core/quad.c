@@ -11,6 +11,7 @@
 #include <zlib.h>
 
 #include "weakptr.h"
+#include "config.h"
 
 #define QUAD_FLAG_NONE 0
 #define QUAD_FLAG_DOUBLESIDED 1
@@ -71,7 +72,7 @@ Quad *quad_new(void) {
     q->offsetU = 0.0f;
     q->offsetV = 0.0f;
     q->cutout = -1.0f;
-    q->layers = 1; // CAMERA_LAYERS_DEFAULT
+    q->layers = CAMERA_LAYERS_DEFAULT;
     q->flags = QUAD_FLAG_DOUBLESIDED;
     q->sortOrder = 0;
 
