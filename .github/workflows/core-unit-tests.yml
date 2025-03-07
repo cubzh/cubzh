@@ -17,10 +17,9 @@ jobs:
                 sparse-checkout: |-
                     core
                     deps/libz
+                    deps/bgfx/bgfx/3rdparty/cgltf
                     dagger.json
-                    .dagger
                     dagger
-                    ci
             - name: scripts/install-dagger.sh
               id: install-dagger
               run: |

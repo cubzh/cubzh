@@ -71,7 +71,7 @@ Camera *camera_new(void) {
         return NULL;
     }
     
-    c->view = transform_make_with_ptr(CameraTransform, c, _camera_void_free);
+    c->view = transform_new_with_ptr(CameraTransform, c, _camera_void_free);
     c->viewMtx = matrix4x4_new_identity();
     c->invViewMtx = matrix4x4_new_identity();
     c->projMatrix = matrix4x4_new_identity();
