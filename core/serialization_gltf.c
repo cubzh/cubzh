@@ -30,11 +30,11 @@ static Texture* _serialization_gltf_load_texture(const cgltf_image* image, const
     }
 
     void* data;
-    size_t size;
+    uint32_t size;
     Texture *t = NULL;
     if (image->buffer_view != NULL) { // embedded image data
-        data = ((const char*)image->buffer_view->buffer->data) + image->buffer_view->offset;
-        size = image->buffer_view->size;
+        data = ((char*)image->buffer_view->buffer->data) + image->buffer_view->offset;
+        size = (uint32_t)image->buffer_view->size;
         t = texture_new_raw(data, size, type);
     } else if (image->uri != NULL) { // external image file
         FILE* file = fopen(image->uri, "rb");
@@ -43,7 +43,7 @@ static Texture* _serialization_gltf_load_texture(const cgltf_image* image, const
         }
 
         fseek(file, 0, SEEK_END);
-        size = ftell(file);
+        size = (uint32_t)ftell(file);
         fseek(file, 0, SEEK_SET);
 
         data = malloc(size);
@@ -308,8 +308,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                         const bool index32 = indexAccessor->count > UINT16_MAX;
 
                         indices = malloc(indexAccessor->count * (index32 ? sizeof(uint32_t) : sizeof(uint16_t)));
-                        ibCount = indexAccessor->count;
-                        
+                        ibCount = (uint32_t)indexAccessor->count;
+
                         cgltf_size index;
                         for (size_t k = 0; k < indexAccessor->count; ++k) {
                             index = cgltf_accessor_read_index(indexAccessor, k);
@@ -341,7 +341,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                     if (index32) {
                                         ((uint32_t*)indices)[l] = l;
                                     } else {
-                                        ((uint16_t*)indices)[l] = l;
+                                        ((uint16_t*)indices)[l] = (uint16_t)l;
                                     }
                                 }
                                 if (index32) {
@@ -375,8 +375,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                         ((uint32_t*)indices)[l * 3 + 2] = l + 2;    // next vertex
                                     } else {
                                         ((uint16_t*)indices)[l * 3] = 0;            // center vertex
-                                        ((uint16_t*)indices)[l * 3 + 1] = l + 1;    // current vertex
-                                        ((uint16_t*)indices)[l * 3 + 2] = l + 2;    // next vertex
+                                        ((uint16_t*)indices)[l * 3 + 1] = (uint16_t)l + 1;    // current vertex
+                                        ((uint16_t*)indices)[l * 3 + 2] = (uint16_t)l + 2;    // next vertex
                                     }
                                 }
                                 break;
@@ -451,6 +451,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                         }
 
                         switch (gltf_material->alpha_mode) {
+                            default:
                             case cgltf_alpha_mode_opaque:
                                 material_set_opaque(material, true);
                                 material_set_alpha_cutout(material, -1.0f);
@@ -470,7 +471,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     }
                     
                     Mesh* mesh = mesh_new();
-                    mesh_set_vertex_buffer(mesh, vertices, posAccessor->count);
+                    mesh_set_vertex_buffer(mesh, vertices, (uint32_t)posAccessor->count);
                     mesh_set_index_buffer(mesh, indices, ibCount);
                     mesh_set_primitive_type(mesh, primitiveType);
                     mesh_set_front_ccw(mesh, false);
@@ -498,7 +499,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
             Light *l = light_new();
             light_set_color(l, node->light->color[0], node->light->color[1], node->light->color[2]);
-            light_set_intensity(l, CLAMP01(node->light->intensity));
+            light_set_intensity(l, CLAMP01F(node->light->intensity));
             switch(node->light->type) {
                 case cgltf_light_type_directional:
                     light_set_type(l, LightType_Directional);
@@ -587,13 +588,13 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                 doubly_linked_list_push_last(*out, _serialization_gltf_new_asset(transforms[j]));
             } else {
                 Transform* parentTransform = NULL;
-                const cgltf_node* currentParent = node->parent;
+                cgltf_node* currentParent = node->parent;
                 Matrix4x4* combinedMtx = NULL;
                 Matrix4x4 nodeMtx;
                 
                 // find first parent node that wasn't skipped
                 while (currentParent != NULL) {
-                    const cgltf_size parentIdx = currentParent - data->nodes;
+                    const cgltf_size parentIdx = (cgltf_size)(currentParent - data->nodes);
                     if (transforms[parentIdx] != NULL) {
                         parentTransform = transforms[parentIdx];
                         break;
@@ -609,7 +610,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                 *(const float3*)currentParent->translation : float3_zero;
                             Quaternion rotation = currentParent->has_rotation ?
                                 *(Quaternion*)currentParent->rotation : quaternion_identity;
-                            
+
                             transform_utils_compute_SRT(&nodeMtx, &scale, &rotation, &position);
                         }
 
