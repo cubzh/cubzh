@@ -46,6 +46,7 @@ alias(
     name = "luau",
     actual = select({
         "@platforms//os:macos": ":luau-macos",
+        "@platforms//os:ios": ":luau-ios",
         "//conditions:default": ":luau-default",
     }),
 )
@@ -65,6 +66,13 @@ apple_static_library(
     name = "luau-macos",
     minimum_os_version = "11.0",
     platform_type = "macos",
+    deps = luau_static_library_deps,
+)
+
+apple_static_library(
+    name = "luau-ios",
+    minimum_os_version = "13.0",
+    platform_type = "ios",
     deps = luau_static_library_deps,
 )
 
