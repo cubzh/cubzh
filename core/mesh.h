@@ -37,10 +37,10 @@ void mesh_release(Mesh *m);
 void mesh_free(Mesh* m);
 
 Transform* mesh_get_transform(const Mesh* m);
-void mesh_set_vertex_buffer(Mesh* m, Vertex* vertices, size_t count); // takes ownership
+void mesh_set_vertex_buffer(Mesh* m, Vertex* vertices, uint32_t count); // takes ownership
 const Vertex* mesh_get_vertex_buffer(const Mesh* m);
 uint32_t mesh_get_vertex_count(const Mesh* m);
-void mesh_set_index_buffer(Mesh* m, void* indices, size_t count); // takes ownership
+void mesh_set_index_buffer(Mesh* m, void* indices, uint32_t count); // takes ownership
 const void* mesh_get_index_buffer(const Mesh* m);
 uint32_t mesh_get_index_count(const Mesh* m);
 uint32_t mesh_get_hash(const Mesh* m);

@@ -101,7 +101,7 @@ Transform* mesh_get_transform(const Mesh *m) {
     return m->transform;
 }
 
-void mesh_set_vertex_buffer(Mesh *m, Vertex *vertices, size_t count) {
+void mesh_set_vertex_buffer(Mesh *m, Vertex *vertices, uint32_t count) {
     if (m->vb != NULL) {
         free(m->vb);
     }
@@ -124,7 +124,7 @@ uint32_t mesh_get_vertex_count(const Mesh *m) {
     return m->vbCount;
 }
 
-void mesh_set_index_buffer(Mesh *m, void *indices, size_t count) {
+void mesh_set_index_buffer(Mesh *m, void *indices, uint32_t count) {
     if (m->ib != NULL) {
         free(m->ib);
     }
@@ -145,7 +145,7 @@ uint32_t mesh_get_hash(const Mesh *m) {
 }
 
 void mesh_set_primitive_type(Mesh *m, PrimitiveType type) {
-    m->primitiveType = type;
+    m->primitiveType = (uint8_t)type;
 }
 
 PrimitiveType mesh_get_primitive_type(const Mesh *m) {

@@ -32,7 +32,7 @@ void _light_void_free(void *o) {
 Light *light_new(void) {
     Light *l = (Light *)malloc(sizeof(Light));
 
-    l->transform = transform_make_with_ptr(LightTransform, l, &_light_void_free);
+    l->transform = transform_new_with_ptr(LightTransform, l, &_light_void_free);
     l->color = float3_new_one();
     l->type = LightType_Point;
     l->range = LIGHT_DEFAULT_RANGE;
@@ -112,8 +112,8 @@ LightType light_get_type(const Light *l) {
     return l->type;
 }
 
-void light_set_range(Light *l, const float area) {
-    l->range = area;
+void light_set_range(Light *l, const float value) {
+    l->range = value;
 }
 
 float light_get_range(const Light *l) {

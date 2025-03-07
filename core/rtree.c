@@ -1079,7 +1079,6 @@ bool debug_rtree_integrity_check(Rtree *r) {
     DoublyLinkedListNode *n;
     RtreeNode *rn, *child, *rbLeaf;
     Transform *t;
-    Shape *s;
     RigidBody *rb;
     bool success = true;
 

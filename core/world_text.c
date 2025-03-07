@@ -120,7 +120,7 @@ void _world_text_void_free(void *o) {
 WorldText *world_text_new(void) {
     WorldText *wt = (WorldText*)malloc(sizeof(WorldText));
 
-    wt->transform = transform_make_with_ptr(WorldTextTransform, wt, &_world_text_void_free);
+    wt->transform = transform_new_with_ptr(WorldTextTransform, wt, &_world_text_void_free);
     wt->wptr = NULL;
     wt->text = NULL;
     wt->drawmodes = NULL;
@@ -478,11 +478,11 @@ float world_text_drawmode_get_outline_weight(const WorldText *wt) {
     return wt->drawmodes != NULL ? wt->drawmodes->outlineWeight / 255.0f : 0.0f;
 }
 
-void world_text_drawmode_set_outline_color(WorldText *wt, uint32_t value) {
+void world_text_drawmode_set_outline_color(WorldText *wt, uint32_t rgb) {
     if (wt->drawmodes == NULL) {
         world_text_toggle_drawmodes(wt, true);
     }
-    wt->drawmodes->outlineColor = value;
+    wt->drawmodes->outlineColor = rgb & 0x00FFFFFF; // force alpha to 0 (unused, make packing easier);
 }
 
 uint32_t world_text_drawmode_get_outline_color(const WorldText *wt) {

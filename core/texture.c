@@ -24,7 +24,7 @@ struct _Texture {
     uint8_t type;          /* 1 byte */
 };
 
-Texture* texture_new_raw(const void* data, const size_t size, const TextureType type) {
+Texture* texture_new_raw(const void* data, const uint32_t size, const TextureType type) {
     Texture* t = (Texture*)malloc(sizeof(Texture));
     if (t == NULL) {
         return NULL;
@@ -43,7 +43,7 @@ Texture* texture_new_raw(const void* data, const size_t size, const TextureType 
     t->height = 0;
     t->hash = (uint32_t)crc32(0, data, (uInt)size);
     t->refCount = 1;
-    t->type = type;
+    t->type = (uint8_t)type;
     return t;
 }
 
@@ -70,7 +70,7 @@ void texture_release(Texture* t) {
     }
 }
 
-void texture_set_parsed_data(Texture* t, const void* data, const size_t size, const uint32_t width, const uint32_t height) {
+void texture_set_parsed_data(Texture* t, const void* data, const uint32_t size, const uint32_t width, const uint32_t height) {
     if (t->data != NULL) {
         free(t->data);
     }
