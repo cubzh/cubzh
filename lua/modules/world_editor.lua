@@ -954,10 +954,13 @@ initPickMap = function()
 		end, function(m)
 			m.pos = { Screen.Width * 0.5 - m.Width * 0.5, Screen.Height * 0.2 }
 		end, {
+			type = "items",
 			onOpen = function(cell)
 				local fullname = cell.repo .. "." .. cell.name
-				-- sendToServer(events.P_END_PREPARING, { mapName = fullname })
 				gallery:remove()
+				loadMap(fullname, MAP_SCALE_DEFAULT, function()
+					setState(states.DEFAULT)
+				end)
 			end,
 		})
 		gallery.didClose = function()
@@ -969,7 +972,9 @@ initPickMap = function()
 	local validateBtn = ui:createButton("Start editing this map")
 	validateBtn:setParent(uiPickMap)
 	validateBtn.onRelease = function()
-		-- sendToServer(events.P_END_PREPARING, { mapName = mapName })
+		loadMap(mapName, MAP_SCALE_DEFAULT, function()
+			setState(states.DEFAULT)
+		end)
 	end
 
 	uiPickMap.parentDidResize = function()

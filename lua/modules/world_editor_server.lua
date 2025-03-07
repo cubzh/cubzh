@@ -36,14 +36,6 @@ local sendSaveWorld = function(sender)
 end
 
 local funcs = {
-	[events.P_END_PREPARING] = function(sender, data)
-		if sender ~= master then
-			print("You can't do that")
-			return
-		end
-		mapName = data.mapName
-		return data
-	end,
 	[events.P_SET_MAP_SCALE] = function(sender, data)
 		local ratio = data.mapScale / mapScale
 		for _, o in pairs(serverObjects) do
