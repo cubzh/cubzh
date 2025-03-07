@@ -4,22 +4,18 @@ blocks:
     - text: |
         [Cubzh](https://cu.bzh) is a platform where you can quickly build games and distribute them on all platforms (Windows, Mac, iOS, Android, web, Discord, and more).
 
-        It can be considered a real open alternative to Roblox.
-
         This documentation contains everything developers need to know to create Cubzh games. 👾
-
-    # - media: "/media/items.mp4"
 
     - title: "Luau"
 
     - text: |
         [Cubzh](https://cu.bzh) scripts use the Luau programming language.
 
-        [Luau](https://luau.org) is derived from [Lua](https://www.lua.org) (5.1) which is a very solid and lighweight scripting language that's been around since 1993. It's easy to learn and already used by other popular video game platforms like [Roblox](https://www.roblox.com).
+        [Luau](https://luau.org) is derived from [Lua](https://www.lua.org) (5.1) which is a very solid and lightweight scripting language that's been around since 1993. It's easy to learn and already used by other popular video game platforms like [Roblox](https://www.roblox.com).
     
         A default Lua script is generated when you create a new game. You can launch the game in edit mode and select "Edit code" in the pause menu to see it.
 
-        Don't worry if you're not familiar with it or even a complete code beginner. You'll get started building fun games in minutes. ☺️
+        Don't worry if you're not familiar with the language or even a complete code beginner. You'll get started building fun games in minutes. ☺️
 
     - subtitle: "Example: 20 line script + editing while playing with friends"
 
@@ -83,7 +79,7 @@ blocks:
         Cubzh's scripting ecosystem is designed for natural integration with AI code generation systems.
 
         Get ready to vibe code games directly on your phone!
-        This featured is not yet available, but please reachout if you'd like to get early access.
+        This feature is not yet available, but please reach out if you'd like to get early access.
 
     - html: |
         <center><div style="max-width: calc(min(90%, 500px));"><blockquote class="twitter-tweet" data-media-max-width="560"><p lang="en" dir="ltr">Many fun games have been made with AI since <a href="https://twitter.com/levelsio?ref_src=twsrc%5Etfw">@levelsio</a>&#39;s little project. 😁<br>Models are now good enough for this, it&#39;s so exciting!<br>Here, I&#39;m working on an AI-based game editor that runs on mobile. 📱🔥<br>(AI generation speed x4 in the video 🐇) <a href="https://t.co/vGxwjshOHZ">https://t.co/vGxwjshOHZ</a> <a href="https://t.co/TUswQL8KxX">pic.twitter.com/TUswQL8KxX</a></p>&mdash; Adrian Duermael (@aduermael) <a href="https://twitter.com/aduermael/status/1896039736223154393?ref_src=twsrc%5Etfw">March 2, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></div></center>
@@ -98,9 +94,3 @@ blocks:
         ➡️ [Sample Scripts](/sample-scripts)
     
     - media: "/media/sword.mp4"
-
-
-
-
-
-
