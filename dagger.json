@@ -1,57 +1,8 @@
 {
   "name": "cubzh",
+  "engineVersion": "v0.16.2",
   "sdk": {
     "source": "go"
   },
-  "source": "dagger",
-  "engineVersion": "v0.16.1",
-  "views": [
-    {
-      "name": "modules",
-      "patterns": [
-        "lua/modules/**",
-        "!.git",
-        "!deps/bgfx",
-        "!deps/libssl",
-        "!deps/libwebsockets",
-        "!mods",
-        "!core",
-        "!misc",
-        "!shaders",
-        "!lua"
-      ]
-    },
-    {
-      "name": "test-core",
-      "patterns": [
-        "core",
-        "deps/libz",
-        "!.git",
-        "!deps/bgfx",
-        "!deps/libssl",
-        "!deps/libwebsockets",
-        "!mods",
-        "!misc",
-        "!shaders",
-        "!lua"
-      ]
-    },
-    {
-      "name": "lint-core",
-      "patterns": [
-        "core",
-        "!core/tests/visual_studio",
-        "!core/tests/xcode",
-        "!core/tests/cmake",
-        "!.git",
-        "!deps/bgfx",
-        "!deps/libssl",
-        "!deps/libwebsockets",
-        "!mods",
-        "!misc",
-        "!shaders",
-        "!lua"
-      ]
-    }
-  ]
+  "source": "dagger"
 }
