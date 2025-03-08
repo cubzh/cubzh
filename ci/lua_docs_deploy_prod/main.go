@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -28,6 +29,8 @@ const (
 	LUA_DOCS_SRV_SSH_URL_ENVAR_NAME        string = "LUA_DOCS_SRV_SSH_URL"
 	LUA_DOCS_SRV_SSH_PRIVATEKEY_ENVAR_NAME string = "LUA_DOCS_SRV_SSH_PRIVATEKEY"
 	LUA_DOCS_SRV_SSH_KNOWNHOSTS_ENVAR_NAME string = "LUA_DOCS_SRV_SSH_KNOWNHOSTS"
+	CLOUDFLARE_API_TOKEN_ENVAR_NAME        string = "CLOUDFLARE_API_TOKEN"
+	CLOUDFLARE_ZONE_ID_ENVAR_NAME          string = "CLOUDFLARE_ZONE_ID"
 )
 
 var (
@@ -37,6 +40,8 @@ var (
 	LUA_DOCS_SRV_SSH_URL           string = os.Getenv(LUA_DOCS_SRV_SSH_URL_ENVAR_NAME)
 	LUA_DOCS_SRV_SSH_PRIVATEKEY    string = os.Getenv(LUA_DOCS_SRV_SSH_PRIVATEKEY_ENVAR_NAME)
 	LUA_DOCS_SRV_SSH_KNOWNHOSTS    string = os.Getenv(LUA_DOCS_SRV_SSH_KNOWNHOSTS_ENVAR_NAME)
+	CLOUDFLARE_API_TOKEN           string = os.Getenv(CLOUDFLARE_API_TOKEN_ENVAR_NAME)
+	CLOUDFLARE_ZONE_ID             string = os.Getenv(CLOUDFLARE_ZONE_ID_ENVAR_NAME)
 	LUA_DOCS_DOCKER_IMAGE_FULLNAME string
 	LUA_DOCS_SRV_SSH_USER          string
 	LUA_DOCS_SRV_SSH_HOST          string
@@ -66,6 +71,12 @@ func main() {
 		}
 		if len(LUA_DOCS_SRV_SSH_KNOWNHOSTS) == 0 {
 			missingEnvarName = LUA_DOCS_SRV_SSH_KNOWNHOSTS_ENVAR_NAME
+		}
+		if len(CLOUDFLARE_API_TOKEN) == 0 {
+			missingEnvarName = CLOUDFLARE_API_TOKEN_ENVAR_NAME
+		}
+		if len(CLOUDFLARE_ZONE_ID) == 0 {
+			missingEnvarName = CLOUDFLARE_ZONE_ID_ENVAR_NAME
 		}
 		if len(missingEnvarName) > 0 {
 			fmt.Println("❌ Error: missing envar", missingEnvarName)
@@ -239,6 +250,17 @@ func deployLuaDocs() error {
 		fmt.Println("✅ docker system prune OK")
 	}
 
+	// Cloudflare cache purge
+	// --------------------------------------------------
+	{
+		fmt.Println("Purging Cloudflare cache...")
+		if err := purgeCloudflareCache(); err != nil {
+			fmt.Println("❌ Cloudflare cache purge failed:", err.Error())
+			return err
+		}
+		fmt.Println("✅ Cloudflare cache purge OK")
+	}
+
 	fmt.Println("✅ Lua docs deployment done!")
 	return nil
 }
@@ -289,4 +311,34 @@ func remoteRun(user, addr, port, privateKey, knownhostsFilepath, cmd string) (st
 	err = session.Run(cmd)
 
 	return b.String(), err
+}
+
+func purgeCloudflareCache() error {
+	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/purge_cache", CLOUDFLARE_ZONE_ID)
+	jsonStr := []byte(`{"purge_everything":true}`)
+	// Only Enterprise customers are permitted to purge by Tag, Host or Prefix.
+	// jsonStr := []byte(`{"hosts": ["cu.bzh"]}`)
+	// Purge by file path
+	// jsonStr := []byte(`{"files": ["https://app.cu.bzh/file1", "https://app.cu.bzh/file2"]}`)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+CLOUDFLARE_API_TOKEN)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("cloudflare cache purge failed with status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
