@@ -4,6 +4,7 @@ local sfx = require("sfx")
 local ease = require("ease")
 local ui = require("uikit")
 local ambience = require("ambience")
+local worldEditorCommon = require("world_editor_common")
 
 local defaultAmbience = { 
 	sky = { 
@@ -132,21 +133,20 @@ end
 
 local skybox = requireSkybox()
 
-local server = require("world_editor_server")
-local sendToServer = require("world_editor_server").sendToServer
-
-local worldEditorCommon = require("world_editor_common")
+-- Import common events and constants from common module
+local events = worldEditorCommon.events
 local MAP_SCALE_DEFAULT = worldEditorCommon.MAP_SCALE_DEFAULT
+
 local uuidv4 = worldEditorCommon.uuidv4
 
 local loadWorld = worldEditorCommon.loadWorld
 local maps = worldEditorCommon.maps
-local events = worldEditorCommon.events
 
 local theme = require("uitheme").current
 local padding = theme.padding
 
 local objects = {}
+local objectsByUUID = {}
 local map
 local mapIndex = 1
 local mapName
@@ -206,7 +206,6 @@ local selectedObject
 local states = {
 	LOADING = 1,
 	PICK_WORLD = 2,
-	PICK_MAP = 3,
 	DEFAULT = 4,
 	GALLERY = 5,
 	SPAWNING_OBJECT = 6,
@@ -214,7 +213,6 @@ local states = {
 	OBJECT_SELECTED = 8,
 	DUPLICATE_OBJECT = 9,
 	DESTROY_OBJECT = 10,
-	MAP_OFFSET = 12,
 }
 
 local setState
@@ -230,6 +228,7 @@ local function clearWorld()
 		o:RemoveFromParent()
 	end
 	objects = {}
+	objectsByUUID = {}
 	mapName = nil
 	
 	worldEditorCommon.updateAmbience(defaultAmbience)
@@ -478,8 +477,6 @@ end
 local statesSettings = {
 	[states.LOADING] = {
 		onStateBegin = function()
-			initPickMap()
-			worldEditor.uiPickMap:hide()
 			require("object_skills").addStepClimbing(Player)
 			setState(states.PICK_WORLD)
 			require("controls"):turnOff()
@@ -494,26 +491,6 @@ local statesSettings = {
 		end,
 		onStateEnd = function()
 			uiRemoveWorldPicker()
-		end,
-	},
-	[states.PICK_MAP] = {
-		onStateBegin = function()
-			worldEditor.uiPickMap:show()
-			Camera:SetModeFree()
-			worldEditor.mapPivot = Object()
-			worldEditor.mapPivot.Tick = function(pvt, dt)
-				pvt.Rotation.Y = pvt.Rotation.Y + dt * 0.06
-			end
-			worldEditor.mapPivot:SetParent(World)
-			Camera:SetParent(worldEditor.mapPivot)
-			Camera.Far = 10000
-			loadMap(maps[1])
-			require("controls"):turnOff()
-			Player.Motion = { 0, 0, 0 }
-		end,
-		onStateEnd = function()
-			worldEditor.uiPickMap:hide()
-			startDefaultMode()
 		end,
 	},
 	[states.DEFAULT] = {
@@ -565,7 +542,7 @@ local statesSettings = {
 			end
 		end,
 		tick = function()
-			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then -- even third person on mobile uses this placing mode
+			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then
 				firstPersonPlacingObject(worldEditor.placingObj)
 			end
 		end,
@@ -753,82 +730,6 @@ local statesSettings = {
 			saveWorld()
 		end,
 	},
-	[states.MAP_OFFSET] = {
-		onStateBegin = function()
-			-- close settings menu
-			worldEditor.settingsBtn:show()
-			worldEditor.menuBar:hide()
-
-			local mapPosition = map.Position:Copy()
-
-			-- Offset buttons
-			local mainContainer = require("ui_container"):createVerticalContainer()
-			worldEditor.offsetMainContainer = mainContainer
-
-			local axisList = { "X", "Y", "Z" }
-			for _, axis in ipairs(axisList) do
-				local btnMinus5 = ui:createButton("-5")
-				btnMinus5.onRelease = function()
-					local value = map.Position:Copy()
-					value[axis] = value[axis] - 5 * map.Scale[axis]
-					map.Position = value
-				end
-				local btnMinus = ui:createButton("-1")
-				btnMinus.onRelease = function()
-					local value = map.Position:Copy()
-					value[axis] = value[axis] - map.Scale[axis]
-					map.Position = value
-				end
-				local mapPositionAxis = ui:createButton(axis .. ": 0")
-				mapPositionAxis.Width = 100
-				map.Position:AddOnSetCallback(function()
-					mapPositionAxis.Text = string.format("%s: %d", axis, map.Position[axis] / map.Scale[axis])
-				end)
-				local btnPlus = ui:createButton("+1")
-				btnPlus.onRelease = function()
-					local value = map.Position:Copy()
-					value[axis] = value[axis] + map.Scale[axis]
-					map.Position = value
-				end
-				local btnPlus5 = ui:createButton("+5")
-				btnPlus5.onRelease = function()
-					local value = map.Position:Copy()
-					value[axis] = value[axis] + 5 * map.Scale[axis]
-					map.Position = value
-				end
-				local container = require("ui_container"):createHorizontalContainer()
-				container:pushElement(btnMinus5)
-				container:pushElement(btnMinus)
-				container:pushGap()
-				container:pushElement(mapPositionAxis)
-				container:pushGap()
-				container:pushElement(btnPlus)
-				container:pushElement(btnPlus5)
-				mainContainer:pushElement(container)
-				mainContainer:pushGap()
-			end
-
-			local validateMapOffsetBtn = ui:createButton("✅")
-			worldEditor.validateMapOffsetBtn = validateMapOffsetBtn
-			validateMapOffsetBtn.pos =
-				{ Screen.Width * 0.5 - validateMapOffsetBtn.Width * 0.5, validateMapOffsetBtn.Height }
-			validateMapOffsetBtn.onRelease = function()
-				local offset = mapPosition - map.Position
-				sendToServer(events.P_SET_MAP_OFFSET, { offset = offset })
-				map.Position = mapPosition
-				setState(states.DEFAULT)
-			end
-		end,
-		onStateEnd = function()
-			require("controls"):turnOn()
-			worldEditor.offsetMainContainer:remove()
-			worldEditor.offsetMainContainer = nil
-			setCameraMode(cameraMode)
-			worldEditor.validateMapOffsetBtn:remove()
-			worldEditor.validateMapOffsetBtn = nil
-			worldEditor.gizmo:setObject(nil)
-		end,
-	},
 }
 
 setState = function(newState, data)
@@ -947,91 +848,6 @@ function uiRemoveWorldPicker()
 	worldPicker = nil
 end
 
-initPickMap = function()
-	local uiPickMap = ui:frame()
-	local previousBtn = ui:createButton("<")
-	previousBtn:setParent(uiPickMap)
-	previousBtn.onRelease = function()
-		mapIndex = mapIndex - 1
-		if mapIndex <= 0 then
-			mapIndex = #maps
-		end
-		loadMap(maps[mapIndex])
-	end
-	local nextBtn = ui:createButton(">")
-	nextBtn:setParent(uiPickMap)
-	nextBtn.onRelease = function()
-		mapIndex = mapIndex + 1
-		if mapIndex > #maps then
-			mapIndex = 1
-		end
-		loadMap(maps[mapIndex])
-	end
-
-	local validateBtn
-	local galleryMapBtn = ui:createButton("or Pick an item as Map")
-	galleryMapBtn:setParent(uiPickMap)
-	galleryMapBtn.onRelease = function()
-		previousBtn:hide()
-		nextBtn:hide()
-		galleryMapBtn:hide()
-		validateBtn:hide()
-		-- Gallery to pick a map
-		local gallery
-		gallery = require("gallery"):create(function()
-			return Screen.Width - theme.padding * 2
-		end, function()
-			return Menu.Position.Y - Screen.SafeArea.Bottom - padding * 2
-		end, function(m)
-			m.pos = { 
-				Screen.Width * 0.5 - m.Width * 0.5, 
-				Screen.SafeArea.Bottom 
-				+ padding
-				+ (Menu.Position.Y - Screen.SafeArea.Bottom - theme.padding * 2) * 0.5
-				- m.Height * 0.5
-			}
-		end, {
-			type = "items",
-			onOpen = function(cell)
-				local fullname = cell.repo .. "." .. cell.name
-				gallery:remove()
-				loadMap(fullname, MAP_SCALE_DEFAULT, function()
-					setState(states.DEFAULT)
-				end)
-			end,
-		})
-		gallery.didClose = function()
-			previousBtn:show()
-			nextBtn:show()
-			galleryMapBtn:show()
-			validateBtn:show()
-		end
-		gallery:bounce()
-	end
-
-	validateBtn = ui:createButton("Start editing this map")
-	validateBtn:setParent(uiPickMap)
-	validateBtn.onRelease = function()
-		loadMap(mapName, MAP_SCALE_DEFAULT, function()
-			setState(states.DEFAULT)
-		end)
-	end
-
-	uiPickMap.parentDidResize = function()
-		uiPickMap.Width = Screen.Width
-		previousBtn.pos = { 50, Screen.Height * 0.5 - previousBtn.Height * 0.5 }
-		nextBtn.pos = { Screen.Width - 50 - nextBtn.Width, Screen.Height * 0.5 - nextBtn.Height * 0.5 }
-		galleryMapBtn.pos = { Screen.Width * 0.5 - galleryMapBtn.Width * 0.5, padding }
-		validateBtn.pos =
-			{ Screen.Width * 0.5 - validateBtn.Width * 0.5, galleryMapBtn.pos.Y + galleryMapBtn.Height + padding }
-	end
-	uiPickMap:parentDidResize()
-
-	worldEditor.uiPickMap = uiPickMap
-
-	uiPickMap:parentDidResize()
-end
-
 loadMap = function(fullname, scale, onDone)
 	mapName = fullname
 	Object:Load(fullname, function(obj)
@@ -1049,15 +865,6 @@ loadMap = function(fullname, scale, onDone)
 		map.Position = { 0, 0, 0 }
 		map.Pivot = { 0, 0, 0 }
 
-		if state == states.PICK_MAP then
-			Fog.On = false
-			Camera.Rotation.Y = math.pi / 2
-			Camera.Rotation.X = math.pi / 4
-
-			local longestValue = math.max(map.Width, math.max(map.Height, map.Depth))
-			worldEditor.mapPivot.Position = Number3(map.Width * 0.5, longestValue, map.Depth * 0.5) * map.Scale
-			Camera.Position = worldEditor.mapPivot.Position + { -longestValue * 4, 0, 0 }
-		end
 		if onDone then
 			onDone()
 		end
@@ -1075,13 +882,9 @@ startDefaultMode = function()
 			Player.Position:Set(0, 20, 0)
 		end
 	end
-	-- require("multi")
+	
 	Player:SetParent(World)
-	if Client.IsMobile then
-		setCameraMode(CameraMode.FIRST_PERSON)
-	else
-		setCameraMode(CameraMode.THIRD_PERSON)
-	end
+	setCameraMode(CameraMode.THIRD_PERSON)
 	dropPlayer()
 
 	require("jumpfly")
@@ -1128,38 +931,6 @@ function uiShowDefaultMenu()
 	end
 	settingsBtn:parentDidResize()
 
-	-- Map Scale frame
-	local frame = ui:createFrame()
-	local text = ui:createText("Map Scale", Color.White)
-	text:setParent(frame)
-	local scale = map.Scale.X or MAP_SCALE_DEFAULT
-	if math.floor(scale) == scale then
-		scale = math.floor(scale)
-	end
-	local input = ui:createTextInput(scale)
-	input.onSubmit = function()
-		local value = tonumber(input.Text)
-		if value <= 0 then
-			print("Error: Map scale must be positive")
-			return
-		end
-		sendToServer(events.P_SET_MAP_SCALE, { mapScale = value })
-	end
-	input:setParent(frame)
-	frame.parentDidResize = function(self)
-		local parent = self.parent
-		if not parent then
-			return
-		end
-		self.Width = parent.Width
-		text.pos.Y = input.Height * 0.5 - text.Height * 0.5
-		input.Width = frame.Width - text.Width - padding
-		input.pos.X = text.pos.X + text.Width + padding
-	end
-	frame.Height = input.Height
-	frame:parentDidResize()
-	local mapScaleFrame = frame
-
 	local menuSettingsConfig = {
 		{
 			type = "button",
@@ -1177,47 +948,6 @@ function uiShowDefaultMenu()
 				saveWorld()
 			end,
 		},
-		{ type = "gap" },
-		{
-			type = "node",
-			node = mapScaleFrame,
-		},
-		{ type = "gap" },
-		{
-			type = "button",
-			text = "Map Ghost",
-			callback = toggleMapGhost,
-		},
-		{ type = "gap" },
-		{
-			type = "button",
-			text = "Map Offset",
-			callback = function()
-				setState(states.MAP_OFFSET)
-			end,
-		},
-		{ type = "gap" },
-		{
-			type = "button",
-			text = "Reset all",
-			callback = function()
-				alertModal =
-					require("alert"):create("Confirm that you want to remove all modifications and start from scratch.")
-				alertModal:setPositiveCallback("Reset and pick a new map", function()
-					menuBar:hide()
-					settingsBtn:show()
-					sendToServer(events.P_RESET_ALL)
-				end)
-				alertModal:setNegativeCallback("Cancel, I want to continue", function()
-					alertModal:close()
-				end)
-				alertModal.didClose = function()
-					alertModal = nil
-				end
-			end,
-			color = require("uitheme").current.colorNegative,
-			name = "resetBtn",
-		},
 	}
 	for _, info in ipairs(menuSettingsConfig) do
 		if info.type == "gap" then
@@ -1231,7 +961,7 @@ function uiShowDefaultMenu()
 			end
 			btn.onRelease = function()
 				if info.serverEvent then
-					sendToServer(info.serverEvent)
+					processEvent(info.serverEvent)
 					return
 				end
 				if info.callback then
@@ -1785,37 +1515,17 @@ function uiHideDefaultMenu()
 	end
 end
 
-LocalEvent:Listen(LocalEvent.Name.DidReceiveEvent, function(e)
-	local data = e.data
-	local sender = Players[e.pID]
-	local isLocalPlayer = e.pID == Player.ID
+-- Function to get the current world state (previously in world_editor_server)
+local function getWorldState()
+	return {
+		mapName = mapName,
+		mapScale = map and map.Scale or MAP_SCALE_DEFAULT,
+		objects = objects,
+		ambience = ambience and ambience:getGeneration() or nil,
+	}
+end
 
-	if e.a == events.END_PREPARING then
-		loadMap(data.mapName, data.mapScale or MAP_SCALE_DEFAULT, function()
-			setState(states.DEFAULT)
-		end)
-	elseif e.a == events.SET_MAP_SCALE then
-		local prevScale = map.Scale
-		local ratio = data.mapScale / prevScale
-		map.Scale = data.mapScale
-		for _, o in pairs(objects) do
-			o.Scale = o.Scale * ratio
-			o.Position = o.Position * ratio
-		end
-		dropPlayer()
-	elseif e.a == events.SET_MAP_OFFSET then
-		local offset = data.offset
-		for _, o in pairs(objects) do
-			o.Position = o.Position + offset
-		end
-		Player.Position = Player.Position + offset
-	elseif e.a == events.RESET_ALL then
-		setState(states.DEFAULT)
-		clearWorld()
-		setState(states.PICK_MAP)
-	end
-end)
-
+-- Auto-save timer
 local autoSaveTimer = nil
 function saveWorld()
 	if autoSaveTimer ~= nil then
