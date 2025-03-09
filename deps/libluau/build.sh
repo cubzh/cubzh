@@ -156,7 +156,8 @@ elif [ "$platform" == "android" ]; then
   artifact_name="libluau-default.a"
 
 elif [ "$platform" == "ios" ]; then
-  artifact_name="libluau-default.a"
+  artifact_name="luau-ios_lipo.a" # it can be a link to the static library artifact
+  bazel_command_suffix="--ios_multi_cpus=arm64"
 
 elif [ "$platform" == "linux" ]; then
   artifact_name="libluau-default.a"
@@ -223,11 +224,11 @@ else
 
       # build library (DEBUG)
       bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=dbg $bazel_command_suffix
-      mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_DEBUG/$artifact_destination_name
+      cp ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_DEBUG/$artifact_destination_name
 
       # build library (RELEASE)
       bazel build //deps/libluau:luau --platforms=//:${platform_to_build}_${arch} --compilation_mode=opt $bazel_command_suffix
-      mv ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_RELEASE/$artifact_destination_name
+      cp ../../bazel-bin/deps/libluau/$artifact_name $OUTPUT_DIR_LIB_RELEASE/$artifact_destination_name
 
       # move the header files to the output directory
       # copy and merge all include directories from src tree to output directory
