@@ -88,7 +88,7 @@ bool json::readUInt8Field(const cJSON *src, const std::string &field, uint8_t &v
     if (intValue < 0 || intValue > UINT8_MAX) {
         return false;
     }
-    value = intValue;
+    value = static_cast<uint8_t>(intValue);
     return true;
 }
 

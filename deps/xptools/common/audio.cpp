@@ -152,7 +152,7 @@ ma_result xptools_vfs_onInfo(ma_vfs* pVFS, ma_vfs_file file, ma_file_info* pInfo
     }
     const long previousPosition = ftell(fd);
     fseek(fd, 0L, SEEK_END);
-    pInfo->sizeInBytes = ftell(fd);
+    pInfo->sizeInBytes = static_cast<ma_uint64>(ftell(fd));
     // seek back
     fseek(fd, previousPosition, SEEK_SET);
     return MA_SUCCESS;
