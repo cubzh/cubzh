@@ -13,12 +13,12 @@
 		1005120D2CC6A77500B16FB1 /* WSConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = 100512092CC6A77500B16FB1 /* WSConnection.mm */; };
 		100512112CC6BECB00B16FB1 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
 		100512122CC6BECB00B16FB1 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
-		101554E02C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
+		101554E02C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		101554E12C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
 		101554E22C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
 		101554E32C04D57E001E9057 /* BZMD5.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 101554DC2C04D57E001E9057 /* BZMD5.hpp */; };
 		101554E42C04D57E001E9057 /* BZMD5.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 101554DC2C04D57E001E9057 /* BZMD5.hpp */; };
-		101554E52C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
+		101554E52C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		101554E62C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
 		101554E72C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
 		101554E82C04D57E001E9057 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
@@ -122,7 +122,7 @@
 		10C5412A2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
 		10C5412B2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
 		10C5412C2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
-		10C63D2C246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
+		10C63D2C246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; };
 		10C63D2D246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; };
 		10C63D2E246C4F61003DEC3E /* strings.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10C63D2B246C4F61003DEC3E /* strings.hpp */; };
 		10E793652450137900B7E2E2 /* filesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10E793642450137900B7E2E2 /* filesystem.cpp */; };
@@ -1463,9 +1463,11 @@
 					"$(PROJECT_DIR)/../../miniaudio",
 				);
 				WARNING_CFLAGS = (
-					"-Weverything",
-					"-Wno-c++98-compat-pedantic",
-					"-Wno-global-constructors",
+					"-Wall",
+					"-Wshadow",
+					"-Wdouble-promotion",
+					"-Wundef",
+					"-Wconversion",
 				);
 			};
 			name = Debug;
@@ -1532,9 +1534,11 @@
 					"$(PROJECT_DIR)/../../miniaudio",
 				);
 				WARNING_CFLAGS = (
-					"-Weverything",
-					"-Wno-c++98-compat-pedantic",
-					"-Wno-global-constructors",
+					"-Wall",
+					"-Wshadow",
+					"-Wdouble-promotion",
+					"-Wundef",
+					"-Wconversion",
 				);
 			};
 			name = Release;
