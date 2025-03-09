@@ -96,8 +96,8 @@ Connection::Payload_SharedPtr Connection::Payload::decode(char *bytes, size_t le
     
     // content starts where cursor is
     p->_content = cursor;
-    p->_len = len - (cursor - bytes);
-    
+    p->_len = len - static_cast<size_t>(cursor - bytes);
+
     return Payload_SharedPtr(p);
 }
 
@@ -145,7 +145,7 @@ Connection::Payload::Payload(char* bytes, size_t len, uint8_t includes) {
     
     if (_includes & Includes::CreatedAt) {
         using namespace std::chrono;
-        _createdAt = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+        _createdAt = static_cast<uint64_t>(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
     }
     
     if (_includes & Includes::TravelHistory) {
@@ -240,12 +240,12 @@ void Connection::Payload::step(const std::string &name) {
     }
     
     using namespace std::chrono;
-    uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    
+    const uint64_t now = static_cast<uint64_t>(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
+
     Step step = {name, now, 0};
     
     if (_steps.size() > 0) {
-        uint64_t ts = _steps.back().timestamp;
+        const uint64_t ts = _steps.back().timestamp;
         if (ts != 0) {
             step.diff = static_cast<uint32_t>(now - ts);
         } else {
@@ -268,7 +268,7 @@ void Connection::Payload::debug() {
     
     if (_includes & Includes::CreatedAt) {
         using namespace std::chrono;
-        uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+        const uint64_t now = static_cast<uint64_t>(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
         vxlog_trace("    CREATED AT: %llu (%llu ms ago)", _createdAt, now - _createdAt);
     }
     

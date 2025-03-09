@@ -436,7 +436,7 @@ bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
         }
     }
 
-return_true:
+    // Success case - close file and return true
     fclose(fd);
     return true;
 

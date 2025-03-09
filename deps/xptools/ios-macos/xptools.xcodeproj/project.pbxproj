@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,12 +13,12 @@
 		1005120D2CC6A77500B16FB1 /* WSConnection.mm in Sources */ = {isa = PBXBuildFile; fileRef = 100512092CC6A77500B16FB1 /* WSConnection.mm */; };
 		100512112CC6BECB00B16FB1 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
 		100512122CC6BECB00B16FB1 /* WSConnection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 85471B3F27E3E4AA000575D5 /* WSConnection.cpp */; };
-		101554E02C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
+		101554E02C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
 		101554E12C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
 		101554E22C04D57E001E9057 /* BZMD5.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 101554DB2C04D57E001E9057 /* BZMD5.cpp */; };
 		101554E32C04D57E001E9057 /* BZMD5.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 101554DC2C04D57E001E9057 /* BZMD5.hpp */; };
 		101554E42C04D57E001E9057 /* BZMD5.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 101554DC2C04D57E001E9057 /* BZMD5.hpp */; };
-		101554E52C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
+		101554E52C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; settings = {COMPILER_FLAGS = "-w"; }; };
 		101554E62C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
 		101554E72C04D57E001E9057 /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = 101554DD2C04D57E001E9057 /* cJSON.c */; };
 		101554E82C04D57E001E9057 /* cJSON.h in Headers */ = {isa = PBXBuildFile; fileRef = 101554DE2C04D57E001E9057 /* cJSON.h */; };
@@ -122,7 +122,7 @@
 		10C5412A2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
 		10C5412B2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
 		10C5412C2CA70FBD008CB6C7 /* HttpRequest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 10C541282CA70FBD008CB6C7 /* HttpRequest.mm */; };
-		10C63D2C246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
+		10C63D2C246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; };
 		10C63D2D246C4F61003DEC3E /* strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10C63D2A246C4F61003DEC3E /* strings.cpp */; };
 		10C63D2E246C4F61003DEC3E /* strings.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 10C63D2B246C4F61003DEC3E /* strings.hpp */; };
 		10E793652450137900B7E2E2 /* filesystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 10E793642450137900B7E2E2 /* filesystem.cpp */; };
@@ -911,7 +911,8 @@
 		8534FDBF240E92C1004B3494 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1130;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1620;
 				ORGANIZATIONNAME = voxowl;
 				TargetAttributes = {
 					8534FDC6240E92C1004B3494 = {
@@ -1420,6 +1421,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1427,9 +1429,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1448,7 +1452,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1459,9 +1463,11 @@
 					"$(PROJECT_DIR)/../../miniaudio",
 				);
 				WARNING_CFLAGS = (
-					"-Weverything",
-					"-Wno-c++98-compat-pedantic",
-					"-Wno-global-constructors",
+					"-Wall",
+					"-Wshadow",
+					"-Wdouble-promotion",
+					"-Wundef",
+					"-Wconversion",
 				);
 			};
 			name = Debug;
@@ -1492,6 +1498,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1499,9 +1506,11 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1515,7 +1524,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -1525,9 +1534,11 @@
 					"$(PROJECT_DIR)/../../miniaudio",
 				);
 				WARNING_CFLAGS = (
-					"-Weverything",
-					"-Wno-c++98-compat-pedantic",
-					"-Wno-global-constructors",
+					"-Wall",
+					"-Wshadow",
+					"-Wdouble-promotion",
+					"-Wundef",
+					"-Wconversion",
 				);
 			};
 			name = Release;

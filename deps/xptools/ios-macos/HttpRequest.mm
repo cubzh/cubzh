@@ -93,7 +93,7 @@ void HttpRequest::_sendAsync() {
                 NSHTTPURLResponse *httpResponse = static_cast<NSHTTPURLResponse *>(response);
 
                 // Set response status code
-                httpReq->getResponse().setStatusCode(httpResponse.statusCode);
+                httpReq->getResponse().setStatusCode(static_cast<uint16_t>(httpResponse.statusCode));
 
                 // Set response headers
                 NSDictionary *headers = httpResponse.allHeaderFields;
