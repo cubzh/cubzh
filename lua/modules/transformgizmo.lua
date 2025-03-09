@@ -150,22 +150,20 @@ function updateGridRotation()
 	local absDotUp = math.abs(dotUp)
 	local m = math.max(absDotForward, absDotRight, absDotUp)
 
-	if Camera.Forward:Dot(target) then
-		if m == absDotForward then
-			if dotForward < 0 then
-				grid.Rotation = Rotation(0, math.pi, 0)
-			else
-				grid.Rotation = Rotation(0, 0, 0)
-			end
-		elseif m == absDotRight then
-			if dotRight < 0 then
-				grid.Rotation = Rotation(0, math.pi * 1.5, 0)
-			else
-				grid.Rotation = Rotation(0, math.pi * 0.5, 0)
-			end
+	if m == absDotForward then
+		if dotForward < 0 then
+			grid.Rotation = Rotation(0, math.pi, 0)
 		else
-			grid.Rotation = Rotation(math.pi * 0.5, 0, 0)
+			grid.Rotation = Rotation(0, 0, 0)
 		end
+	elseif m == absDotRight then
+		if dotRight < 0 then
+			grid.Rotation = Rotation(0, math.pi * 1.5, 0)
+		else
+			grid.Rotation = Rotation(0, math.pi * 0.5, 0)
+		end
+	else
+		grid.Rotation = Rotation(math.pi * 0.5, 0, 0)
 	end
 
 	plane.normal = grid.Forward
