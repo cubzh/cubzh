@@ -19,5 +19,5 @@ unsigned int vx::Process::getMemoryUsageLimitMB(void) {
 }
 
 unsigned int vx::Process::getUsedMemoryMB() {
-    return static_cast<int>(getUsedMemory() >> 20);
+    return static_cast<unsigned int>(getUsedMemory() >> 20);
 }

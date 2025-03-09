@@ -112,24 +112,30 @@ void OperationQueue::dispatchFirst(fp_t&& op) {
     this->startThreadIfNeeded();
 }
 
-void OperationQueue::schedule(const fp_t& op, uint64_t ms) {
+void OperationQueue::schedule(const fp_t& op, int64_t ms) {
+    if (ms < 0) {
+        // cannot schedule in the past
+        return;
+    }
     {
         LOCK_GUARD
-        using namespace std::chrono;
-        system_clock::time_point tp = system_clock::now() + milliseconds(ms);
-        time_t t = system_clock::to_time_t(tp);
-        _queueScheduled[t] = op;
+        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+        std::chrono::system_clock::time_point scheduled_tp = now + std::chrono::milliseconds(ms);
+        _queueScheduled[scheduled_tp] = op;
     }
     this->startThreadIfNeeded();
 }
 
-void OperationQueue::schedule(const fp_t&& op, uint64_t ms) {
+void OperationQueue::schedule(const fp_t&& op, int64_t ms) {
+    if (ms < 0) {
+        // cannot schedule in the past
+        return;
+    }
     {
         LOCK_GUARD
-        using namespace std::chrono;
-        uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-        uint64_t date = now + ms;
-        _queueScheduled[date] = std::move(op);
+        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+        std::chrono::system_clock::time_point scheduled_tp = now + std::chrono::milliseconds(ms);
+        _queueScheduled[scheduled_tp] = std::move(op);
     }
     this->startThreadIfNeeded();
 }
@@ -140,10 +146,8 @@ void OperationQueue::callFirstDispatchedBlocks(size_t n) {
         LOCK
 
         if (skipScheduled == false && _queueScheduled.empty() == false) {
-            using namespace std::chrono;
-            uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            
-            std::pair<uint64_t,fp_t> entry = *(_queueScheduled.begin());
+            std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+            std::pair<std::chrono::system_clock::time_point,fp_t> entry = *(_queueScheduled.begin());
             if (entry.first <= now) {
                 fp_t op = entry.second;
                 _queueScheduled.erase(_queueScheduled.begin());
@@ -211,10 +215,10 @@ void OperationQueue::startThreadIfNeeded() {
 #ifndef __VX_SINGLE_THREAD
 void OperationQueue::threadFunction() {
     std::unique_lock<std::mutex> locker(_lock, std::defer_lock);
-    uint64_t now;
+    std::chrono::system_clock::time_point now;
     std::queue<fp_t> operations;
-    std::map<uint64_t,fp_t>::iterator itScheduled;
-    std::pair<uint64_t,fp_t> opScheduled;
+    std::map<std::chrono::system_clock::time_point,fp_t>::iterator itScheduled;
+    std::pair<std::chrono::system_clock::time_point,fp_t> opScheduled;
     fp_t op;
     int n;
 
@@ -230,7 +234,7 @@ void OperationQueue::threadFunction() {
 
         if (_queueScheduled.empty() == false) {
             // TODO: _queueScheduled -> std::list<std::pair<uint64_t,fp_t>>
-            now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            now = std::chrono::system_clock::now();
             itScheduled = _queueScheduled.begin();
 
             opScheduled = *(itScheduled);

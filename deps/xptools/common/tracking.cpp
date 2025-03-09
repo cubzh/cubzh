@@ -166,7 +166,7 @@ void TrackingClient::_checkAndRefreshSession() {
 #if !defined(P3S_NO_METRICS)
     using namespace std::chrono;
     TrackingClient& tc = TrackingClient::shared();
-    const uint64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    const int64_t now = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     if (tc._session_id == 0 || now - tc._session_used_at > NEW_SESSION_DELAY_MS) {
         // create new session starting now
         tc._session_id = now;

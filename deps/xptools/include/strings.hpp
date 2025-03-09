@@ -61,6 +61,18 @@ std::vector<std::string> splitString(const std::string& input,
 ///
 std::string strToHex(const std::string& input);
 
+/// Attempts to convert string to integer
+/// Returns true if successful, false otherwise
+bool toInt(const std::string& input, int& output);
+
+/// Attempts to convert string to unsigned 16-bit integer
+/// Returns true if successful, false otherwise 
+bool toUInt16(const std::string& input, uint16_t& output);
+
+/// Attempts to convert string to unsigned 32-bit integer
+/// Returns true if successful, false otherwise 
+bool toUInt32(const std::string& input, uint32_t& output);
+
 /// Returns true if `prefix` is a prefix of `str`, false otherwise.
 bool hasPrefix(const std::string& str, const std::string& prefix);
 

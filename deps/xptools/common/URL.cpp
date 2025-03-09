@@ -144,7 +144,11 @@ std::string URL::_parseURLString(const std::string& urlString,
                 return "too many : characters found"; // error
             }
             const std::string portStr = elements.back();
-            outPort = std::stoi(portStr);
+            const bool ok = vx::str::toUInt16(portStr, outPort);
+            if (ok == false) {
+                return "port value is invalid";
+            }
+
             // remove the port suffix
             outHost = outHost.substr(0, outHost.length() - (portStr.length() + 1)); // +1 is length of ":"
         }
