@@ -41,7 +41,7 @@ local SERIALIZED_CHUNKS_ID = {
 	MAP = 0,
 	AMBIENCE = 1,
 	OBJECTS = 2,
-	BLOCKS = 3,
+	BLOCKS = 3, -- NOT USED ANYMORE
 }
 
 local ambienceFields = { -- key, serialize and deserialize functions
@@ -503,29 +503,26 @@ local readChunkBlocks = function(d)
 		local key = d:ReadString(keyLength)
 		local blockAction = d:ReadUInt8()
 		if blockAction == 0 then -- remove
-			table.insert(blocks, { key, -1 })
+			-- table.insert(blocks, { key, -1 })
 		elseif blockAction == 1 then -- add
 			local color = d:ReadColor()
-			table.insert(blocks, { key, color })
+			-- table.insert(blocks, { key, color })
 		end
 	end
 	return blocks
 end
 
 -- v2: versionId, map chunk that can be read from cpp to load map, ambience fields, objects, blocks
---     ambience, objects and blocks might not be serialized if the value is nil or length is 0
 -- v3: same as v2 but removed itemDetailsCell and Objects chunk length is now uint32 and not uint16
 
 local SERIALIZE_VERSION = 3
 
 local serializeWorldBase64 = function(world)
-	if not world.mapName then
-		error("can't serialize without mapName", 2)
-		return
-	end
 	local d = Data()
 	d:WriteByte(SERIALIZE_VERSION) -- version
-	writeChunkMap(d, world.mapName, world.mapScale or 5)
+	if world.mapName then
+		writeChunkMap(d, world.mapName, world.mapScale or 5)
+	end
 	if world.ambience then
 		writeChunkAmbience(d, world.ambience)
 	end
@@ -536,9 +533,15 @@ local serializeWorldBase64 = function(world)
 end
 
 local deserializeWorldBase64 = function(str)
+	local world = {
+		objects = {},
+	}
+	if str == nil then
+		return world
+	end
 	local d = Data(str, { format = "base64" })
 	local version = d:ReadByte()
-	local world = {}
+	
 	if version == 2 or version == 3 then
 		while d.Cursor < d.Length do
 			local chunk = d:ReadByte()
@@ -553,7 +556,7 @@ local deserializeWorldBase64 = function(str)
 					world.objects = readChunkObjects(d)
 				end
 			elseif chunk == SERIALIZED_CHUNKS_ID.BLOCKS then
-				world.blocks = readChunkBlocks(d)
+				world.blocks = readChunkBlocks(d) -- NOT USED ANYMORE BUT NEED TO READ TO MOVE CURSOR ANYWAY
 			end
 		end
 	else -- just a table
@@ -579,29 +582,41 @@ common.uuidv4 = function()
 	end)
 end
 
-local loadObject = function(obj, objInfo, config)
-	obj:SetParent(World)
-	local k = Box()
-	k:Fit(obj, true)
-	obj.Pivot = Number3(obj.Width / 2, k.Min.Y + obj.Pivot.Y, obj.Depth / 2)
-
-	local scale = objInfo.Scale or 0.5
-	local boxSize = k.Size * scale
-	local turnOnShadows = config.optimisations.minimum_item_size_for_shadows_sqr
-		and boxSize.SquaredLength >= config.optimisations.minimum_item_size_for_shadows_sqr
-	turnOnShadows = true
+common.updateShadow = function(obj, box) 
+	local castShadow = false 
+	if loaded.minimum_item_size_for_shadows_sqr ~= nil then
+		if box == nil then
+			box = Box()
+			box:Fit(obj, true)
+		end
+		castShadow = box.Size.SquaredLength >= loaded.minimum_item_size_for_shadows_sqr
+	end
 
 	obj:Recurse(function(l)
-		l.Physics = objInfo.Physics or PhysicsMode.StaticPerBlock
-		l.Shadow = turnOnShadows
+		if typeof(l.Shadow) == "boolean" then
+		l.Shadow = castShadow
+		end
 	end, { includeRoot = true })
+end
+
+local loadObject = function(obj, objInfo, config)
+	obj:SetParent(World)
+
+	obj.Scale = objInfo.Scale or 0.5
+
+	local k = Box()
+	k:Fit(obj, true)
+
+	obj.Pivot = Number3(obj.Width * 0.5, k.Min.Y + obj.Pivot.Y, obj.Depth * 0.5)
+
 	obj.Position = objInfo.Position or Number3(0, 0, 0)
 	obj.Rotation = objInfo.Rotation or Rotation(0, 0, 0)
-	obj.Scale = scale
 	obj.uuid = objInfo.uuid
 	obj.CollidesWithGroups = Map.CollisionGroups + Player.CollisionGroups
 	obj.Name = objInfo.Name or objInfo.fullname
 	obj.fullname = objInfo.fullname
+
+	common.updateShadow(obj, k)
 end
 
 local loadMap = function(d, n, didLoad)
@@ -631,7 +646,6 @@ common.addObject = function(obj)
 	if obj.uuid == nil then
 		return
 	end
-
 	table.insert(loaded.world.objects, obj)
 	loaded.objectsByUUID[obj.uuid] = obj
 end
@@ -733,9 +747,9 @@ local defaultLoadWorldConfig = {
 	onDone = nil,
 	fullnameItemKey = "fullname",
 	optimisations = {
-		minimum_item_size_for_shadows = 1,
+		minimum_item_size_for_shadows = 10,
 	},
-	b64 = "",
+	b64 = nil,
 	title = nil,
 	worldID = nil,
 }
@@ -756,11 +770,21 @@ common.loadWorld = function(config)
 		error("world_editor_common:loadWorld(config) - config error: " .. err, 2)
 	end
 
-	if #config.b64 == 0 then
-		return
+	local world = common.deserializeWorld(config.b64)
+
+	if world.mapName == nil and (world.objects == nil  or #world.objects == 0) then
+		local scale = common.MAP_SCALE_DEFAULT
+		local basePlate = {
+			fullname = "aduermael.baseplate",
+			uuid = common.uuidv4(),
+			Position = Number3(0, 0, 0), -- pivot at center by default
+			Rotation = Rotation(0, 0, 0),
+			Scale = Number3(scale, scale, scale),
+			Physics = PhysicsMode.StaticPerBlock,
+		}
+		table.insert(world.objects, basePlate)
 	end
 
-	local world = common.deserializeWorld(config.b64)
 	loaded = {
 		b64 = config.b64,
 		title = config.title,
@@ -768,9 +792,10 @@ common.loadWorld = function(config)
 		map = nil,
 		world = world,
 		objectsByUUID = {},
+		minimum_item_size_for_shadows_sqr = 1,
 	}
 
-	local loadObjectsBlocksAndAmbience = function()
+	local loadObjectsAndAmbience = function()
 		if config.skipMap then
 			Map.Scale = world.mapScale or 5
 			loaded.map = Map
@@ -780,26 +805,8 @@ common.loadWorld = function(config)
 			end
 		end
 		local map = loaded.map
-		local blocks = world.blocks -- deprecated
 		local objects = world.objects
 		local ambience = world.ambience
-		if blocks then
-			for _, data in ipairs(blocks) do
-				local pos = data[1]
-				local color = data[2]
-				local x = math.floor(pos % 1000)
-				local y = math.floor(pos / 1000 % 1000)
-				local z = math.floor(pos / 1000000)
-				local w = map:GetBlock(x, y, z)
-				if w then
-					w:Remove()
-				end
-				if color ~= nil and color ~= -1 then
-					map:AddBlock(color, x, y, z)
-				end
-			end
-			map:RefreshModel()
-		end
 		if objects then
 			for i, o in ipairs(objects) do
 				if o.uuid then
@@ -809,8 +816,7 @@ common.loadWorld = function(config)
 
 			local minimum_item_size_for_shadows = config.optimisations.minimum_item_size_for_shadows
 			if minimum_item_size_for_shadows ~= nil then
-				config.optimisations.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows
-					* minimum_item_size_for_shadows
+				loaded.minimum_item_size_for_shadows_sqr = minimum_item_size_for_shadows ^ 2
 			end
 			local massLoading = require("massloading")
 			local onLoad = function(obj, data)
@@ -831,10 +837,10 @@ common.loadWorld = function(config)
 			config.onDone()
 		end
 	end
-	if not config.skipMap then
-		loadMap(world.mapName, world.mapScale, loadObjectsBlocksAndAmbience)
+	if not config.skipMap and world.mapName ~= nil then
+		loadMap(world.mapName, world.mapScale, loadObjectsAndAmbience)
 	else
-		loadObjectsBlocksAndAmbience()
+		loadObjectsAndAmbience()
 	end
 end
 

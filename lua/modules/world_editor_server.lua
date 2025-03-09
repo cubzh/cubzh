@@ -4,7 +4,6 @@ local events = worldEditorCommon.events
 local serializeWorld = worldEditorCommon.serializeWorld
 
 local serverObjects = {}
-local blocks = {}
 local mapName
 local mapScale = MAP_SCALE_DEFAULT
 
@@ -59,7 +58,6 @@ local funcs = {
 		mapName = nil
 		mapScale = MAP_SCALE_DEFAULT
 		serverObjects = {}
-		blocks = {}
 		return data
 	end,
 }
@@ -67,7 +65,6 @@ local funcs = {
 local server = {}
 
 serverObjects = {}
-blocks = {}
 mapName = nil
 mapScale = MAP_SCALE_DEFAULT
 

@@ -5,6 +5,31 @@ local ease = require("ease")
 local ui = require("uikit")
 local ambience = require("ambience")
 
+local defaultAmbience = { 
+	sky = { 
+		skyColor = {0,168,255}, 
+		horizonColor = {137,222,229}, 
+		abyssColor = {76,144,255}, 
+		lightColor = {142,180,204}, 
+		lightIntensity = 0.6 
+	}, 
+	fog = { 
+		color = {19,159,204}, 
+		near = 300, 
+		far = 700, 
+		lightAbsorbtion = 0.4 
+	}, 
+	sun = { 
+		color = {255,247,204}, 
+		intensity = 1.0, 
+		rotation = {1.061161,3.089219,0.0} 
+	}, 
+	ambient = { 
+		skyLightFactor = 0.1, 
+		dirLightFactor = 0.2 
+	} 
+}
+
 function requireSkybox()
 	local skybox = {}
 	skybox.load = function(config, func)
@@ -206,7 +231,9 @@ local function clearWorld()
 	end
 	objects = {}
 	mapName = nil
-	ambience:set(ambience.noon)
+	
+	worldEditorCommon.updateAmbience(defaultAmbience)
+	require("ai_ambience"):loadGeneration(defaultAmbience)
 end
 
 local function setObjectPhysicsMode(obj, physicsMode)
@@ -453,7 +480,6 @@ local statesSettings = {
 		onStateBegin = function()
 			initPickMap()
 			worldEditor.uiPickMap:hide()
-			ambience:set(ambience.noon)
 			require("object_skills").addStepClimbing(Player)
 			setState(states.PICK_WORLD)
 			require("controls"):turnOff()
@@ -508,6 +534,7 @@ local statesSettings = {
 	[states.GALLERY] = {
 		onStateBegin = function()
 			worldEditor.gallery:show()
+			worldEditor.gallery:bounce()
 			require("controls"):turnOff()
 			Player.Motion = { 0, 0, 0 }
 		end,
@@ -646,6 +673,7 @@ local statesSettings = {
 						rotation = target.Rotation,
 						scale = target.Scale,
 					})
+					worldEditorCommon.updateShadow(target)
 				end,
 			})
 		end,
@@ -870,14 +898,9 @@ function uiShowWorldPicker()
 					print(err)
 					return
 				end
-				local mapBase64 = data.mapBase64
-				if not mapBase64 or #mapBase64 == 0 then
-					setState(states.PICK_MAP)
-					return
-				end
 
 				loadWorld({
-					b64 = mapBase64,
+					b64 = data.mapBase64,
 					title = cell.title,
 					worldID = cell.id,
 					onDone = function()
@@ -897,8 +920,13 @@ function uiShowWorldPicker()
 					end,
 				})
 
-				Clouds.On = false
+				local ambience = worldEditorCommon.getAmbience()
+				if ambience == nil then
+					worldEditorCommon.updateAmbience(defaultAmbience)
+					require("ai_ambience"):loadGeneration(defaultAmbience)
+				end
 
+				
 				-- local textureURL = "https://i.ibb.co/hgRhk0t/Standard-Cube-Map.png"
 				-- local textureURL = "https://files.cu.bzh/skyboxes/green-mushrooms512.png"
 				-- local textureURL = "https://files.cu.bzh/skyboxes/skybox_2.png"
@@ -940,19 +968,28 @@ initPickMap = function()
 		loadMap(maps[mapIndex])
 	end
 
+	local validateBtn
 	local galleryMapBtn = ui:createButton("or Pick an item as Map")
 	galleryMapBtn:setParent(uiPickMap)
 	galleryMapBtn.onRelease = function()
 		previousBtn:hide()
 		nextBtn:hide()
+		galleryMapBtn:hide()
+		validateBtn:hide()
 		-- Gallery to pick a map
 		local gallery
 		gallery = require("gallery"):create(function()
 			return Screen.Width - theme.padding * 2
 		end, function()
-			return Screen.Height * 0.8
+			return Menu.Position.Y - Screen.SafeArea.Bottom - padding * 2
 		end, function(m)
-			m.pos = { Screen.Width * 0.5 - m.Width * 0.5, Screen.Height * 0.2 }
+			m.pos = { 
+				Screen.Width * 0.5 - m.Width * 0.5, 
+				Screen.SafeArea.Bottom 
+				+ padding
+				+ (Menu.Position.Y - Screen.SafeArea.Bottom - theme.padding * 2) * 0.5
+				- m.Height * 0.5
+			}
 		end, {
 			type = "items",
 			onOpen = function(cell)
@@ -966,10 +1003,13 @@ initPickMap = function()
 		gallery.didClose = function()
 			previousBtn:show()
 			nextBtn:show()
+			galleryMapBtn:show()
+			validateBtn:show()
 		end
+		gallery:bounce()
 	end
 
-	local validateBtn = ui:createButton("Start editing this map")
+	validateBtn = ui:createButton("Start editing this map")
 	validateBtn:setParent(uiPickMap)
 	validateBtn.onRelease = function()
 		loadMap(mapName, MAP_SCALE_DEFAULT, function()
@@ -1027,12 +1067,13 @@ end
 startDefaultMode = function()
 	Fog.On = true
 	dropPlayer = function()
-		if not map then
-			return
+		Player.Rotation:Set(0, 0, 0)
+		Player.Velocity:Set(0, 0, 0)
+		if map then
+			Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
+		else
+			Player.Position:Set(0, 20, 0)
 		end
-		Player.Position = Number3(map.Width * 0.5, map.Height + 10, map.Depth * 0.5) * map.Scale
-		Player.Rotation = { 0, 0, 0 }
-		Player.Velocity = { 0, 0, 0 }
 	end
 	-- require("multi")
 	Player:SetParent(World)
@@ -1207,8 +1248,10 @@ function uiShowDefaultMenu()
 	menuBar:hide()
 	menuBar.parentDidResize = function()
 		menuBar:refresh()
-		menuBar.pos =
-			{ Screen.Width - padding - menuBar.Width, Screen.Height - menuBar.Height - Screen.SafeArea.Top - padding }
+		menuBar.pos = { 
+			Screen.Width - Screen.SafeArea.Right - menuBar.Width - padding, 
+			Screen.Height - Screen.SafeArea.Top - menuBar.Height - padding, 
+		}
 	end
 	menuBar:parentDidResize()
 
@@ -1222,13 +1265,14 @@ function uiShowDefaultMenu()
 		worldEditor.gallery = require("gallery"):create(function() -- maxWidth
 			return Screen.Width - Screen.SafeArea.Right - Screen.SafeArea.Left - theme.padding * 2
 		end, function() -- maxHeight
-			return Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom - theme.padding * 2
+			return Menu.Position.Y - Screen.SafeArea.Bottom - theme.padding * 2
 		end, function(m) -- position
 			m.pos = {
 				Screen.Width * 0.5 - m.Width * 0.5,
-				Screen.SafeArea.Bottom
-					+ (Screen.Height - Screen.SafeArea.Top - Screen.SafeArea.Bottom) * 0.5
-					- m.Height * 0.5,
+				Screen.SafeArea.Bottom 
+				+ padding
+				+ (Menu.Position.Y - Screen.SafeArea.Bottom - theme.padding * 2) * 0.5
+				- m.Height * 0.5,
 			}
 		end, { onOpen = galleryOnOpen, type = "items" })
 		worldEditor.gallery.didClose = function()
@@ -1429,7 +1473,6 @@ function uiShowDefaultMenu()
 				sunRotationYLabel.Text = "" .. v
 				local ambience = worldEditorCommon.getAmbience()
 				if ambience.sun.rotation then
-					-- print("ambience.sun.rotation:", type(ambience.sun.rotation))
 					ambience.sun.rotation.Y = math.rad(v)
 					worldEditorCommon.updateAmbience(ambience)
 					require("ai_ambience"):loadGeneration(ambience)
@@ -1565,27 +1608,39 @@ function uiShowDefaultMenu()
 					-- loading:hide()
 					-- saveWorld()
 
-					print("prompt:", prompt)
+					-- print("prompt:", prompt)
 
 					prompt = "SYSTEM: Generate a skybox in pixel art style. Do NOT include ground details, just empty sky volume, include skyline details only if specified.\n\nPROMPT: "
 						.. prompt
 
 					local body = {}
 					body.prompt = prompt
-					print("prompt:", body.prompt)
+					-- print("prompt:", body.prompt)
 
 					local headers = {}
 					headers["Content-Type"] = "application/json"
 
+					-- do not send request when skybox is not requested
 					HTTP:Post("http://localhost", headers, body, function(res)
-						print("skybox generation:", res.StatusCode)
+						-- print("skybox generation:", res.StatusCode)
 						if res.StatusCode == 200 then
 							loadedAmbiance = require("ai_ambience"):loadGeneration(generation)
 
 							local body = JSON:Decode(res.Body:ToString())
-							print("body.url:", body.url)
-							local textureURL = "http://localhost" .. body.url
-							skybox.load({ url = textureURL }, function(obj)
+							-- print("body.url:", body.url)
+							if body.url ~= nil then
+								local textureURL = "http://localhost" .. body.url
+								skybox.load({ url = textureURL }, function(obj)
+									sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
+									worldEditorCommon.updateAmbience(loadedAmbiance)
+									sunRotationSlider:setValue(math.floor(math.deg(loadedAmbiance.sun.rotation.Y)))
+									sunRotationXSlider:setValue(math.floor(math.deg(loadedAmbiance.sun.rotation.X)))
+									aiInput:show()
+									aiBtn:show()
+									loading:hide()
+									saveWorld()
+								end)
+							else
 								sfx("metal_clanging_2", { Spatialized = false, Volume = 0.6 })
 								worldEditorCommon.updateAmbience(loadedAmbiance)
 								sunRotationSlider:setValue(math.floor(math.deg(loadedAmbiance.sun.rotation.Y)))
@@ -1594,7 +1649,7 @@ function uiShowDefaultMenu()
 								aiBtn:show()
 								loading:hide()
 								saveWorld()
-							end)
+							end
 						end
 					end)
 
@@ -1642,15 +1697,15 @@ function uiShowDefaultMenu()
 			if addObjectBtn ~= nil then
 				self.Height = math.min(
 					500,
-					Screen.Height - Screen.SafeArea.Bottom - Screen.SafeArea.Top - addObjectBtn.Height - padding * 3
+					Menu.Position.Y - Screen.SafeArea.Bottom - addObjectBtn.Height - padding * 3
 				)
 			else
-				self.Height = math.min(500, Screen.Height - Screen.SafeArea.Bottom - Screen.SafeArea.Top - padding * 2)
+				self.Height = math.min(500, Menu.Position.Y - Screen.SafeArea.Bottom - padding * 2)
 			end
 
 			self.pos = {
-				Screen.SafeArea.Left + padding,
-				Screen.Height - self.Height - Screen.SafeArea.Top - padding,
+				Menu.Position.X,
+				Menu.Position.Y - self.Height - padding,
 			}
 
 			title.pos = {
@@ -1713,7 +1768,7 @@ function uiShowDefaultMenu()
 	cameraBtn.parentDidResize = function()
 		ambienceBtn.pos = {
 			Screen.SafeArea.Left + padding,
-			Screen.Height - ambienceBtn.Height - Screen.SafeArea.Top - padding,
+			Menu.Position.Y - ambienceBtn.Height - padding,
 		}
 
 		cameraBtn.pos = {
