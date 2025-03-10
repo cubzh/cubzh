@@ -33,11 +33,11 @@ func (m *Cubzh) TestCore(
 	ctx context.Context,
 	// Source code
 	// +defaultPath="/"
-	// +ignore=["*", "!core", "!deps/libz"]
+	// +ignore=["*", "!core", "!deps/libz", "!deps/bgfx/bgfx/3rdparty/cgltf"]
 	src *dagger.Directory,
 ) error {
 	// create container with source files
-	ctr := dag.Container().From("voxowl/cpp-build-env:14.0.0")
+	ctr := dag.Container().From("voxowl/cpp-build-env:18.1.3")
 
 	// retrieve container architecture and provide it as ENVAR inside the container
 	{

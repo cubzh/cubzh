@@ -4,10 +4,9 @@ $input a_position, a_normal, a_texcoord0, a_color0
 #if IS_SHADOW_PASS
 
 #if QUAD_VARIANT_TEX && QUAD_VARIANT_CUTOUT
-$output v_color0, v_texcoord0
+$output v_color0
 	#define v_depth v_color0.x
 	#define v_uv v_color0.yz
-	#define v_normal v_texcoord0.xyz
 #elif QUAD_VARIANT_MRT_SHADOW_PACK
 $output v_color0
 	#define v_depth v_color0.x
@@ -36,10 +35,11 @@ $output v_color0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/quad_lib.sh"
+#if QUAD_VARIANT_MRT_LIGHTING == 0
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
+#endif
 
 #if QUAD_VARIANT_MRT_TRANSPARENCY && QUAD_VARIANT_CUTOUT
 uniform vec4 u_color1;
@@ -57,7 +57,6 @@ void main() {
 	v_depth = clip.z / clip.w;
 #endif
 #if QUAD_VARIANT_TEX && QUAD_VARIANT_CUTOUT
-	v_normal = a_normal;
 	v_uv = a_texcoord0.xy;
 #endif
 
@@ -74,7 +73,7 @@ void main() {
 	float cutout = meta[2];
 	vec4 srgb = vec4(meta[3], meta[4], meta[5], meta[6]);
 
-	color = mix(getNonVolumeVertexLitColor(color, srgb.x * u_bakedIntensity, srgb.yzw, u_sunColor.xyz, clip.z), color, unlit);
+	color = mix(getNonVoxelVertexLitColor(color, srgb.x * u_bakedIntensity, srgb.yzw, u_sunColor.xyz, clip.z), color, unlit);
 #elif QUAD_VARIANT_MRT_TRANSPARENCY && QUAD_VARIANT_CUTOUT
 	float cutout = unpackQuadMetadata_Cutout(a_position.w);
 #endif

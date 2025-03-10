@@ -10,7 +10,7 @@ function loadLanguage(l)
 		return
 	end
 
-	local data = bundle:Data("i18n/" .. l .. ".json")
+	local data = Data:FromBundle("i18n/" .. l .. ".json")
 	if data == nil then
 		loadedLanguages[l] = {}
 		return

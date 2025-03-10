@@ -36,10 +36,10 @@ typedef struct _VertexBuffer VertexBuffer;
 typedef struct _Chunk Chunk;
 typedef struct _Rtree Rtree;
 
-typedef struct _LoadShapeSettings {
+typedef struct _ShapeSettings {
     bool lighting;
     bool isMutable;
-} LoadShapeSettings;
+} ShapeSettings;
 
 #define POINT_OF_INTEREST_ORIGIN "origin" // legacy
 #define POINT_OF_INTEREST_HAND "Hand"     //
@@ -157,12 +157,12 @@ void shape_get_bounding_box_size(const Shape *shape, int3 *size);
 SHAPE_SIZE_INT3_T shape_get_allocated_size(const Shape *shape);
 bool shape_is_within_bounding_box(const Shape *shape, const SHAPE_COORDS_INT3_T coords);
 
-// converts given box to a world axis-aligned box relative to shape
-void shape_box_to_aabox(const Shape *s,
-                        const Box *box,
-                        Box *aabox,
-                        bool isCollider,
-                        const bool refreshParents);
+// converts given model to a world axis-aligned model relative to shape
+void shape_aabox_model_to_world(const Shape *s,
+                                const Box *model,
+                                Box *world,
+                                bool isCollider,
+                                const bool refreshParents);
 
 /// a bounding box is the smallest box containing all shape's blocks, it is axis-aligned and
 /// therefore is dependant on which space we express it in,

@@ -177,8 +177,14 @@ void ::vx::fs::importFile(ImportFileCallback callback) {
     UIDocumentPickerViewController *pickerVC = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:@[@"com.voxowl.particubes.vox",
                                                                                                                @"com.voxowl.particubes.pcubes",
                                                                                                                @"com.voxowl.particubes.particubes",
-                                                                                                               @"com.voxowl.particubes.3zh"] inMode:UIDocumentPickerModeImport];
-    
+                                                                                                               @"com.voxowl.particubes.3zh",
+                                                                                                               @"com.voxowl.particubes.glb",
+                                                                                                               @"com.voxowl.particubes.gltf",
+                                                                                                               @"com.voxowl.particubes.gif",
+                                                                                                               @"com.voxowl.particubes.jpg",
+                                                                                                               @"com.voxowl.particubes.jpeg",
+                                                                                                               @"com.voxowl.particubes.png"] inMode:UIDocumentPickerModeImport];
+
     DocumentPickerDelegate *d = [DocumentPickerDelegate shared];
     d.callback = callback;
     pickerVC.delegate = d;
@@ -188,8 +194,8 @@ void ::vx::fs::importFile(ImportFileCallback callback) {
     [op setCanChooseFiles:YES];
     [op setCanChooseDirectories:NO];
     [op setAllowsMultipleSelection:NO];
-    [op setAllowedFileTypes:[NSArray arrayWithObjects:@"vox", @"pcubes", @"3zh", nil]];
-    
+    [op setAllowedFileTypes:[NSArray arrayWithObjects:@"vox", @"pcubes", @"3zh", @"glb", @"gltf", @"jpg", @"jpeg", @"gif", nil]];
+
     [op beginWithCompletionHandler:^(NSInteger result){
         if (result == NSModalResponseOK) {
             NSURL* fileURL = [[op URLs] objectAtIndex:0];
