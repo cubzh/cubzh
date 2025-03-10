@@ -59,7 +59,7 @@ void _quad_void_free(void *o) {
 
 Quad *quad_new(void) {
     Quad *q = (Quad *)malloc(sizeof(Quad));
-    q->transform = transform_make_with_ptr(QuadTransform, q, &_quad_void_free);
+    q->transform = transform_new_with_ptr(QuadTransform, q, &_quad_void_free);
     q->data = NULL;
     q->size = 0;
     q->hash = 0;

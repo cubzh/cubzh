@@ -80,19 +80,18 @@ add_compile_options(
 include_directories(
     ${LIBZ_INC_DIR}
     ${CUBZH_CORE_ROOT_DIR}
+    ${CUBZH_DEPS_DIR}/bgfx/bgfx/3rdparty
 )
 
 add_executable(unit_tests ${SOURCE_FILES})
 
 # more info here: https://releases.llvm.org/14.0.0/tools/clang/docs/DiagnosticsReference.html
 # -Werror: process warnings as errors
-# -Wshadow: same variable created twice
+# -Wshadow: same variable created twice in the same scope
 # -Wdouble-promotion: avoid using a float as a double
 # -Wundef: undefined macro
 # -Wconversion: implicit casts
-# -Wunused-parameter: to be avoided, useful in callbacks
-# -Wshadow: warns of shadowed variables (same name in lower scope)
-target_compile_options(unit_tests PRIVATE -Werror -Wall -Wshadow -Wdouble-promotion -Wundef -Wconversion -Wno-unused-parameter -Wno-shadow)
+target_compile_options(unit_tests PRIVATE -Werror -Wall -Wshadow -Wdouble-promotion -Wundef -Wconversion)
 
 target_link_libraries(unit_tests
     ${LIBZ}
