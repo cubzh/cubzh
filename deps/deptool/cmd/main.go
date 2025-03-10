@@ -8,6 +8,7 @@ import (
 
 	"github.com/cubzh/cubzh/deps/deptool"
 	"github.com/spf13/cobra"
+	"github.com/voxowl/objectstorage"
 )
 
 const (
@@ -85,20 +86,6 @@ func uploadCmdFunc(cmd *cobra.Command, args []string) error {
 	version := args[1]
 	platform := args[2]
 
-	// construct object storage client opts
-	opts := deptool.DigitalOceanObjectStorageClientOpts{}
-	authKey, authSecret, err := getObjectStorageCredentialsFromEnvVars()
-	if err == nil {
-		opts.AuthKey = authKey
-		opts.AuthSecret = authSecret
-	}
-
-	// construct object storage client
-	objectStorage, err := deptool.NewDigitalOceanObjectStorageClient(opts)
-	if err != nil {
-		return err
-	}
-
 	// find git repo root directory
 	gitRepoRootDir, err := findPathToFirstParentGitRepo()
 	if err != nil {
@@ -108,7 +95,7 @@ func uploadCmdFunc(cmd *cobra.Command, args []string) error {
 	// construct path to deps directory
 	depsDirPath := filepath.Join(gitRepoRootDir, "deps")
 
-	return deptool.UploadArtifacts(objectStorage, depsDirPath, depName, version, platform)
+	return deptool.UploadArtifacts(objectStorageBuildFunc, depsDirPath, depName, version, platform)
 }
 
 // deptool download <dependency> <version> <platform>
@@ -122,20 +109,6 @@ func downloadCmdFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// construct object storage client opts
-	opts := deptool.DigitalOceanObjectStorageClientOpts{}
-	authKey, authSecret, err := getObjectStorageCredentialsFromEnvVars()
-	if err == nil {
-		opts.AuthKey = authKey
-		opts.AuthSecret = authSecret
-	}
-
-	// construct object storage client
-	objectStorage, err := deptool.NewDigitalOceanObjectStorageClient(opts)
-	if err != nil {
-		return err
-	}
-
 	// find git repo root directory
 	gitRepoRootDir, err := findPathToFirstParentGitRepo()
 	if err != nil {
@@ -145,7 +118,7 @@ func downloadCmdFunc(cmd *cobra.Command, args []string) error {
 	// construct path to deps directory
 	depsDirPath := filepath.Join(gitRepoRootDir, "deps")
 
-	return deptool.DownloadArtifacts(objectStorage, depsDirPath, depName, version, platform, forceFlag)
+	return deptool.DownloadArtifacts(objectStorageBuildFunc, depsDirPath, depName, version, platform, forceFlag)
 }
 
 // deptool upload <dependency> <version> <platform>
@@ -191,22 +164,10 @@ func autoconfigCmdFunc(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cubzh repo root dir path is empty")
 	}
 
-	// construct object storage client
-	opts := deptool.DigitalOceanObjectStorageClientOpts{}
-	authKey, authSecret, err := getObjectStorageCredentialsFromEnvVars()
-	if err == nil {
-		opts.AuthKey = authKey
-		opts.AuthSecret = authSecret
-	}
-	objectStorage, err := deptool.NewDigitalOceanObjectStorageClient(opts)
-	if err != nil {
-		return err
-	}
-
 	depsDirPath := filepath.Join(cubzhRepoRootDirPath, "deps")
 	configJsonFilePath := filepath.Join(cubzhRepoRootDirPath, "bundle", "config.json")
 
-	return deptool.Autoconfigure(objectStorage, depsDirPath, configJsonFilePath, platforms)
+	return deptool.Autoconfigure(objectStorageBuildFunc, depsDirPath, configJsonFilePath, platforms)
 }
 
 //
@@ -247,4 +208,19 @@ func findPathToFirstParentGitRepo() (string, error) {
 		}
 	}
 	return "", fmt.Errorf("no git repository found")
+}
+
+func objectStorageBuildFunc() (objectstorage.ObjectStorage, error) {
+	// construct object storage client opts
+	opts := deptool.DigitalOceanObjectStorageClientOpts{}
+	authKey, authSecret, err := getObjectStorageCredentialsFromEnvVars()
+	if err == nil {
+		opts.AuthKey = authKey
+		opts.AuthSecret = authSecret
+	}
+	objectStorage, err := deptool.NewDigitalOceanObjectStorageClient(opts)
+	if err != nil {
+		return nil, err
+	}
+	return objectStorage, nil
 }

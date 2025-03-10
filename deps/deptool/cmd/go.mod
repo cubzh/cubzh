@@ -1,6 +1,6 @@
 module github.com/cubzh/cubzh/deps/deptool/cmd
 
-go 1.24.0
+go 1.24.1
 
 // Use the local copies of packages
 replace github.com/cubzh/cubzh/deps/deptool v0.0.1 => ../
@@ -10,6 +10,7 @@ replace github.com/cubzh/cubzh/deps/deptool/utils v0.0.1 => ../utils
 require (
 	github.com/cubzh/cubzh/deps/deptool v0.0.1
 	github.com/spf13/cobra v1.9.1
+	github.com/voxowl/objectstorage v0.0.3
 )
 
 require (
@@ -28,5 +29,4 @@ require (
 	github.com/cubzh/cubzh/deps/deptool/utils v0.0.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
-	github.com/voxowl/objectstorage v0.0.3 // indirect
 )

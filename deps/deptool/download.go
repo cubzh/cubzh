@@ -11,13 +11,10 @@ import (
 )
 
 // DownloadArtifacts downloads artifacts from object storage to the local filesystem
-func DownloadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, depName, version, platform string, forceFlag bool) error {
+func DownloadArtifacts(objectStorageBuildFunc ObjectStorageBuildFunc, depsDirPath, depName, version, platform string, forceFlag bool) error {
 	fmt.Printf("⭐️ Downloading artifacts for [%s] [%s] [%s] (force: %t)\n", depName, version, platform, forceFlag)
 
 	// Validate arguments
-	if objectStorage == nil {
-		return fmt.Errorf("object storage client is nil")
-	}
 
 	if !isDependencyNameValid(depName) {
 		return fmt.Errorf("invalid dependency name: %s", depName)
@@ -31,11 +28,9 @@ func DownloadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, d
 		return fmt.Errorf("version is required")
 	}
 
-	// Destination directory path
-	destinationDirPath := filepath.Join(depsDirPath, constructDepArtifactsPath(depName, version, platform))
+	destinationDirPath, exists := areDependencyFilesInstalled(depsDirPath, depName, version, platform)
 
-	// If the destination directory exists, and --force is not set, prints a message and exits
-	if _, err := os.Stat(destinationDirPath); err == nil {
+	if exists {
 		if !forceFlag {
 			fmt.Printf("✅ Artifacts appear to be already present locally. Doing nothing.\n(%s)\n", destinationDirPath)
 			fmt.Println("Note: You can use --force to force download the artifacts")
@@ -45,6 +40,11 @@ func DownloadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, d
 		if err := os.RemoveAll(destinationDirPath); err != nil {
 			return fmt.Errorf("failed to delete destination directory: %w", err)
 		}
+	}
+
+	objectStorage, err := objectStorageBuildFunc()
+	if err != nil {
+		return fmt.Errorf("failed to build object storage client: %w", err)
 	}
 
 	// Construct the S3 key prefix

@@ -5,19 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/voxowl/objectstorage"
 )
 
-func UploadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, depName, version, platform string) error {
+func UploadArtifacts(objectStorageBuildFunc ObjectStorageBuildFunc, depsDirPath, depName, version, platform string) error {
 	fmt.Printf("⭐️ Uploading artifacts for [%s] [%s] [%s]\n", depName, version, platform)
 
 	var err error
 
 	// Validate arguments
-	if objectStorage == nil {
-		return fmt.Errorf("object storage client is nil")
-	}
 
 	if !isDependencyNameValid(depName) {
 		return fmt.Errorf("invalid dependency name: %s", depName)
@@ -39,6 +34,11 @@ func UploadArtifacts(objectStorage objectstorage.ObjectStorage, depsDirPath, dep
 		}
 	} else {
 		depsPathsToUpload = append(depsPathsToUpload, constructDepArtifactsPath(depName, version, platform))
+	}
+
+	objectStorage, err := objectStorageBuildFunc()
+	if err != nil {
+		return fmt.Errorf("failed to build object storage client: %w", err)
 	}
 
 	// Try to upload each path

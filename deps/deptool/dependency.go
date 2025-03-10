@@ -1,6 +1,7 @@
 package deptool
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 )
@@ -36,4 +37,12 @@ func isPlatformNameValid(name string) bool {
 
 func constructDepArtifactsPath(depName, version, platform string) string {
 	return filepath.Join(depName, version, "prebuilt", platform)
+}
+
+// TODO: make the testing more robust
+func areDependencyFilesInstalled(depsDirPath, depName, version, platform string) (string, bool) {
+	fullDepPath := filepath.Join(depsDirPath, constructDepArtifactsPath(depName, version, platform))
+	_, err := os.Stat(fullDepPath)
+	exists := err == nil
+	return fullDepPath, exists
 }

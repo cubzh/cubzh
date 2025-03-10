@@ -14,6 +14,8 @@ const (
 	defaultDigitalOceanSpacesBucket     = "cubzh-deps"
 )
 
+type ObjectStorageBuildFunc func() (objectstorage.ObjectStorage, error)
+
 type DigitalOceanObjectStorageClientOpts struct {
 	AuthKey    string // optional
 	AuthSecret string // optional
