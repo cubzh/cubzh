@@ -6,6 +6,9 @@ local ui = require("uikit")
 local ambience = require("ambience")
 local worldEditorCommon = require("world_editor_common")
 
+-- constants
+local NEW_OBJECT_MAX_DISTANCE = 50
+
 local defaultAmbience = { 
 	sky = { 
 		skyColor = {0,168,255}, 
@@ -464,13 +467,32 @@ toggleMapGhost = function(activate)
 	end
 end
 
-local firstPersonPlacingObject = function(obj)
-	local impact = Camera:CastRay(nil, Player)
-	if impact then
-		obj.Position = Camera.Position + Camera.Forward * impact.Distance
+local putObjectAtImpact = function(obj, origin, direction, distance)
+	if type(distance) ~= "number" then
+		distance = NEW_OBJECT_MAX_DISTANCE
+	else
+		distance = math.min(distance, NEW_OBJECT_MAX_DISTANCE)
 	end
-	obj.Rotation.Y = worldEditor.rotationShift
+	obj.Position:Set(origin + direction * distance)
 end
+
+local dropNewObject = function()
+	local placingObj = worldEditor.placingObj
+	worldEditor.placingObj = nil
+	unfreezeObject(placingObj)
+
+	if not objects[placingObj.uuid] then
+		objects[placingObj.uuid] = placingObj
+	else
+		worldEditorCommon.updateObject({
+			uuid = placingObj.uuid,
+			position = placingObj.Position,
+			rotation = placingObj.Rotation,
+		})
+	end
+	setState(states.OBJECT_SELECTED, placingObj)
+end
+
 
 -- States
 
@@ -536,61 +558,30 @@ local statesSettings = {
 			if worldEditor.rotationShift == nil then
 				worldEditor.rotationShift = 0
 			end
+			
+			-- When in first person, or mobile, we can  use pointer move event to place the object.
+			-- So just dropping the object at point of impact with camera forward ray.
 			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then
-				worldEditor.placingValidateBtn:show()
-				return
-			end
-		end,
-		tick = function()
-			if cameraMode == CameraMode.FIRST_PERSON or Client.IsMobile then
-				firstPersonPlacingObject(worldEditor.placingObj)
+				local impact = Camera:CastRay(Map.CollisionGroups + OBJECTS_COLLISION_GROUP, obj)
+				putObjectAtImpact(obj, Camera.Position, Camera.Forward, impact.Distance)
+				obj.Rotation.Y = worldEditor.rotationShift
+				dropNewObject() -- ends state
 			end
 		end,
 		onStateEnd = function()
-			worldEditor.placingValidateBtn:hide()
 			worldEditor.placingCancelBtn:hide()
 		end,
 		pointerMove = function(pe)
-			if cameraMode == CameraMode.FIRST_PERSON then
-				return
-			end
 			local placingObj = worldEditor.placingObj
-
-			-- place and rotate object
 			local impact = pe:CastRay(Map.CollisionGroups + OBJECTS_COLLISION_GROUP, placingObj)
-			if not impact then
-				return
-			end
-			local pos = pe.Position + pe.Direction * impact.Distance
-			placingObj.Position = pos
+			putObjectAtImpact(placingObj, pe.Position, pe.Direction, impact.Distance)
 			placingObj.Rotation.Y = worldEditor.rotationShift
 		end,
-		pointerDrag = function(_) end,
 		pointerUp = function(pe)
-			if cameraMode == CameraMode.FIRST_PERSON then
-				return
-			end
 			if pe.Index ~= 4 then
 				return
 			end
-
-			local placingObj = worldEditor.placingObj
-
-			-- drop object
-			worldEditor.placingObj = nil
-
-			unfreezeObject(placingObj)
-
-			if not objects[placingObj.uuid] then
-				objects[placingObj.uuid] = placingObj
-			else
-				worldEditorCommon.updateObject({
-					uuid = placingObj.uuid,
-					position = placingObj.Position,
-					rotation = placingObj.Rotation,
-				})
-			end
-			setState(states.OBJECT_SELECTED, placingObj)
+			dropNewObject()
 		end,
 		pointerWheelPriority = function(delta)
 			worldEditor.rotationShift = worldEditor.rotationShift + math.pi * 0.0625 * (delta > 0 and 1 or -1)
@@ -1026,26 +1017,6 @@ function uiShowDefaultMenu()
 	placingCancelBtn:parentDidResize()
 	placingCancelBtn:hide()
 	worldEditor.placingCancelBtn = placingCancelBtn
-
-	local placingValidateBtn = ui:createButton("✅")
-	placingValidateBtn.onRelease = function()
-		local placingObj = worldEditor.placingObj
-		worldEditor.placingObj = nil
-
-		unfreezeObject(placingObj)
-
-		objects[placingObj.uuid] = placingObj
-		setState(states.OBJECT_SELECTED, placingObj)
-	end
-	placingValidateBtn.parentDidResize = function()
-		placingValidateBtn.Width = placingCancelBtn.Width * 1.4
-		placingValidateBtn.Height = placingValidateBtn.Width
-		placingValidateBtn.pos = placingCancelBtn.pos
-			+ { placingCancelBtn.Width + padding, placingCancelBtn.Height * 0.5 - placingValidateBtn.Height * 0.5, 0 }
-	end
-	placingValidateBtn:parentDidResize()
-	placingValidateBtn:hide()
-	worldEditor.placingValidateBtn = placingValidateBtn
 
 	-- Update object UI
 	local updateObjectUI = ui:frameGenericContainer()
