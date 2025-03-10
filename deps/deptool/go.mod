@@ -1,6 +1,6 @@
 module cu.bzh/tools/deptool
 
-go 1.24.0
+go 1.24.1
 
 // For local development of objectstorage
 // replace github.com/voxowl/objectstorage => ../../../../objectstorage

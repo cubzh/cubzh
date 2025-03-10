@@ -67,6 +67,6 @@ go build -o deptool_windows_amd64
 ```bash
 # /!\ execute from the "deps/deptool/cmd" directory
 
-docker run --platform linux/amd64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.0-alpine3.21 go build -o deptool_linux_amd64
-docker run --platform linux/arm64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.0-alpine3.21 go build -o deptool_linux_arm64
+docker run --platform linux/amd64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.1-alpine3.21 go build -o deptool_linux_amd64
+docker run --platform linux/arm64 --rm -it -v $(pwd)/..:/deptool -w /deptool/cmd golang:1.24.1-alpine3.21 go build -o deptool_linux_arm64
 ```

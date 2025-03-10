@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/voxowl/objectstorage"
 )
 
 type Config struct {
@@ -28,7 +26,7 @@ func parseConfig(configFilePath string) (Config, error) {
 	return config, nil
 }
 
-func Autoconfigure(objectStorage objectstorage.ObjectStorage, depsDirPath, configFilePath string, platforms []string) error {
+func Autoconfigure(objectStorageBuildFunc ObjectStorageBuildFunc, depsDirPath, configFilePath string, platforms []string) error {
 
 	if configFilePath == "" {
 		return fmt.Errorf("config file path is required")
@@ -44,12 +42,18 @@ func Autoconfigure(objectStorage objectstorage.ObjectStorage, depsDirPath, confi
 
 	// for each dependency, download the dependency
 	for depName, depVersion := range config.Deps {
+
 		// fmt.Printf("⚙️ downloading dependency (%s|%s)\n", depName, depVersion)
 		force := false
 		for _, platform := range platforms {
-			err = DownloadArtifacts(objectStorage, depsDirPath, depName, depVersion, platform, force)
-			if err != nil {
-				return fmt.Errorf("failed to download dependency (%s|%s): %w", depName, depVersion, err)
+			_, exists := areDependencyFilesInstalled(depsDirPath, depName, depVersion, platform)
+			if !exists || force {
+				err = DownloadArtifacts(objectStorageBuildFunc, depsDirPath, depName, depVersion, platform, force)
+				if err != nil {
+					return fmt.Errorf("failed to download dependency (%s|%s): %w", depName, depVersion, err)
+				}
+			} else {
+				fmt.Printf("✅ dependency (%s|%s) already installed\n", depName, depVersion)
 			}
 		}
 	}
