@@ -1290,11 +1290,14 @@ function uiShowDefaultMenu()
 		cell:setParent(nil)
 
 		local function generate()
+			local prompt = aiInput.Text
+			if prompt == "" then
+				return
+			end
+
 			aiInput:hide()
 			aiBtn:hide()
 			loading:show()
-
-			local prompt = aiInput.Text
 
 			require("ai_ambience"):generate({
 				prompt = aiInput.Text,
