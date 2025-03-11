@@ -597,7 +597,9 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     if (transforms[parentIdx] != NULL) {
                         parentTransform = transforms[parentIdx];
                         break;
-                    } else {
+                    } else if (currentParent->has_matrix || currentParent->has_scale ||
+                               currentParent->has_translation || currentParent->has_rotation) {
+                            
                         // accumulate transformations from skipped nodes
                         nodeMtx = matrix4x4_identity;
                         if (currentParent->has_matrix) {
@@ -623,6 +625,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                 }
 
                 if (combinedMtx != NULL) {
+                    transform_refresh(transforms[j], false, false);
                     matrix4x4_op_multiply(combinedMtx, transform_get_mtx(transforms[j]));
                     transform_utils_set_mtx(transforms[j], combinedMtx);
                     matrix4x4_free(combinedMtx);
