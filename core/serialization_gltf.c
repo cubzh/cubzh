@@ -337,11 +337,11 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                 indices = malloc(ibCount * (index32 ? sizeof(uint32_t) : sizeof(uint16_t)));
                                 
                                 // generate sequential indices and add first vertex at the end
-                                for (uint32_t l = 0; l < vertexCount; ++l) {
+                                for (uint32_t k = 0; k < vertexCount; ++k) {
                                     if (index32) {
-                                        ((uint32_t*)indices)[l] = l;
+                                        ((uint32_t*)indices)[k] = k;
                                     } else {
-                                        ((uint16_t*)indices)[l] = (uint16_t)l;
+                                        ((uint16_t*)indices)[k] = (uint16_t)k;
                                     }
                                 }
                                 if (index32) {
@@ -368,15 +368,15 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                                 ibCount = triCount * 3;
                                 indices = malloc(ibCount * (index32 ? sizeof(uint32_t) : sizeof(uint16_t)));
 
-                                for (uint32_t l = 0; l < triCount; l++) {
+                                for (uint32_t k = 0; k < triCount; k++) {
                                     if (index32) {
-                                        ((uint32_t*)indices)[l * 3] = 0;            // center vertex
-                                        ((uint32_t*)indices)[l * 3 + 1] = l + 1;    // current vertex
-                                        ((uint32_t*)indices)[l * 3 + 2] = l + 2;    // next vertex
+                                        ((uint32_t*)indices)[k * 3] = 0;            // center vertex
+                                        ((uint32_t*)indices)[k * 3 + 1] = k + 1;    // current vertex
+                                        ((uint32_t*)indices)[k * 3 + 2] = k + 2;    // next vertex
                                     } else {
-                                        ((uint16_t*)indices)[l * 3] = 0;            // center vertex
-                                        ((uint16_t*)indices)[l * 3 + 1] = (uint16_t)l + 1;    // current vertex
-                                        ((uint16_t*)indices)[l * 3 + 2] = (uint16_t)l + 2;    // next vertex
+                                        ((uint16_t*)indices)[k * 3] = 0;            // center vertex
+                                        ((uint16_t*)indices)[k * 3 + 1] = (uint16_t)k + 1;    // current vertex
+                                        ((uint16_t*)indices)[k * 3 + 2] = (uint16_t)k + 2;    // next vertex
                                     }
                                 }
                                 break;
@@ -388,8 +388,8 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     }
 
                     Material* material = NULL;
-                    if (node->mesh->primitives[j].material != NULL) {
-                        const cgltf_material* gltf_material = node->mesh->primitives[j].material;
+                    if (primitive->material != NULL) {
+                        const cgltf_material* gltf_material = primitive->material;
                         material = material_new();
 
                         if (gltf_material->has_pbr_metallic_roughness) {
@@ -476,7 +476,6 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     mesh_set_primitive_type(mesh, primitiveType);
                     mesh_set_front_ccw(mesh, false);
                     mesh_reset_model_aabb(mesh);
-                    mesh_reset_pivot_to_center(mesh);
                     mesh_set_material(mesh, material);
                     
                     Transform* meshTransform = mesh_get_transform(mesh);
