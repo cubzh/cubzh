@@ -1,10 +1,24 @@
 mod = {}
 
+-- modules
+ui = require("uikit")
+conf = require("config")
+
 loadingInstances = {} -- table ref: quad
 nbLoadingInstances = 0
 loadingTickListener = nil
 
 animationQuadData = nil
+
+function nodeRemove(self)
+	if self.animation == nil then return end
+	loadingInstances[self.animation] = nil
+	nbLoadingInstances = nbLoadingInstances - 1
+	if nbLoadingInstances == 0 and loadingTickListener ~= nil then
+		loadingTickListener:Remove()
+		loadingTickListener = nil
+	end
+end
 
 mod.create = function(self, config)
 	if self ~= mod then
@@ -12,11 +26,11 @@ mod.create = function(self, config)
 	end
 
 	local defaultConfig = {
-		ui = require("uikit"),
+		ui = ui,
 	}
 
 	local ok, err = pcall(function()
-		config = require("config"):merge(defaultConfig, config)
+		config = conf:merge(defaultConfig, config)
 	end)
 	if not ok then
 		error("uiLoading:create(config) - config error: " .. err, 2)
@@ -72,15 +86,9 @@ mod.create = function(self, config)
 
 	node.Width = animation.Width
 	node.Height = animation.Height
+	node.animation = animation
 
-	node.onRemoveSystem = function(self)
-		loadingInstances[self] = nil
-		nbLoadingInstances = nbLoadingInstances - 1
-		if nbLoadingInstances == 0 and loadingTickListener ~= nil then
-			loadingTickListener:Remove()
-			loadingTickListener = nil
-		end
-	end
+	node.onRemoveSystem = nodeRemove
 
 	return node
 end
