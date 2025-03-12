@@ -382,11 +382,11 @@ void WSConnection::receivedBytes(char *bytes,
         // notify delegate
         std::shared_ptr<ConnectionDelegate> delegate = getDelegate().lock();
         if (delegate != nullptr) {
-            char *bytes = reinterpret_cast<char*>(malloc(_receivedBytesBuffer.size()));
-            if (bytes != nullptr) {
-                memcpy(bytes, _receivedBytesBuffer.c_str(), _receivedBytesBuffer.size());
+            char *bytesBuf = reinterpret_cast<char*>(malloc(_receivedBytesBuffer.size()));
+            if (bytesBuf != nullptr) {
+                memcpy(bytesBuf, _receivedBytesBuffer.c_str(), _receivedBytesBuffer.size());
 
-                Payload_SharedPtr pld = Payload::decode(bytes, _receivedBytesBuffer.size());
+                Payload_SharedPtr pld = Payload::decode(bytesBuf, _receivedBytesBuffer.size());
 
                 pld->step("WSConnection::receivedBytes");
 

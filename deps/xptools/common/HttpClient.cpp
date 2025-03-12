@@ -345,7 +345,9 @@ bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
             const std::string prefix = "max-age=";
             if (directive.rfind(prefix, 0) == 0) {
                 directive.erase(0, prefix.length());
-                maxAge = std::stoi(directive, nullptr, 10);
+                if (vx::str::toUInt32(directive, maxAge) == false) {
+                    return false;
+                }
             }
         }
     }
@@ -389,7 +391,7 @@ bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
 
     // file creation time
     {
-        const uint32_t creationTime = vx::device::timestampApple();
+        const uint32_t creationTime = static_cast<uint32_t>(vx::device::timestampApple());
         ok = _cacheWriteUint32Chunk(VX_HTTP_CACHE_CHUNK_CREATIONTIME, creationTime, fd);
         if (ok == false) {
             goto return_false;
@@ -436,7 +438,7 @@ bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
         }
     }
 
-return_true:
+    // Success case - close file and return true
     fclose(fd);
     return true;
 
@@ -531,7 +533,7 @@ HttpClient::CacheMatch HttpClient::getCachedResponseForRequest(HttpRequest_Share
             goto return_cache_not_found_and_delete_cache;
         }
 
-        const uint32_t currentTime = vx::device::timestampApple();
+        const uint32_t currentTime = static_cast<uint32_t>(vx::device::timestampApple());
         result.isStillFresh = currentTime < (cacheCreationTime + maxAge);
     }
 
@@ -562,7 +564,7 @@ HttpClient::CacheMatch HttpClient::getCachedResponseForRequest(HttpRequest_Share
         }
 
         req->getCachedResponse().setSuccess(true);
-        req->getCachedResponse().setStatusCode(statusCode);
+        req->getCachedResponse().setStatusCode(static_cast<uint16_t>(statusCode));
         req->getCachedResponse().setHeaders(std::move(headers));
         req->getCachedResponse().setBytes(body);
         req->getCachedResponse().setUseLocalCache(true);

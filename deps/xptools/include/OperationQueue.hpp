@@ -60,10 +60,10 @@ public:
     void dispatch(fp_t&& op);
     
     /// dispatch and copy, to be triggered in `ms` milliseconds
-    void schedule(const fp_t& op, uint64_t ms);
+    void schedule(const fp_t& op, int64_t ms);
     
     /// dispatch and move, to be triggered in `ms` milliseconds
-    void schedule(const fp_t&& op, uint64_t ms);
+    void schedule(const fp_t&& op, int64_t ms);
     
     /// dispatch (in front of queue) and copy
     void dispatchFirst(const fp_t& op);
@@ -101,7 +101,7 @@ private:
     std::deque<fp_t> _queue;
     
     /// scheduled tasks queue
-    std::map<uint64_t,fp_t> _queueScheduled;
+    std::map<std::chrono::system_clock::time_point,fp_t> _queueScheduled;
     
     /// queue type
     Type _type;

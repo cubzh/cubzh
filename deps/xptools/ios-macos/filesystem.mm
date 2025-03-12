@@ -910,7 +910,13 @@ void showIOSPicker() {
     }];
     NSRect proposedRect = NSMakeRect(0.0, 0.0, outputSizePx.width, outputSizePx.height);
     CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
-    CGContextRef cgContext = CGBitmapContextCreate(nullptr, proposedRect.size.width, proposedRect.size.height, 8, 4*proposedRect.size.width, colorSpace, kCGImageByteOrderDefault | kCGImageAlphaPremultipliedLast);
+    CGContextRef cgContext = CGBitmapContextCreate(nullptr,
+                                                   static_cast<size_t>(proposedRect.size.width),
+                                                   static_cast<size_t>(proposedRect.size.height),
+                                                   8,
+                                                   static_cast<size_t>(4 * proposedRect.size.width),
+                                                   colorSpace,
+                                                   kCGImageByteOrderDefault | kCGImageAlphaPremultipliedLast);
     CGColorSpaceRelease(colorSpace);
     NSGraphicsContext* context = [NSGraphicsContext graphicsContextWithCGContext:cgContext flipped:NO];
     CGContextRelease(cgContext);

@@ -84,8 +84,8 @@ private:
 #ifndef P3S_NO_METRICS
     OperationQueue *_operationQueue;
     std::string _host;
-    uint64_t _session_id;
-    uint64_t _session_used_at;
+    int64_t _session_id;
+    int64_t _session_used_at;
     uint16_t _port;
     bool _secure;
     bool _keep_alive_activated;

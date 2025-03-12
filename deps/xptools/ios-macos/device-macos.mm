@@ -51,7 +51,7 @@ uint16_t vx::device::appBuildNumber() {
     if (bundleVersion == nullptr) {
         return 0;
     }
-    const uint16_t result = [bundleVersion intValue];
+    const uint16_t result = static_cast<uint16_t>([bundleVersion intValue]);
     return result;
 }
 

@@ -114,18 +114,88 @@ std::vector<std::string> vx::str::splitString(const std::string& input,
     return result;
 }
 
-std::string vx::str::strToHex(const std::string& input)
-{
+std::string vx::str::strToHex(const std::string& input) {
     static const char hex_digits[] = "0123456789ABCDEF";
 
     std::string output;
     output.reserve(input.length() * 2);
-    for (unsigned char c : input)
-    {
+    for (const char c : input) {
         output.push_back(hex_digits[c >> 4]);
         output.push_back(hex_digits[c & 15]);
     }
     return output;
+}
+
+bool vx::str::toInt(const std::string& input, int& output) {
+    try {
+        size_t pos;
+        output = std::stoi(input, &pos);
+        
+        // Check if the entire string was converted
+        if (pos != input.length()) {
+            return false;
+        }
+        
+        return true;
+    }
+    catch (const std::invalid_argument&) {
+        return false;
+    }
+    catch (const std::out_of_range&) {
+        return false;
+    }
+}
+
+bool vx::str::toUInt16(const std::string& input, uint16_t& output) {
+    try {
+        size_t pos;
+        unsigned long value = std::stoul(input, &pos);
+        
+        // Check if the entire string was converted
+        if (pos != input.length()) {
+            return false;
+        }
+        
+        // Check if the value fits in uint16_t range (0 to 65535)
+        if (value > UINT16_MAX) {
+            return false;
+        }
+        
+        output = static_cast<uint16_t>(value);
+        return true;
+    }
+    catch (const std::invalid_argument&) {
+        return false;
+    }
+    catch (const std::out_of_range&) {
+        return false;
+    }
+}
+
+bool vx::str::toUInt32(const std::string& input, uint32_t& output) {
+    try {
+        size_t pos;
+        unsigned long value = std::stoul(input, &pos);
+        
+        // Check if the entire string was converted
+        if (pos != input.length()) {
+            return false;
+        }
+        
+        // Check if the value fits in uint32_t range (0 to 4294967295)
+        if (value > UINT32_MAX) {
+            return false;
+        }
+        
+        output = static_cast<uint32_t>(value);
+        return true;
+    }
+    catch (const std::invalid_argument&) {
+        return false;
+    }
+    catch (const std::out_of_range&) {
+        return false;
+    }
 }
 
 bool vx::str::hasPrefix(const std::string& str, const std::string& prefix) {
