@@ -173,13 +173,10 @@ signup.startFlow = function(self, config)
 							function(err, accountInfo)
 								if err == nil then
 									local userID = accountInfo.credentials["user-id"]
-									local username = accountInfo.username
 									local token = accountInfo.credentials.token
 
-									System.Username = username
-									System:StoreCredentials(userID, token)
-
 									System.AskedForMagicKey = false
+									System:StoreCredentials(userID, token)
 
 									-- flush signup flow and restart credential checks (should go through now)
 									signupFlow:flush()
@@ -352,13 +349,10 @@ signup.startFlow = function(self, config)
 								function(err, accountInfo)
 									if err == nil then
 										local userID = accountInfo.credentials["user-id"]
-										local username = accountInfo.username
 										local token = accountInfo.credentials.token
 
-										System.Username = username
-										System:StoreCredentials(userID, token)
-
 										System.AskedForMagicKey = false
+										System:StoreCredentials(userID, token)
 
 										-- flush signup flow and restart credential checks (should go through now)
 										signupFlow:flush()

@@ -2483,6 +2483,7 @@ function home()
 		btnCreate.onRelease = function()
 			Menu:sendHomeDebugEvent("User presses CREATE button")
 			Menu:ShowCreations()
+			-- URL:Open("https://app.cu.bzh?worldID=a113f59f-5e18-4726-81f7-bf31dd64cd80")
 		end
 
 		bottomBar.parentDidResize = function(self)
