@@ -8,15 +8,13 @@ local addSegment = function(segments, color, thickness, segmentLength)
 	segment.Physics = PhysicsMode.Disabled
 	segment.Pivot = { 0.5, 0.5, 0 }
 	segment.Scale = { thickness, thickness, segmentLength }
-	segment.IsHidden = true
 	table.insert(segments, segment)
 	return segment
 end
 
 local create = function(_, source, target, color, thickness, segmentLength)
 	local t = {}
-	source = source
-	target = target
+	local hidden = false
 	color = color or Color.White
 	thickness = thickness or 0.5
 	segmentLength = segmentLength or 5
@@ -43,12 +41,12 @@ local create = function(_, source, target, color, thickness, segmentLength)
 				if segmentIndex >= MAX_TRAIL_SEGMENTS then
 					return
 				end
-				addSegment(segments, color, thickness, segmentLength)
+				segment = addSegment(segments, color, thickness, segmentLength)
+				if not segment then
+					return
+				end
+				segment.IsHidden = hidden
 			end
-			if not segment then
-				return
-			end
-			segment.IsHidden = false
 			segment.Position = sourcePos + vector * (segmentIndex - 1) * spaceBetweenTwoSegmentOrigins
 			segment.Forward = vector
 			dist = dist + spaceBetweenTwoSegmentOrigins
@@ -66,6 +64,21 @@ local create = function(_, source, target, color, thickness, segmentLength)
 		end
 		segments = {}
 	end
+
+	t.hide = function(_)
+		hidden = true
+		for _, segment in ipairs(segments) do
+			segment.IsHidden = true
+		end
+	end
+
+	t.show = function(_)
+		hidden = false
+		for _, segment in ipairs(segments) do
+			segment.IsHidden = false
+		end
+	end
+
 	return t
 end
 

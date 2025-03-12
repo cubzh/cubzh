@@ -16,12 +16,15 @@ creations.createModalContent = function(_, config)
 		onOpen = nil,
 		authorId = Player.UserID,
 		authorName = Player.Username,
+		title = nil,
+		categories = { "items", "wearables", "worlds" },
 	}
 
 	local ok, err = pcall(function()
 		config = require("config"):merge(defaultConfig, config, {
 			acceptTypes = {
 				onOpen = { "function" },
+				title = { "string" },
 			},
 		})
 	end)
@@ -418,7 +421,9 @@ creations.createModalContent = function(_, config)
 
 	local createCreationsContent = function()
 		local creationsContent = modal:createContent()
-		if config.authorId == Player.UserID then
+		if config.title ~= nil then
+			creationsContent.title = config.title
+		elseif config.authorId == Player.UserID then
 			creationsContent.title = "Creations"
 		else
 			creationsContent.title = config.authorName .. "'s Creations"
@@ -502,44 +507,58 @@ creations.createModalContent = function(_, config)
 			btnNew.onRelease = newItem
 		end
 
-		creationsContent.tabs = {
-			{
-				label = "⚔️ Items",
-				short = "⚔️",
-				action = function()
-					grid:setCategories({ "null" }, "items")
-					if btnNew then
-						btnNew.Text = "✨ Create item ⚔️"
-						btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-						btnNew.onRelease = newItem
-					end
-				end,
-			},
-			{
-				label = "👕 Wearables",
-				short = "👕",
-				action = function()
-					grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
-					if btnNew then
-						btnNew.Text = "✨ Create wearable 👕"
-						btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-						btnNew.onRelease = newWearable
-					end
-				end,
-			},
-			{
-				label = "🌎 Worlds",
-				short = "🌎",
-				action = function()
-					grid:setCategories({ "null" }, "worlds")
-					if btnNew then
-						btnNew.Text = "✨ Create world 🌎"
-						btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
-						btnNew.onRelease = newWorld
-					end
-				end,
-			},
-		}
+		creationsContent.tabs = {}
+
+		for _, category in ipairs(config.categories) do
+			if category == "items" then
+				table.insert(creationsContent.tabs, {
+					label = "⚔️ Items",
+					short = "⚔️",
+					action = function()
+						grid:setCategories({ "null" }, "items")
+						if btnNew then
+							btnNew.Text = "✨ Create item ⚔️"
+							btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+							btnNew.onRelease = newItem
+						end
+					end,
+				})
+			elseif category == "wearables" then
+				table.insert(creationsContent.tabs, {
+					label = "👕 Wearables",
+					short = "👕",
+					action = function()
+						grid:setCategories({ "hair", "jacket", "pants", "boots" }, "items")
+						if btnNew then
+							btnNew.Text = "✨ Create wearable 👕"
+							btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+							btnNew.onRelease = newWearable
+						end
+					end,
+				})
+			elseif category == "worlds" then
+				table.insert(creationsContent.tabs, {
+					label = "🌎 Worlds",
+					short = "🌎",
+					action = function()
+						grid:setCategories({ "null" }, "worlds")
+						if btnNew then
+							btnNew.Text = "✨ Create world 🌎"
+							btnNew.pos.X = btnNew.parent.Width * 0.5 - btnNew.Width * 0.5
+							btnNew.onRelease = newWorld
+						end
+					end,
+				})
+			end
+		end
+
+		if #creationsContent.tabs > 0 then
+			creationsContent.tabs[1].action()
+		end
+
+		if  #creationsContent.tabs == 1 then
+			creationsContent.tabs = {}
+		end
 
 		creationsContent.node = node
 
@@ -684,7 +703,12 @@ creations.createModal = function(_, config)
 
 	local content = modal:createContent()
 
-	local creationsContent = creations:createModalContent({ uikit = ui, onOpen = config.onOpen })
+	local creationsContent = creations:createModalContent({
+		uikit = ui,
+		onOpen = config.onOpen,
+		categories = config.categories,
+		title = config.title,
+	})
 
 	creationsContent.idealReducedContentSize = function(content, width, height)
 		local grid = content
