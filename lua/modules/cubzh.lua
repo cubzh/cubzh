@@ -70,6 +70,7 @@ Client.OnStart = function()
 	avatarCameraX = 0
 
 	local req = HTTP:GetStream("https://api.cu.bzh/ping", function(resp)
+		print("[🐞][ping] callback")
 		if resp.StatusCode ~= 200 then
 			print("[🐞][ping] status not 200: " .. resp.StatusCode)
 			return

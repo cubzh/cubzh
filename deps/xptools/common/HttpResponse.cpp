@@ -33,11 +33,11 @@ const bool& HttpResponse::getSuccess() const {
     return _success;
 }
 
-void HttpResponse::setResponseType(const HTTPResponseType& type) {
+void HttpResponse::setType(const HTTPResponseType& type) {
     _responseType = type;
 }
 
-const HTTPResponseType& HttpResponse::getResponseType() const {
+const HTTPResponseType& HttpResponse::getType() const {
     return _responseType;
 }
 

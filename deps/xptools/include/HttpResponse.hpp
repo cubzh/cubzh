@@ -56,8 +56,8 @@ public:
     void setSuccess(const bool& success);
     const bool& getSuccess() const;
 
-    void setResponseType(const HTTPResponseType& type);
-    const HTTPResponseType& getResponseType() const;
+    void setType(const HTTPResponseType& type);
+    const HTTPResponseType& getType() const;
 
     void setStatusCode(const uint16_t& statusCode);
     const uint16_t& getStatusCode() const;

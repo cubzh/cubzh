@@ -46,7 +46,9 @@
     return self;
 }
 
+// Create a dataTask for the URL request
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request forHttpRequest:(vx::HttpRequest_SharedPtr*)httpReqPtr {
+    // Note: delegate of `session` is `self`
     NSURLSessionDataTask *task = [self.session dataTaskWithRequest:request];
     @synchronized (_taskMap) {
         _taskMap[@(task.taskIdentifier)] = [NSValue valueWithPointer: httpReqPtr];
@@ -57,32 +59,52 @@
 #pragma mark - NSURLSessionDataDelegate
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completionHandler {
-    vxlog_debug("🐞 [didReceiveResponse] ⭐️");
+    vxlog_debug("[🐞][didReceiveResponse] ⭐️");
     @synchronized (_taskMap) {
         NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+
         vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
-        if (httpReqPtr) {
-//            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-//
-//            // Set response status code
-//            httpReq->getResponse().setStatusCode(httpResponse.statusCode);
-//
-//            // Set response headers
-//            NSDictionary *headers = httpResponse.allHeaderFields;
-//            std::unordered_map<std::string, std::string> responseHeaders;
-//            for (NSString *key in headers) {
-//                NSString *value = headers[key];
-//                responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
-//            }
-//            httpReq->getResponse().setHeaders(responseHeaders);
-//
-//            // Initialize response body
-//            httpReq->getResponse().setBytes("");
-//            httpReq->getResponse().setSuccess(true);
-//
-//            // Call callback for the first time with headers
-//            httpReq->callCallback();
+        if (httpReqPtr == nullptr) {
+            vxlog_error("[🐞][didReceiveResponse] HttpRequest pointer is NULL. Cancelling the request.");
+            completionHandler(NSURLSessionResponseCancel);
+            return;
         }
+
+        vx::HttpRequest_SharedPtr httpReq = *httpReqPtr;
+        if (httpReq == nullptr) {
+            vxlog_error("[🐞][didReceiveResponse] HttpRequest shared pointer is NULL. Cancelling the request.");
+            completionHandler(NSURLSessionResponseCancel);
+            return;
+        }
+
+        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+        if (httpResponse == nullptr) {
+            vxlog_error("[🐞][didReceiveResponse] NSHTTPURLResponse is NULL. Cancelling the request.");
+            completionHandler(NSURLSessionResponseCancel);
+            return;
+        }
+
+        // Set response status code
+        httpReq->getResponse().setStatusCode(static_cast<uint16_t>(httpResponse.statusCode));
+
+        // Set response headers
+        NSDictionary *headers = httpResponse.allHeaderFields;
+        std::unordered_map<std::string, std::string> responseHeaders;
+        for (NSString *key in headers) {
+            NSString *value = headers[key];
+            responseHeaders[[key lowercaseString].UTF8String] = value.UTF8String;
+        }
+        httpReq->getResponse().setHeaders(responseHeaders);
+
+        // Set response type
+        httpReq->getResponse().setType(vx::HTTPResponseType::PARTIAL_FIRST);
+
+        // Initialize response body
+        httpReq->getResponse().setBytes("");
+        httpReq->getResponse().setSuccess(true);
+
+        // Call callback for the first time with headers
+        httpReq->callCallback();
     }
     completionHandler(NSURLSessionResponseAllow);
 }
@@ -204,7 +226,7 @@ void HttpRequest::_sendAsync() {
         if ((*httpReqPtr)->getOpts().getStreamResponse()) {
             // Create task with the NetworkManager
             task = [[NetworkManager sharedManager] dataTaskWithRequest:request forHttpRequest:httpReqPtr];
-        } else {
+        } else { // LEGACY CODE (NO HTTP STREAMING)
             // TODO: !!! send regular HTTP request
             // DO NOT USE DEFAULT COOKIE STORE
             // NSURLSession *session = [NSURLSession sharedSession];
