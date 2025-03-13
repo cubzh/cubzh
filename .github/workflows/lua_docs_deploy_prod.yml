@@ -37,5 +37,7 @@ jobs:
                   LUA_DOCS_SRV_SSH_URL: ${{ secrets.LUA_DOCS_SRV_SSH_URL }}
                   LUA_DOCS_SRV_SSH_PRIVATEKEY: ${{ secrets.LUA_DOCS_SRV_SSH_PRIVATEKEY }}
                   LUA_DOCS_SRV_SSH_KNOWNHOSTS: ${{ secrets.LUA_DOCS_SRV_SSH_KNOWNHOSTS }}
+                  CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
               working-directory: ./ci/lua_docs_deploy_prod
               run: ./deploy
