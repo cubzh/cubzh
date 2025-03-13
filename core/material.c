@@ -154,3 +154,20 @@ void material_set_texture(Material* m, MaterialTexture slot, Texture* texture) {
 Texture* material_get_texture(const Material* m, MaterialTexture slot) {
     return m->textures[slot];
 }
+
+void material_set_filtering(Material* m, const bool value) {
+    for (uint8_t i = 0; i < MaterialTexture_Count; ++i) {
+        if (m->textures[i] != NULL && texture_get_type(m->textures[i]) != TextureType_Normal) {
+            texture_set_filtering(m->textures[i], value);
+        }
+    }
+}
+
+bool material_has_filtering(const Material* m) {
+    for (uint8_t i = 0; i < MaterialTexture_Count; ++i) {
+        if (m->textures[i] != NULL && texture_has_filtering(m->textures[i])) {
+            return true;
+        }
+    }
+    return false;
+}

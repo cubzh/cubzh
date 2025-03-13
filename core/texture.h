@@ -16,7 +16,6 @@ extern "C" {
 #include "weakptr.h"
 
 typedef enum {
-    TextureType_None,
     TextureType_Albedo,
     TextureType_Normal,
     TextureType_Metallic,
@@ -37,9 +36,12 @@ bool texture_is_raw(const Texture* t);
 uint32_t texture_get_width(const Texture* t);
 uint32_t texture_get_height(const Texture* t);
 TextureType texture_get_type(const Texture* t);
-uint32_t texture_get_hash(const Texture* t);
+uint32_t texture_get_data_hash(const Texture* t);
+uint32_t texture_get_rendering_hash(const Texture* t);
 Weakptr *texture_get_weakptr(Texture *t);
 Weakptr *texture_get_and_retain_weakptr(Texture *t);
+void texture_set_filtering(Texture* t, bool value);
+bool texture_has_filtering(const Texture* t);
 
 #ifdef __cplusplus
 }
