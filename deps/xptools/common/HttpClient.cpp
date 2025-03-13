@@ -94,6 +94,11 @@ HttpRequest_SharedPtr HttpClient::GET(const URL& url,
         return nullptr;
     }
 
+    // this function (HttpClient::GET) doesn't support streaming yet
+    if (opts.getStreamResponse() == true) {
+        return nullptr;
+    }
+
     const bool secure = url.scheme() == VX_HTTPS_SCHEME;
 
     HttpRequest_SharedPtr req = HttpRequest::make("GET",

@@ -58,7 +58,7 @@ bool HttpRequest::callCallback() {
         // never trigger callback if request has been cancelled
         return false;
     }
-    if (strongSelf->_callbackCalled == true) {
+    if (strongSelf->_callbackCalled == true && strongSelf->getOpts().getStreamResponse() == false) {
         vxlog_warning("HttpRequest callback is being called more than one time!");
         return false;
     }
@@ -299,8 +299,12 @@ const std::string& HttpRequest::getBodyBytes() const {
     return this->_bodyBytes;
 }
 
+const HttpRequestOpts& HttpRequest::getOpts() const {
+    return _opts;
+}
+
 void HttpRequest::setOpts(const HttpRequestOpts& opts) {
-    this->_opts = HttpRequestOpts(opts);
+    _opts = HttpRequestOpts(opts);
 }
 
 void HttpRequest::setHeaders(const std::unordered_map<std::string, std::string>& headers) {

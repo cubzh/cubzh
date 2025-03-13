@@ -119,6 +119,7 @@ public:
     const std::string& getBodyBytes() const;
 
     ///
+    const HttpRequestOpts& getOpts() const;
     void setOpts(const HttpRequestOpts& opts);
 
     ///

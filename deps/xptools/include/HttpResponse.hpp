@@ -9,8 +9,8 @@
 #pragma once
 
 // C++
-#include <string>
 #include <cstdint>
+#include <string>
 #include <unordered_map>
 
 namespace vx {
@@ -28,6 +28,22 @@ enum class HTTPStatus {
     CONFLICT,
 };
 
+enum class HTTPResponseType {
+    DEFAULT,
+    PARTIAL_FIRST,
+    PARTIAL_BYTES,
+    PARTIAL_END,
+};
+
+// Add this after the enum definition
+inline const char* HTTPResponseTypeToStr(HTTPResponseType type) {
+    switch (type) {
+        case HTTPResponseType::DEFAULT:       return "DEFAULT";
+        case HTTPResponseType::PARTIAL_FIRST: return "PARTIAL_FIRST";
+        case HTTPResponseType::PARTIAL_BYTES: return "PARTIAL_BYTES";
+        case HTTPResponseType::PARTIAL_END:   return "PARTIAL_END";
+    }
+}
 class HttpResponse final {
 
 public:
@@ -38,7 +54,10 @@ public:
     // accessors
     void setSuccess(const bool& success);
     const bool& getSuccess() const;
-    
+
+    void setType(const HTTPResponseType& type);
+    const HTTPResponseType& getType() const;
+
     void setStatusCode(const uint16_t& statusCode);
     const uint16_t& getStatusCode() const;
     HTTPStatus getStatus() const;
@@ -58,19 +77,28 @@ public:
     /// -> if we have a Content-Type header with application/json or other text
     ///    formats, the _bytes field should have a trailing NULL character.
     const std::string getText() const;
-    
+
+    /// Clears all content
+    void clear();
+
 private:
-    
+
     /// indicates whether the connection was successful
     bool _success;
-    
+
+    /// indicates what kind of response it is (complete, partial)
+    HTTPResponseType _type;
+
     /// HTTP status code
+    /// Used for response types `DEFAULT` and `PARTIAL_FIRST`
     uint16_t _statusCode;
     
     /// HTTP headers
+    /// Used for response types `DEFAULT` and `PARTIAL_FIRST`
     std::unordered_map<std::string, std::string> _headers;
     
     /// Response body
+    /// Used for response types `DEFAULT`, `PARTIAL_FIRST` and `PARTIAL_BYTES`
     std::string _bytes;
 
     /// Indicates whether the response content is from local cache
