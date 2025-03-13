@@ -12,6 +12,11 @@
 
 #include "cclog.h"
 
+#define TEXTURE_FLAG_NONE 0
+#define TEXTURE_FLAG_FILTERING 1
+#define TEXTURE_FLAG_TYPE_SHIFT TEXTURE_FLAG_FILTERING
+#define TEXTURE_FLAG_TYPE_MASK 6
+
 //// If data isn't NULL and width/height are 0, the texture data must first be parsed
 struct _Texture {
     void* data;
@@ -21,8 +26,21 @@ struct _Texture {
     uint32_t height;       /* 4 bytes */
     uint32_t hash;         /* 4 bytes */
     uint16_t refCount;     /* 2 bytes */
-    uint8_t type;          /* 1 byte */
+    uint8_t flags;         /* 1 byte */
+    char pad[5];
 };
+
+static void _texture_toggle_flag(Texture *t, const uint8_t flag, const bool toggle) {
+    if (toggle) {
+        t->flags |= flag;
+    } else {
+        t->flags &= ~flag;
+    }
+}
+
+static bool _texture_get_flag(const Texture *t, const uint8_t flag) {
+    return (t->flags & flag) != 0;
+}
 
 Texture* texture_new_raw(const void* data, const uint32_t size, const TextureType type) {
     Texture* t = (Texture*)malloc(sizeof(Texture));
@@ -43,7 +61,7 @@ Texture* texture_new_raw(const void* data, const uint32_t size, const TextureTyp
     t->height = 0;
     t->hash = (uint32_t)crc32(0, data, (uInt)size);
     t->refCount = 1;
-    t->type = (uint8_t)type;
+    t->flags = (uint8_t)(type << TEXTURE_FLAG_TYPE_SHIFT);
     return t;
 }
 
@@ -109,11 +127,19 @@ uint32_t texture_get_height(const Texture* t) {
 }
 
 TextureType texture_get_type(const Texture* t) {
-    return t->type;
+    return (TextureType)((t->flags & TEXTURE_FLAG_TYPE_MASK) >> TEXTURE_FLAG_TYPE_SHIFT);
 }
 
-uint32_t texture_get_hash(const Texture* t) {
+uint32_t texture_get_data_hash(const Texture* t) {
     return t->hash;
+}
+
+uint32_t texture_get_rendering_hash(const Texture* t) {
+    uint32_t hash = t->hash;
+    if (_texture_get_flag(t, TEXTURE_FLAG_FILTERING)) {
+        hash = (hash * 31) + 1;
+    }
+    return hash;
 }
 
 Weakptr *texture_get_weakptr(Texture *t) {
@@ -132,4 +158,12 @@ Weakptr *texture_get_and_retain_weakptr(Texture *t) {
     } else { // this can only happen if weakptr ref count is at max
         return NULL;
     }
-} 
+}
+
+void texture_set_filtering(Texture* t, bool value) {
+    _texture_toggle_flag(t, TEXTURE_FLAG_FILTERING, value);
+}
+
+bool texture_has_filtering(const Texture* t) {
+    return _texture_get_flag(t, TEXTURE_FLAG_FILTERING);
+}

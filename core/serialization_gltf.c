@@ -24,11 +24,15 @@
 #include "material.h"
 #include "texture.h"
 
-static Texture* _serialization_gltf_load_texture(const cgltf_image* image, const TextureType type) {
-    if (image == NULL) {
+#define GL_LINEAR 9729
+#define GL_NEAREST 9728
+
+static Texture* _serialization_gltf_load_texture(const cgltf_texture* texture, const TextureType type) {
+    if (texture == NULL || texture->image == NULL) {
         return NULL;
     }
 
+    const cgltf_image* image = texture->image;
     void* data;
     uint32_t size;
     Texture *t = NULL;
@@ -63,6 +67,16 @@ static Texture* _serialization_gltf_load_texture(const cgltf_image* image, const
         fclose(file);
     } else {
         return NULL;
+    }
+
+    if (t != NULL) {
+        if (texture->sampler != NULL) {
+            const cgltf_sampler* sampler = texture->sampler;
+            const bool useLinear = sampler->mag_filter == GL_LINEAR || sampler->min_filter == GL_LINEAR;
+            texture_set_filtering(t, useLinear);
+        } else {
+            texture_set_filtering(t, type != TextureType_Normal);
+        }
     }
 
     return t;
@@ -406,7 +420,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
                             // albedo texture
                             if (pbr->base_color_texture.texture != NULL) {
-                                Texture* texture = _serialization_gltf_load_texture(pbr->base_color_texture.texture->image, TextureType_Albedo);
+                                Texture* texture = _serialization_gltf_load_texture(pbr->base_color_texture.texture, TextureType_Albedo);
                                 if (texture != NULL) {
                                     material_set_texture(material, MaterialTexture_Albedo, texture);
                                     texture_release(texture);
@@ -415,7 +429,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
                             // metallic-roughness map
                             if (pbr->metallic_roughness_texture.texture != NULL) {
-                                Texture* texture = _serialization_gltf_load_texture(pbr->metallic_roughness_texture.texture->image, TextureType_Metallic);
+                                Texture* texture = _serialization_gltf_load_texture(pbr->metallic_roughness_texture.texture, TextureType_Metallic);
                                 if (texture != NULL) {
                                     material_set_texture(material, MaterialTexture_Metallic, texture);
                                     texture_release(texture);
@@ -434,7 +448,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
                         // emissive texture
                         if (gltf_material->emissive_texture.texture != NULL) {
-                            Texture* texture = _serialization_gltf_load_texture(gltf_material->emissive_texture.texture->image, TextureType_Emissive);
+                            Texture* texture = _serialization_gltf_load_texture(gltf_material->emissive_texture.texture, TextureType_Emissive);
                             if (texture != NULL) {
                                 material_set_texture(material, MaterialTexture_Emissive, texture);
                                 texture_release(texture);
@@ -443,7 +457,7 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
 
                         // normal map
                         if (gltf_material->normal_texture.texture != NULL) {
-                            Texture* texture = _serialization_gltf_load_texture(gltf_material->normal_texture.texture->image, TextureType_Normal);
+                            Texture* texture = _serialization_gltf_load_texture(gltf_material->normal_texture.texture, TextureType_Normal);
                             if (texture != NULL) {
                                 material_set_texture(material, MaterialTexture_Normal, texture);
                                 texture_release(texture);

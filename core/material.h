@@ -53,6 +53,8 @@ void material_set_unlit(Material* m, const bool value);
 bool material_is_unlit(const Material* m);
 void material_set_texture(Material* m, MaterialTexture slot, Texture* texture);
 Texture* material_get_texture(const Material* m, MaterialTexture slot);
+void material_set_filtering(Material* m, const bool value);
+bool material_has_filtering(const Material* m);
 
 #ifdef __cplusplus
 }
