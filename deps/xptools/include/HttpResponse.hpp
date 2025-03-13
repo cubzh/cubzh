@@ -42,7 +42,6 @@ inline const char* HTTPResponseTypeToStr(HTTPResponseType type) {
         case HTTPResponseType::PARTIAL_FIRST: return "PARTIAL_FIRST";
         case HTTPResponseType::PARTIAL_BYTES: return "PARTIAL_BYTES";
         case HTTPResponseType::PARTIAL_END:   return "PARTIAL_END";
-        default:                             return "UNKNOWN";
     }
 }
 class HttpResponse final {
@@ -78,14 +77,17 @@ public:
     /// -> if we have a Content-Type header with application/json or other text
     ///    formats, the _bytes field should have a trailing NULL character.
     const std::string getText() const;
-    
+
+    /// Clears all content
+    void clear();
+
 private:
 
     /// indicates whether the connection was successful
     bool _success;
 
     /// indicates what kind of response it is (complete, partial)
-    HTTPResponseType _responseType;
+    HTTPResponseType _type;
 
     /// HTTP status code
     /// Used for response types `DEFAULT` and `PARTIAL_FIRST`

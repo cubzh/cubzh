@@ -58,7 +58,7 @@ bool HttpRequest::callCallback() {
         // never trigger callback if request has been cancelled
         return false;
     }
-    if (strongSelf->_callbackCalled == true) {
+    if (strongSelf->_callbackCalled == true && strongSelf->getOpts().getStreamResponse() == false) {
         vxlog_warning("HttpRequest callback is being called more than one time!");
         return false;
     }

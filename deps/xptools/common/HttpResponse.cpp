@@ -15,7 +15,7 @@ namespace vx {
 
 HttpResponse::HttpResponse() :
 _success(false),
-_responseType(HTTPResponseType::DEFAULT),
+_type(HTTPResponseType::DEFAULT),
 _statusCode(0),
 _headers(),
 _bytes(),
@@ -34,11 +34,11 @@ const bool& HttpResponse::getSuccess() const {
 }
 
 void HttpResponse::setType(const HTTPResponseType& type) {
-    _responseType = type;
+    _type = type;
 }
 
 const HTTPResponseType& HttpResponse::getType() const {
-    return _responseType;
+    return _type;
 }
 
 void HttpResponse::setStatusCode(const uint16_t& statusCode) {
@@ -126,6 +126,15 @@ const std::string HttpResponse::getText() const {
     // copy bytes into the string
     text.replace(0, byteCount, _bytes);
     return text;
+}
+
+void HttpResponse::clear() {
+    _success = false;
+    _type = HTTPResponseType::DEFAULT;
+    _statusCode = 0;
+    _headers.clear();
+    _bytes.clear();
+    _useLocalCache = false;
 }
 
 // --------------------------------------------------

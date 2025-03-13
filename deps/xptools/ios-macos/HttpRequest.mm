@@ -61,7 +61,13 @@
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition))completionHandler {
     vxlog_debug("[🐞][didReceiveResponse] ⭐️");
     @synchronized (_taskMap) {
+
         NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
+        if (dictValue == nil) {
+            vxlog_error("[🐞][didReceiveResponse] HttpRequest not found in taskMap");
+            completionHandler(NSURLSessionResponseCancel);
+            return;
+        }
 
         vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
         if (httpReqPtr == nullptr) {
@@ -77,12 +83,21 @@
             return;
         }
 
+        // This should not be needed...
+        // httpReq->getResponse().clear();
+
         NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
         if (httpResponse == nullptr) {
-            vxlog_error("[🐞][didReceiveResponse] NSHTTPURLResponse is NULL. Cancelling the request.");
-            completionHandler(NSURLSessionResponseCancel);
+            vxlog_error("[🐞][didReceiveResponse] NSHTTPURLResponse is NULL.");
+            httpReq->getResponse().setSuccess(false);
+            httpReq->callCallback();
             return;
         }
+
+        httpReq->getResponse().setSuccess(true);
+
+        // Set response type
+        httpReq->getResponse().setType(vx::HTTPResponseType::PARTIAL_FIRST);
 
         // Set response status code
         httpReq->getResponse().setStatusCode(static_cast<uint16_t>(httpResponse.statusCode));
@@ -96,89 +111,94 @@
         }
         httpReq->getResponse().setHeaders(responseHeaders);
 
-        // Set response type
-        httpReq->getResponse().setType(vx::HTTPResponseType::PARTIAL_FIRST);
+        // response body remains empty
+        // httpReq->getResponse().setBytes("");
 
-        // Initialize response body
-        httpReq->getResponse().setBytes("");
-        httpReq->getResponse().setSuccess(true);
-
-        // Call callback for the first time with headers
         httpReq->callCallback();
     }
     completionHandler(NSURLSessionResponseAllow);
 }
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
-    vxlog_debug("🐞 [didReceiveData] ⭐️");
+    vxlog_debug("[🐞][didReceiveData] ⭐️");
     @synchronized (_taskMap) {
+
         NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
-        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
-        if (httpReqPtr) {
-//            // Append new data to existing response
-//            std::string newBytes(reinterpret_cast<const char*>(data.bytes), data.length);
-//            std::string currentBytes = httpReq->getResponse().getBytes();
-//            currentBytes.append(newBytes);
-//            httpReq->getResponse().setBytes(currentBytes);
-//
-//            // Call callback with the updated data
-//            httpReq->callCallback();
+        if (dictValue == nil) {
+            vxlog_error("[🐞][didReceiveData] HttpRequest not found in taskMap");
+            return;
         }
+
+        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
+        if (httpReqPtr == nullptr) {
+            vxlog_error("[🐞][didReceiveData] HttpRequest pointer is NULL. Cancelling the request.");
+            return;
+        }
+
+        vx::HttpRequest_SharedPtr httpReq = *httpReqPtr;
+        if (httpReq == nullptr) {
+            vxlog_error("[🐞][didReceiveData] HttpRequest shared pointer is NULL. Cancelling the request.");
+            return;
+        }
+
+        httpReq->getResponse().clear();
+        httpReq->getResponse().setSuccess(true);
+
+        // Set response type
+        httpReq->getResponse().setType(vx::HTTPResponseType::PARTIAL_BYTES);
+
+        // Append new data to existing response
+        const std::string newBytes(reinterpret_cast<const char*>(data.bytes), data.length);
+        httpReq->getResponse().setBytes(newBytes);
+
+        // Call callback with the updated data
+        httpReq->callCallback();
     }
 }
 
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
-    vxlog_debug("🐞 [didCompleteWithError] ⭐️");
+    vxlog_debug("[🐞][didCompleteWithError] ⭐️");
     @synchronized (_taskMap) {
+
         NSValue* dictValue = _taskMap[@(task.taskIdentifier)];
         if (dictValue == nil) {
-            vxlog_error("🐞 [didCompleteWithError] HttpRequest not found in taskMap");
+            vxlog_error("[🐞][didCompleteWithError] HttpRequest not found in taskMap");
             return;
         }
+
         vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
         if (httpReqPtr == nullptr) {
-            vxlog_error("🐞 [didCompleteWithError] HttpRequest pointer is nullptr");
+            vxlog_error("[🐞][didCompleteWithError] HttpRequest pointer is nullptr");
             return;
         }
 
+        vx::HttpRequest_SharedPtr httpReq = *httpReqPtr;
+        if (httpReq == nullptr) {
+            vxlog_error("[🐞][didCompleteWithError] HttpRequest shared pointer is NULL. Cancelling the request.");
+            return;
+        }
+
+        httpReq->getResponse().clear();
+
+        // Set response type
+        httpReq->getResponse().setType(vx::HTTPResponseType::PARTIAL_END);
+
+        if (error) {
+            vxlog_error("[🐞][didCompleteWithError] ERROR: %s", error.localizedDescription.UTF8String);
+            httpReq->setStatus(vx::HttpRequest::Status::FAILED);
+            httpReq->getResponse().setSuccess(false);
+        } else {
+            httpReq->setStatus(vx::HttpRequest::Status::DONE);
+            httpReq->getResponse().setSuccess(true);
+        }
+
+        // Call callback with the updated data
+        httpReq->callCallback();
+
+        // Clean up
+        // httpReq->_detachPlatformObject(); // done in HttpRequest destructor
+        [_taskMap removeObjectForKey:@(task.taskIdentifier)];
     }
-
-//        if (error) {
-//            vxlog_error("HTTP request failed: %s", error.localizedDescription.UTF8String);
-//            httpReq->getResponse().setSuccess(false);
-//            httpReq->setStatus(vx::HttpRequest::Status::FAILED);
-//        } else {
-//            httpReq->setStatus(vx::HttpRequest::Status::DONE);
-//        }
-//
-//        // Final callback
-//        httpReq->callCallback();
-//
-//        // Clean up
-//        httpReq->_detachPlatformObject();
-//        [_taskMap removeObjectForKey:@(task.taskIdentifier)];
-
-//        ====================================================================
-
-//        NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
-//        vx::HttpRequest_SharedPtr* httpReqPtr = static_cast<vx::HttpRequest_SharedPtr*>([dictValue pointerValue]);
-//        if (httpReqPtr) {
-//            if (error) {
-//                vxlog_error("HTTP request failed: %s", error.localizedDescription.UTF8String);
-//                httpReq->getResponse().setSuccess(false);
-//                httpReq->setStatus(vx::HttpRequest::Status::FAILED);
-//            } else {
-//                httpReq->setStatus(vx::HttpRequest::Status::DONE);
-//            }
-//
-//            // Final callback
-//            httpReq->callCallback();
-//
-//            // Clean up
-//            httpReq->_detachPlatformObject();
-//            [_taskMap removeObjectForKey:@(task.taskIdentifier)];
-//        }
-//    }
 }
 
 @end
