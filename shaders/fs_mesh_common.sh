@@ -14,8 +14,8 @@ $input v_color0, v_texcoord0
 
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
-#include "./include/utils_lib.sh"
 #if MESH_VARIANT_MRT_LIGHTING
+#include "./include/utils_lib.sh"
 #include "./include/mesh_lib.sh"
 #endif
 
@@ -68,7 +68,7 @@ void main() {
 
 #if MESH_VARIANT_MRT_LIGHTING
     gl_FragData[0] = color;
-    gl_FragData[1] = vec4(encodeNormalUint(normal), unlit);
+    gl_FragData[1] = vec4(normToUnorm3(normal), unlit);
     gl_FragData[2] = vec4(u_lighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, u_lighting.x);
     gl_FragData[3] = vec4(u_lighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR + emissive, unlit);
 #if MESH_VARIANT_MRT_PBR && MESH_VARIANT_MRT_LINEAR_DEPTH

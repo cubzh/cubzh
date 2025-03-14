@@ -26,7 +26,7 @@ void main() {
 #if VCOLOR_VARIANT_UNLIT
 	vec3 normal = vec3_splat(0.0);
 #else
-	vec3 normal = encodeNormalUint(v_normal);
+	vec3 normal = normToUnorm3(v_normal);
 #endif
 
 #if VCOLOR_VARIANT_MRT_LIGHTING && VCOLOR_VARIANT_UNLIT == 0

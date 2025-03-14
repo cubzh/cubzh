@@ -464,3 +464,11 @@ float frand(void) {
     const int r = rand();
     return (float)r / (float)RAND_MAX;
 }
+
+uint8_t utils_pack_norm_to_uint8(float value) {
+    return (uint8_t)(CLAMP01F(value * 0.5f + 0.5f) * 255.0f);
+}
+
+int16_t utils_pack_unorm_to_int16(float value) {
+    return (int16_t)(CLAMP01F(value) * 65535.0f - 32768.0f);
+}

@@ -35,7 +35,7 @@ float unpackMeshMetadata_albedoFlag(float f) {
 }
 
 vec3 decodeNormal(vec3 normal, mat3 tbn) {
-    vec3 snormal = decodeNormalUint(normal);
+    vec3 snormal = unormToNorm3(normal);
     vec3 wnormal = mul(tbn, snormal);
     return normalize(wnormal);
 }

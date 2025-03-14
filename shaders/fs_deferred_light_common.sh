@@ -146,7 +146,7 @@ void main() {
 
 	if (unlit == LIGHTING_UNLIT_FLAG) discard;
 
-	vec3 normal = decodeNormalUint(fb1.xyz);
+	vec3 normal = unormToNorm3(fb1.xyz);
 
 #if LIGHT_VARIANT_LINEAR_DEPTH
 	float viewZ = texture2D(s_fb2, uv).x;

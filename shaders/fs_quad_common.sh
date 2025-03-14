@@ -65,7 +65,7 @@ void main() {
 
 #if QUAD_VARIANT_MRT_LIGHTING
 	gl_FragData[0] = color;
-	gl_FragData[1] = vec4(encodeNormalUint(v_normal), unlit);
+	gl_FragData[1] = vec4(normToUnorm3(v_normal), unlit);
 	gl_FragData[2] = vec4(srgb.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, srgb.x * u_bakedIntensity);
 	gl_FragData[3] = vec4(srgb.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, unlit);
 #if QUAD_VARIANT_MRT_PBR && QUAD_VARIANT_MRT_LINEAR_DEPTH

@@ -108,7 +108,7 @@ void mesh_set_vertex_buffer(Mesh *m, Vertex *vertices, uint32_t count) {
     if (vertices != NULL && count > 0) {
         m->vb = vertices;
         m->vbCount = count;
-        m->hash = (uint32_t)crc32(0, (const void *)vertices, (uInt)m->vbCount);
+        m->hash = (uint32_t)crc32(0, (const void *)vertices, (uInt)(count * sizeof(Vertex)));
     } else {
         m->vb = NULL;
         m->vbCount = 0;

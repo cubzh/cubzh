@@ -14,11 +14,11 @@ extern "C" {
 #include "material.h"
 
 typedef struct {
-    float x, y, z;
-    float nx, ny, nz;
-    float tx, ty, tz;
-    float u, v;
+    float x, y, z, unused;
+    uint8_t nx, ny, nz;
+    uint8_t tx, ty, tz;
     uint32_t rgba;
+    int16_t u, v;
 } Vertex;
 
 typedef enum {

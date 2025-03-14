@@ -23,6 +23,7 @@
 #include "mesh.h"
 #include "material.h"
 #include "texture.h"
+#include "utils.h"
 
 #define GL_LINEAR 9729
 #define GL_NEAREST 9728
@@ -269,35 +270,36 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     Vertex* vertices = (Vertex*)malloc(vertexCount * sizeof(Vertex));
                     
                     for (size_t k = 0; k < vertexCount; ++k) {
+                        // position (float3)
                         cgltf_accessor_read_float(posAccessor, k, &vertices[k].x, 3);
+
+                        vertices[k].unused = 0.0f;
                         
+                        // normal (uint8 normalized)
                         if (normalAccessor != NULL) {
-                            cgltf_accessor_read_float(normalAccessor, k, &vertices[k].nx, 3);
+                            float normal[3]; cgltf_accessor_read_float(normalAccessor, k, normal, 3);
+                            vertices[k].nx = utils_pack_norm_to_uint8(normal[0]);
+                            vertices[k].ny = utils_pack_norm_to_uint8(normal[1]);
+                            vertices[k].nz = utils_pack_norm_to_uint8(normal[2]);
                         } else {
-                            vertices[k].nx = 0.0f;
-                            vertices[k].ny = 0.0f;
-                            vertices[k].nz = 0.0f;
-                        }
-                        
-                        if (uvAccessor != NULL) {
-                            cgltf_accessor_read_float(uvAccessor, k, &vertices[k].u, 2);
-                        } else {
-                            vertices[k].u = 0.0f;
-                            vertices[k].v = 0.0f;
+                            vertices[k].nx = utils_pack_norm_to_uint8(0.0f);
+                            vertices[k].ny = utils_pack_norm_to_uint8(0.0f);
+                            vertices[k].nz = utils_pack_norm_to_uint8(1.0f); // default to forward
                         }
 
+                        // tangent (uint8 normalized, pre-apply handedness)
                         if (tangentAccessor != NULL) {
-                            float tangent[4];
-                            cgltf_accessor_read_float(tangentAccessor, k, tangent, 4);
-                            vertices[k].tx = tangent[0] * tangent[3]; // pre-apply handedness
-                            vertices[k].ty = tangent[1] * tangent[3];
-                            vertices[k].tz = tangent[2] * tangent[3];
+                            float tangent[4]; cgltf_accessor_read_float(tangentAccessor, k, tangent, 4);
+                            vertices[k].tx = utils_pack_norm_to_uint8(tangent[0] * tangent[3]);
+                            vertices[k].ty = utils_pack_norm_to_uint8(tangent[1] * tangent[3]);
+                            vertices[k].tz = utils_pack_norm_to_uint8(tangent[2] * tangent[3]);
                         } else {
-                            vertices[k].tx = 1.0f; // default tangent aligned with X axis
-                            vertices[k].ty = 0.0f;
-                            vertices[k].tz = 0.0f;
+                            vertices[k].tx = utils_pack_norm_to_uint8(1.0f); // default to right
+                            vertices[k].ty = utils_pack_norm_to_uint8(0.0f);
+                            vertices[k].tz = utils_pack_norm_to_uint8(0.0f);
                         }
 
+                        // color (uint32)
                         if (colorAccessor != NULL) {
                             float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
                             cgltf_accessor_read_float(colorAccessor, k, color,
@@ -311,6 +313,16 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                             );
                         } else {
                             vertices[k].rgba = 0xFFFFFFFF;
+                        }
+
+                        // uv (int16 normalized)
+                        if (uvAccessor != NULL) {
+                            float uv[2]; cgltf_accessor_read_float(uvAccessor, k, uv, 2);
+                            vertices[k].u = utils_pack_unorm_to_int16(uv[0]);
+                            vertices[k].v = utils_pack_unorm_to_int16(uv[1]);
+                        } else {
+                            vertices[k].u = utils_pack_unorm_to_int16(0.0f);
+                            vertices[k].v = utils_pack_unorm_to_int16(0.0f);
                         }
                     }
 

@@ -35,7 +35,7 @@ void main() {
 	gl_FragData[2] = VOXEL_LIGHT_DEFAULT_RGBS;
 	gl_FragData[3] = vec4(0.0, 0.0, 0.0, LIGHTING_UNLIT_FLAG);
 #else
-	gl_FragData[1] = vec4(encodeNormalUint(v_normal), LIGHTING_LIT_FLAG);
+	gl_FragData[1] = vec4(normToUnorm3(v_normal), LIGHTING_LIT_FLAG);
 	gl_FragData[2] = vec4(v_lighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, v_lighting.x);
 	gl_FragData[3] = vec4(v_lighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, LIGHTING_LIT_FLAG);
 #endif // VOXEL_VARIANT_UNLIT
