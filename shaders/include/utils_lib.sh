@@ -29,11 +29,27 @@ float sum(vec3 v) {
 	return v.x + v.y + v.z;
 }
 
-vec4 encodeNormalUint(vec4 v) {
+vec4 normToUnorm4(vec4 v) {
 	return v * 0.5 + 0.5;
 }
 
-vec4 decodeNormalUint(vec4 v) {
+vec3 normToUnorm3(vec3 v) {
+	return v * 0.5 + 0.5;
+}
+
+vec2 normToUnorm2(vec2 v) {
+	return v * 0.5 + 0.5;
+}
+
+vec4 unormToNorm4(vec4 v) {
+	return v * 2.0 - 1.0;
+}
+
+vec3 unormToNorm3(vec3 v) {
+	return v * 2.0 - 1.0;
+}
+
+vec2 unormToNorm2(vec2 v) {
 	return v * 2.0 - 1.0;
 }
 

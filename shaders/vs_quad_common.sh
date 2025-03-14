@@ -1,6 +1,6 @@
 #define IS_SHADOW_PASS (QUAD_VARIANT_MRT_SHADOW_PACK || QUAD_VARIANT_MRT_SHADOW_SAMPLE)
 
-$input a_position, a_normal, a_texcoord0, a_color0
+$input a_position, a_normal, a_color0, a_texcoord0
 #if IS_SHADOW_PASS
 
 #if QUAD_VARIANT_TEX && QUAD_VARIANT_CUTOUT

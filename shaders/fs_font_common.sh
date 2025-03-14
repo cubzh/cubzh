@@ -66,7 +66,7 @@ void main() {
 	gl_FragData[2] = VOXEL_LIGHT_DEFAULT_RGBS;
 	gl_FragData[3] = vec4(0.0, 0.0, 0.0, LIGHTING_UNLIT_FLAG);
 #else
-	gl_FragData[1] = vec4(encodeNormalUint(u_normal.xyz), LIGHTING_LIT_FLAG);
+	gl_FragData[1] = vec4(normToUnorm3(u_normal.xyz), LIGHTING_LIT_FLAG);
 #if FONT_VARIANT_LIGHTING_UNIFORM
 	gl_FragData[2] = vec4(emissive * VOXEL_LIGHT_RGB_PRE_FACTOR, lightValue);
 	gl_FragData[3] = vec4(emissive * VOXEL_LIGHT_RGB_POST_FACTOR, LIGHTING_LIT_FLAG);

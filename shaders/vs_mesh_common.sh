@@ -1,6 +1,6 @@
 #define IS_SHADOW_PASS (MESH_VARIANT_MRT_SHADOW_PACK || MESH_VARIANT_MRT_SHADOW_SAMPLE)
 
-$input a_position, a_normal, a_tangent, a_texcoord0, a_color0
+$input a_position, a_normal, a_tangent, a_color0, a_texcoord0
 #if IS_SHADOW_PASS
 
 #if MESH_VARIANT_MRT_SHADOW_PACK
@@ -38,7 +38,9 @@ uniform vec4 u_params;
 #endif // IS_SHADOW_PASS
 
 #include "./include/bgfx.sh"
-#if MESH_VARIANT_MRT_LIGHTING == 0
+#if MESH_VARIANT_MRT_LIGHTING
+#include "./include/utils_lib.sh"
+#else
 #include "./include/game_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
@@ -63,8 +65,8 @@ void main() {
 #if MESH_VARIANT_MRT_LINEAR_DEPTH
     vec4 view = mul(u_modelView, model);
 #endif
-    vec3 wnormal = normalize(mul(u_model[0], vec4(a_normal, 0.0)).xyz);
-	vec3 wtangent = normalize(mul(u_model[0], vec4(a_tangent, 0.0)).xyz);
+    vec3 wnormal = normalize(mul(u_model[0], vec4(unormToNorm3(a_normal), 0.0)).xyz);
+	vec3 wtangent = normalize(mul(u_model[0], vec4(unormToNorm3(a_tangent), 0.0)).xyz);
     vec3 wbitangent = cross(wnormal, wtangent);// * a_tangent.w;
 #else
     vec4 color = mix(getNonVoxelVertexLitColor(a_color0, u_lighting.x, u_lighting.yzw, u_sunColor.xyz, clip.z), a_color0, u_unlit);
@@ -72,7 +74,7 @@ void main() {
 
     gl_Position = clip;
     v_color0 = color;
-    v_uv = a_texcoord0.xy;
+    v_uv = normToUnorm2(a_texcoord0.xy);
 #if MESH_VARIANT_MRT_LIGHTING
 #if MESH_VARIANT_MRT_LINEAR_DEPTH
     v_linearDepth = view.z;
