@@ -1075,6 +1075,8 @@ int lws_callback_http(struct lws *wsi,
             if (req != nullptr) {
                 // call callback function
                 req->getResponse().setSuccess(true);
+                req->getResponse().setDownloadComplete(true);
+                req->setStatus(HttpRequest::Status::DONE);
                 if (req->callCallback()) {
                     delete reinterpret_cast<HttpRequest_SharedPtr*>(user);
                     lws_set_wsi_user(wsi, nullptr);

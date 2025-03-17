@@ -111,7 +111,6 @@
 }
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
-    NSString *dataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     @synchronized (_taskMap) {
 
         NSValue* dictValue = _taskMap[@(dataTask.taskIdentifier)];
