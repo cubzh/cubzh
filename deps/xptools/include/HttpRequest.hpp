@@ -88,8 +88,7 @@ public:
     void setCachedResponse(const bool success,
                            const uint16_t statusCode,
                            const std::unordered_map<std::string, std::string>& headers,
-                           const std::string bytes);
-    HttpResponse& getCachedResponse();
+                           const std::string& bytes);
 
     // Accessors
 

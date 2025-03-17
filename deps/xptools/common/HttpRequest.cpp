@@ -275,18 +275,16 @@ HttpResponse& HttpRequest::getResponse() {
     return this->_response;
 }
 
-HttpResponse& HttpRequest::getCachedResponse() {
-    return this->_cachedResponse;
-}
-
 void HttpRequest::setCachedResponse(const bool success,
                                     const uint16_t statusCode,
                                     const std::unordered_map<std::string, std::string>& headers,
-                                    const std::string bytes) {
+                                    const std::string& bytes) {
     this->_cachedResponse.setSuccess(success);
     this->_cachedResponse.setStatusCode(statusCode);
     this->_cachedResponse.setHeaders(headers);
     this->_cachedResponse.appendBytes(bytes);
+    this->_cachedResponse.setUseLocalCache(true);
+    this->_cachedResponse.setDownloadComplete(true);
 }
 
 // Accessors
@@ -461,6 +459,7 @@ void HttpRequest::_useCachedResponse() {
     strongSelf->_response.setStatusCode(strongSelf->_cachedResponse.getStatusCode());
     strongSelf->_response.appendBytes(allBytes);
     strongSelf->_response.setUseLocalCache(strongSelf->_cachedResponse.getUseLocalCache());
+    strongSelf->_response.setDownloadComplete(strongSelf->_cachedResponse.getDownloadComplete());
 }
 
 #endif
