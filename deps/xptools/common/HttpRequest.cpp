@@ -58,7 +58,7 @@ bool HttpRequest::callCallback() {
         // never trigger callback if request has been cancelled
         return false;
     }
-    if (strongSelf->_callbackCalled == true) {
+    if (strongSelf->_callbackCalled == true && strongSelf->getOpts().getStreamResponse() == false) {
         vxlog_warning("HttpRequest callback is being called more than one time!");
         return false;
     }
@@ -299,8 +299,12 @@ const std::string& HttpRequest::getBodyBytes() const {
     return this->_bodyBytes;
 }
 
+const HttpRequestOpts& HttpRequest::getOpts() const {
+    return _opts;
+}
+
 void HttpRequest::setOpts(const HttpRequestOpts& opts) {
-    this->_opts = HttpRequestOpts(opts);
+    _opts = HttpRequestOpts(opts);
 }
 
 void HttpRequest::setHeaders(const std::unordered_map<std::string, std::string>& headers) {
@@ -444,11 +448,18 @@ void HttpRequest::_useCachedResponse() {
     if (strongSelf == nullptr) {
         return;
     }
+
+    std::string allBytes;
+    const bool ok = strongSelf->_cachedResponse.readAllBytes(allBytes);
+    if (ok == false) {
+        return;
+    }
+
     // HTTP headers are not pulled from cache
     // doc: https://developer.mozilla.org/fr/docs/Web/HTTP/Status/304
     strongSelf->_response.setSuccess(strongSelf->_cachedResponse.getSuccess());
     strongSelf->_response.setStatusCode(strongSelf->_cachedResponse.getStatusCode());
-    strongSelf->_response.setBytes(strongSelf->_cachedResponse.getBytes());
+    strongSelf->_response.appendBytes(allBytes);
     strongSelf->_response.setUseLocalCache(strongSelf->_cachedResponse.getUseLocalCache());
 }
 

@@ -9,31 +9,42 @@
 #include "HttpResponse.hpp"
 
 // C++
+#include <mutex>
 #include <string>
 
 namespace vx {
 
 HttpResponse::HttpResponse() :
 _success(false),
+_downloadComplete(false),
 _statusCode(0),
 _headers(),
 _bytes(),
+_bytesLock(),
 _useLocalCache(false) {}
 
 HttpResponse::~HttpResponse() {}
 
-// TODO: remove get/set success
-// status code == 0 + empty body is enough
-void HttpResponse::setSuccess(const bool& success) {
-    _success = success;
+void HttpResponse::setSuccess(const bool& value) {
+    _success = value;
 }
 
 const bool& HttpResponse::getSuccess() const {
     return _success;
 }
 
-void HttpResponse::setStatusCode(const uint16_t& statusCode) {
-    this->_statusCode = statusCode;
+void HttpResponse::setDownloadComplete(const bool& value) {
+    std::lock_guard<std::mutex> lock(_bytesLock);
+    _downloadComplete = value;
+}
+
+const bool& HttpResponse::getDownloadComplete() const {
+    std::lock_guard<std::mutex> lock(_bytesLock);
+    return _downloadComplete;
+}
+
+void HttpResponse::setStatusCode(const uint16_t& value) {
+    _statusCode = value;
 }
 
 const uint16_t& HttpResponse::getStatusCode() const {
@@ -77,12 +88,12 @@ HTTPStatus HttpResponse::getStatus() const {
     return HTTPStatus::UNKNOWN;
 }
 
-void HttpResponse::setHeaders(std::unordered_map<std::string, std::string>&& headers) {
-    this->_headers = headers;
+void HttpResponse::setHeaders(std::unordered_map<std::string, std::string>&& value) {
+    _headers = std::move(value);
 }
 
-void HttpResponse::setHeaders(const std::unordered_map<std::string, std::string>& headers) {
-    this->_headers = headers;
+void HttpResponse::setHeaders(const std::unordered_map<std::string, std::string>& value) {
+    _headers = value;
 }
 
 const std::unordered_map<std::string, std::string>& HttpResponse::getHeaders() const {
@@ -90,39 +101,39 @@ const std::unordered_map<std::string, std::string>& HttpResponse::getHeaders() c
 }
 
 void HttpResponse::appendBytes(const std::string& bytes) {
-    this->_bytes.append(bytes);
+    std::lock_guard<std::mutex> lock(_bytesLock);
+    // _bytes.insert(_bytes.end(), bytes.begin(), bytes.end());
+    _bytes.append(bytes);
 }
 
-const std::string& HttpResponse::getBytes() const {
-    return _bytes;
+void HttpResponse::readBytes(std::string& outBytes) {
+    std::lock_guard<std::mutex> lock(_bytesLock);
+    outBytes.assign(_bytes);
+    _bytes.clear();
 }
 
-void HttpResponse::setBytes(const std::string& bytes) {
-    this->_bytes.assign(bytes);
+// TODO: gdevillele: _bytes.clear() has been commented in order for HTTP caching to work (see HttpClient::cacheHttpResponse)
+bool HttpResponse::readAllBytes(std::string& outBytes) {
+    std::lock_guard<std::mutex> lock(_bytesLock);
+    if (_downloadComplete == false) {
+        return false; // error
+    }
+    outBytes.assign(_bytes.begin(), _bytes.end());
+    // _bytes.clear();
+    return true;
 }
 
-void HttpResponse::setUseLocalCache(const bool useLocalCache) {
-    this->_useLocalCache = useLocalCache;
+size_t HttpResponse::availableBytes() const {
+    std::lock_guard<std::mutex> lock(_bytesLock);
+    return _bytes.size();
 }
 
-bool HttpResponse::getUseLocalCache() const {
+void HttpResponse::setUseLocalCache(const bool& value) {
+    _useLocalCache = value;
+}
+
+const bool& HttpResponse::getUseLocalCache() const {
     return _useLocalCache;
 }
-
-const std::string HttpResponse::getText() const {
-    const size_t byteCount = _bytes.size(); // count of bytes
-    // alloc string of size (byteCount + 1) to accomodate for trailing NULL char
-    // (string is initialized with NULL chars)
-    std::string text(byteCount + 1, '\0');
-    // copy bytes into the string
-    text.replace(0, byteCount, _bytes);
-    return text;
-}
-
-// --------------------------------------------------
-// MARK: - Private -
-// --------------------------------------------------
-
-
 
 }

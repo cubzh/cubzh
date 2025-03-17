@@ -9,9 +9,11 @@
 #pragma once
 
 // C++
-#include <string>
 #include <cstdint>
+#include <mutex>
+#include <string>
 #include <unordered_map>
+#include <limits>
 
 namespace vx {
 
@@ -36,44 +38,50 @@ public:
     virtual ~HttpResponse();
     
     // accessors
-    void setSuccess(const bool& success);
+    void setSuccess(const bool& value);
     const bool& getSuccess() const;
-    
-    void setStatusCode(const uint16_t& statusCode);
+
+    void setDownloadComplete(const bool& value);
+    const bool& getDownloadComplete() const;
+
+    void setStatusCode(const uint16_t& value);
     const uint16_t& getStatusCode() const;
     HTTPStatus getStatus() const;
 
-    void appendBytes(const std::string& bytes);
-    const std::string& getBytes() const;
-    void setBytes(const std::string& bytes);
-
-    void setHeaders(std::unordered_map<std::string, std::string>&& headers);
-    void setHeaders(const std::unordered_map<std::string, std::string>& headers);
+    void setHeaders(std::unordered_map<std::string, std::string>&& value);
+    void setHeaders(const std::unordered_map<std::string, std::string>& value);
     const std::unordered_map<std::string, std::string>& getHeaders() const;
 
-    void setUseLocalCache(const bool useLocalCache);
-    bool getUseLocalCache() const;
+    // bytes buffer
+    void appendBytes(const std::string& bytes);
+    /// reads all available bytes, and clear the internal buffer
+    void readBytes(std::string& outBytes);
+    bool readAllBytes(std::string& outBytes);
+    size_t availableBytes() const;
 
-    /// TODO: should be removed once we support HTTP headers for the response
-    /// -> if we have a Content-Type header with application/json or other text
-    ///    formats, the _bytes field should have a trailing NULL character.
-    const std::string getText() const;
-    
+    void setUseLocalCache(const bool& value);
+    const bool& getUseLocalCache() const;
+
 private:
-    
+
     /// indicates whether the connection was successful
     bool _success;
-    
+
+    /// indicates whether all bytes have been received or if we are still waiting for some
+    bool _downloadComplete;
+
     /// HTTP status code
     uint16_t _statusCode;
     
-    /// HTTP headers
+    /// HTTP response headers
     std::unordered_map<std::string, std::string> _headers;
     
-    /// Response body
+    /// Response body & its mutex
     std::string _bytes;
+    mutable std::mutex _bytesLock;
 
     /// Indicates whether the response content is from local cache
+    /// Note: if HttpRequest.opts.streamResponse == true, cache is never used for now.
     bool _useLocalCache;
 };
 

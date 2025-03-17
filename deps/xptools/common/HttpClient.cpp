@@ -94,6 +94,11 @@ HttpRequest_SharedPtr HttpClient::GET(const URL& url,
         return nullptr;
     }
 
+    // this function (HttpClient::GET) doesn't support streaming yet
+    if (opts.getStreamResponse() == true) {
+        return nullptr;
+    }
+
     const bool secure = url.scheme() == VX_HTTPS_SCHEME;
 
     HttpRequest_SharedPtr req = HttpRequest::make("GET",
@@ -321,11 +326,16 @@ _cacheMutex(),
 _callbackMiddleware(nullptr) {}
 
 bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
+    // For now, there is no caching for streamed HTTP responses
+    if (req->getOpts().getStreamResponse()) {
+        return true;
+    }
+
     const std::lock_guard<std::mutex> lock(this->_cacheMutex);
 
     bool ok = false;
 
-    const HttpResponse& response = req->getResponse();
+    HttpResponse& response = req->getResponse();
     const HttpHeaders& responseHeaders = response.getHeaders();
 
     // test status code
@@ -432,7 +442,13 @@ bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
 
     // HTTP response body
     {
-        ok = _cacheWriteStringChunk(VX_HTTP_CACHE_CHUNK_BODY, response.getBytes(), fd);
+        std::string allBytes;
+        ok = response.readAllBytes(allBytes);\
+        if (ok == false) {
+            goto return_false;
+        }
+        
+        ok = _cacheWriteStringChunk(VX_HTTP_CACHE_CHUNK_BODY, allBytes, fd);
         if (ok == false) {
             goto return_false;
         }
@@ -566,7 +582,7 @@ HttpClient::CacheMatch HttpClient::getCachedResponseForRequest(HttpRequest_Share
         req->getCachedResponse().setSuccess(true);
         req->getCachedResponse().setStatusCode(static_cast<uint16_t>(statusCode));
         req->getCachedResponse().setHeaders(std::move(headers));
-        req->getCachedResponse().setBytes(body);
+        req->getCachedResponse().appendBytes(body);
         req->getCachedResponse().setUseLocalCache(true);
     }
 
