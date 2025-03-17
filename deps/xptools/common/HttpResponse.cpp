@@ -102,7 +102,6 @@ const std::unordered_map<std::string, std::string>& HttpResponse::getHeaders() c
 
 void HttpResponse::appendBytes(const std::string& bytes) {
     std::lock_guard<std::mutex> lock(_bytesLock);
-    // _bytes.insert(_bytes.end(), bytes.begin(), bytes.end());
     _bytes.append(bytes);
 }
 
@@ -118,7 +117,7 @@ bool HttpResponse::readAllBytes(std::string& outBytes) {
     if (_downloadComplete == false) {
         return false; // error
     }
-    outBytes.assign(_bytes.begin(), _bytes.end());
+    outBytes.assign(_bytes); // make a copy
     // _bytes.clear();
     return true;
 }

@@ -328,11 +328,10 @@ _callbackMiddleware(nullptr) {}
 bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
     // For now, there is no caching for streamed HTTP responses
     if (req->getOpts().getStreamResponse()) {
-        return true;
+        return false; // was not cached
     }
 
     const std::lock_guard<std::mutex> lock(this->_cacheMutex);
-
     bool ok = false;
 
     HttpResponse& response = req->getResponse();
@@ -443,11 +442,10 @@ bool HttpClient::cacheHttpResponse(HttpRequest_SharedPtr req) {
     // HTTP response body
     {
         std::string allBytes;
-        ok = response.readAllBytes(allBytes);\
+        ok = response.readAllBytes(allBytes);
         if (ok == false) {
             goto return_false;
         }
-        
         ok = _cacheWriteStringChunk(VX_HTTP_CACHE_CHUNK_BODY, allBytes, fd);
         if (ok == false) {
             goto return_false;
@@ -579,16 +577,9 @@ HttpClient::CacheMatch HttpClient::getCachedResponseForRequest(HttpRequest_Share
             goto return_cache_not_found_and_delete_cache;
         }
 
-        req->getCachedResponse().setSuccess(true);
-        req->getCachedResponse().setStatusCode(static_cast<uint16_t>(statusCode));
-        req->getCachedResponse().setHeaders(std::move(headers));
-        req->getCachedResponse().appendBytes(body);
-        req->getCachedResponse().setUseLocalCache(true);
+        req->setCachedResponse(true, static_cast<uint16_t>(statusCode), std::move(headers), body);
     }
 
-    goto return_result;
-
-return_result:
     fclose(fd);
     return result;
 
