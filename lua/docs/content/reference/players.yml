@@ -1,4 +1,4 @@
-keywords: ["blip", "game", "mobile", "scripting", "luau", "lua"]
+keywords: ["blip", "lua", "luau", "players", "multiplayer", "user", "character", "avatar", "game", "online"]
 type: "Players"
 description: Players is an array of Players, it contains all players currently connected in the World.
 blocks:

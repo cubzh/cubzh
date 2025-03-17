@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+keywords: ["blip", "lua", "luau", "world", "scene", "environment", "game world", "space", "universe", "root"]
 type: "World"
 extends: "Object"
 description: |

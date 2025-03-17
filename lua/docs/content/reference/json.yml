@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "json"]
+keywords: ["blip", "lua", "luau", "json", "parse", "stringify", "data format", "serialization", "objects", "api"]
 type: "JSON"
 
 creatable: false

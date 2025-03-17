@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "data"]
+keywords: ["blip", "lua", "luau", "data", "storage", "persistence", "save", "load", "serialization", "database"]
 type: "Data"
 
 creatable: false 
