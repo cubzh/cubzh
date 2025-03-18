@@ -14,7 +14,7 @@ extern "C" {
 #include "material.h"
 
 typedef struct {
-    float x, y, z, unused;
+    float x, y, z;
     uint8_t nx, ny, nz;
     uint8_t tx, ty, tz;
     uint32_t rgba;
