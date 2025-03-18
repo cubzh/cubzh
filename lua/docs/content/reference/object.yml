@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "object", "voxel"]
+keywords: ["blip", "lua", "luau", "object", "entity", "transform", "component", "properties", "methods", "scene graph"]
 type: "Object"
 description: |
   An `Object` is the most basic thing that can be added to the game 3D scene.

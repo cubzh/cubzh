@@ -575,7 +575,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 
 	mt.Avatar = nil
 
-	mt.ID = playerID or 252
+	mt.ConnectionID = playerID or 252
 	mt.Username = username or "..."
 	mt.UserID = userID or "..."
 	mt.IsLocal = isLocal
@@ -600,7 +600,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 	local objectIndex = mt.__index
 	mt.__index = function(t, k)
 		if
-			k == "ID"
+			k == "ConnectionID"
 			or k == "Avatar"
 			or k == "Username"
 			or k == "UserID"
@@ -652,7 +652,7 @@ local playerCall = function(_, playerID, username, userID, isLocal)
 			mt[k] = v
 			return
 		end
-		if k == "Username" or k == "UserID" or k == "ID" then
+		if k == "Username" or k == "UserID" or k == "ConnectionID" then
 			error("Player." .. k .. " can't be modified", 2)
 		end
 		if k == "Avatar" then

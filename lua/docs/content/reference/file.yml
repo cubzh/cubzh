@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "file"]
+keywords: ["blip", "lua", "luau", "file", "storage", "io", "read", "write", "filesystem", "data"]
 type: "File"
 
 creatable: false 

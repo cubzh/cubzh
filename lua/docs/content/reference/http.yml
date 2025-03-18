@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world", "http", "callback"]
+keywords: ["blip", "lua", "luau", "http", "request", "api", "web", "networking", "data", "fetch"]
 type: "HTTP"
 
 creatable: false

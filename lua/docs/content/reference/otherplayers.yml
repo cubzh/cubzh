@@ -1,17 +1,22 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+keywords: ["blip", "lua", "luau", "other players", "multiplayer", "network", "remote", "users", "online", "interaction"]
 type: "OtherPlayers"
 description: "OtherPlayers is an array of Players that contains all players except the local one."
 blocks:
   - text: |
-      [OtherPlayers] is a table containing all [Player]s except the local one.
+      [OtherPlayers] is a [array] containing all [Player]s currently connected to the [World], except the local one.
     
       [OtherPlayers] is not available to the [Server], because it just wouldn't make sense! 🙂
 
-      [Player]s are indexed by their "player ID". Player IDs range from 0 to 15.
+      Player indexes in [OtherPlayers] are arbitrary, and may change as players join and leave.
 
-      ⚠️ Don't use `ipairs` for iterating over `OtherPlayers`, but only `pairs`.
   - code: |
-      for id, player in pairs(OtherPlayers) do
-        -- id and player.ID have the same value here
-        print(id, player.ID, player.Username)
+      -- print information about all other players:
+      for _, player in OtherPlayers do
+        print(player.Username, player.UserID, player.ConnectionID)
+      end
+
+      -- another way to iterate:
+      for i = 1, #OtherPlayers do
+        local player = OtherPlayers[i]
+        print(player.Username, player.UserID, player.ConnectionID)
       end

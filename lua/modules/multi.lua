@@ -182,24 +182,24 @@ local initPlayer = function(player)
 		player:SetParent(World)
 	end
 	if player == Player then
-		multi:sync(player, "p_" .. player.ID, {
+		multi:sync(player, "p_" .. player.ConnectionID, {
 			keys = { "Motion", "Velocity", "Position", "Rotation.Y" },
 			triggers = { "LocalRotation", "Rotation", "Motion", "Position", "Velocity" },
 		})
 		multi:sync(
 			player.Head,
-			"ph_" .. player.ID,
+			"ph_" .. player.ConnectionID,
 			{ keys = { "LocalRotation.X" }, triggers = { "LocalRotation", "Rotation" } }
 		)
 	else
-		multi:link(player, "p_" .. player.ID)
-		multi:link(player.Head, "ph_" .. player.ID)
+		multi:link(player, "p_" .. player.ConnectionID)
+		multi:link(player.Head, "ph_" .. player.ConnectionID)
 	end
 end
 
 local removePlayer = function(player)
-	multi:unlink("ph_" .. player.ID)
-	multi:unlink("p_" .. player.ID)
+	multi:unlink("ph_" .. player.ConnectionID)
+	multi:unlink("p_" .. player.ConnectionID)
 	if player ~= Player then
 		player:RemoveFromParent()
 	end

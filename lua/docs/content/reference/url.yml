@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+keywords: ["blip", "lua", "luau", "url", "web", "link", "address", "http", "internet", "resource"]
 type: "URL"
 description: "URL allows to open web pages from the Lua script."
 blocks:

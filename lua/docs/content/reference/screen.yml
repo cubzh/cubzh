@@ -1,4 +1,4 @@
-keywords: ["cubzh", "game", "mobile", "scripting", "cube", "voxel", "world"]
+keywords: ["blip", "lua", "luau", "screen", "display", "resolution", "viewport", "ui", "interface", "rendering"]
 type: "Screen"
 description: |
     Screen represents the area on which the app is rendered.
