@@ -272,8 +272,6 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                     for (size_t k = 0; k < vertexCount; ++k) {
                         // position (float3)
                         cgltf_accessor_read_float(posAccessor, k, &vertices[k].x, 3);
-
-                        vertices[k].unused = 0.0f;
                         
                         // normal (uint8 normalized)
                         if (normalAccessor != NULL) {
