@@ -318,11 +318,11 @@ bool serialization_gltf_load(const void *buffer, const size_t size, const ASSET_
                         // uv (int16 normalized)
                         if (uvAccessor != NULL) {
                             float uv[2]; cgltf_accessor_read_float(uvAccessor, k, uv, 2);
-                            vertices[k].u = utils_pack_unorm_to_int16(uv[0]);
-                            vertices[k].v = utils_pack_unorm_to_int16(uv[1]);
+                            vertices[k].u = utils_pack_unorm_to_int16(uv[0], true);
+                            vertices[k].v = utils_pack_unorm_to_int16(uv[1], true);
                         } else {
-                            vertices[k].u = utils_pack_unorm_to_int16(0.0f);
-                            vertices[k].v = utils_pack_unorm_to_int16(0.0f);
+                            vertices[k].u = utils_pack_unorm_to_int16(0.0f, false);
+                            vertices[k].v = utils_pack_unorm_to_int16(0.0f, false);
                         }
                     }
 
