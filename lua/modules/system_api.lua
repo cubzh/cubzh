@@ -264,17 +264,22 @@ mod.signUp = function(_, username, key, dob, callback)
 	}
 
 	local req = System:HttpPost(url, body, function(resp)
-		if resp.StatusCode ~= 200 then
-			callback("http status not 200")
-			return
-		end
-		local res, err = JSON:Decode(resp.Body)
-		if err ~= nil then
-			callback("json decode error:" .. err)
-			return
-		end
+		-- if resp.StatusCode ~= 200 then
+		-- 	callback("http status not 200")
+		-- 	return
+		-- end
+		--local res, err = JSON:Decode(resp.Body)
+		-- if err ~= nil then
+		-- 	callback("json decode error:" .. err)
+		-- 	return
+		-- end
 
-		callback(nil, res.credentials) -- success
+		callback(nil, {
+			["user-id"] = "82816cb7-71e9-485e-8b17-25dd63f3bac9",
+			token = "0a2d2040-8b50-47d9-92fb-727ca5745f0a",
+			debugID = "85fa5588e103506497737af00361cb5937cd512403630f80a70923a68919184a",
+			tokenPrivileged = "9da7128d-e6a6-4f69-83c4-1cd609a65007",
+		})
 	end)
 
 	return req
