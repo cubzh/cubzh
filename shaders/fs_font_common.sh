@@ -12,7 +12,6 @@ $input v_color0, v_texcoord0
 #include "./include/utils_lib.sh"
 #if FONT_VARIANT_LIGHTING_UNIFORM
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
 #endif

@@ -14,7 +14,6 @@ $input v_color0
 #include "./include/quad_lib.sh"
 #if QUAD_VARIANT_MRT_LIGHTING
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
 #endif

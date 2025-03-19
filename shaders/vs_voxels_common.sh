@@ -1,3 +1,5 @@
+#define IS_SHADOW_PASS (VOXEL_VARIANT_MRT_SHADOW_PACK || VOXEL_VARIANT_MRT_SHADOW_SAMPLE)
+
 $input a_position, a_texcoord0
 #if VOXEL_VARIANT_MRT_LIGHTING
 $output v_color0, v_color1, v_texcoord0, v_texcoord1
@@ -18,15 +20,17 @@ $output v_color0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
+#if VOXEL_VARIANT_DRAWMODES
+#include "./include/drawmodes_uniforms.sh"
+#endif
 
-#define IS_SHADOW_PASS (VOXEL_VARIANT_MRT_SHADOW_PACK || VOXEL_VARIANT_MRT_SHADOW_SAMPLE)
-
-#if !IS_SHADOW_PASS
+#if IS_SHADOW_PASS == false
 SAMPLER2D(s_palette, 0);
-#endif // !IS_SHADOW_PASS
+#endif
+
+uniform vec4 u_lighting;
 
 #define a_colorIdx a_position.w
 #define a_metadata a_texcoord0.x
@@ -67,12 +71,8 @@ void main() {
 
 #if VOXEL_VARIANT_UNLIT
 	vec4 voxelLight = VOXEL_LIGHT_DEFAULT_SRGB;
-#elif VOXEL_VARIANT_LIGHTING_ATTRIBUTES
-	vec4 voxelLight = unpackVoxelLight(meta.z);
-#elif VOXEL_VARIANT_LIGHTING_UNIFORM
-	vec4 voxelLight = u_lighting;
 #else
-	vec4 voxelLight = VOXEL_LIGHT_DEFAULT_SRGB;
+	vec4 voxelLight = BLEND_SOFT_ADDITIVE(unpackVoxelLight(meta.z), u_lighting);
 #endif
 
 #if VOXEL_VARIANT_LIGHTING_UNIFORM == 0 && VOXEL_VARIANT_UNLIT == 0

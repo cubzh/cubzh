@@ -4,8 +4,6 @@
 
 // Unlit
 #define VOXEL_VARIANT_UNLIT 1
-#define VOXEL_VARIANT_LIGHTING_UNIFORM 0
-#define VOXEL_VARIANT_LIGHTING_ATTRIBUTES 0
 
 // Multiple render target transparency
 #define VOXEL_VARIANT_MRT_TRANSPARENCY 1

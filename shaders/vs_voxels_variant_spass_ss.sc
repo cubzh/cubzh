@@ -4,8 +4,6 @@
 
 // No lighting
 #define VOXEL_VARIANT_UNLIT 0
-#define VOXEL_VARIANT_LIGHTING_UNIFORM 0
-#define VOXEL_VARIANT_LIGHTING_ATTRIBUTES 0
 
 // Multiple render target shadow w/ depth sampling
 #define VOXEL_VARIANT_MRT_TRANSPARENCY 0

@@ -17,7 +17,7 @@ $input v_color0
 #include "./include/config.sh"
 #if VOXEL_VARIANT_DRAWMODES
 #include "./include/drawmodes_lib.sh"
-#include "./include/voxels_uniforms_fs.sh"
+#include "./include/drawmodes_uniforms_fs.sh"
 #elif VOXEL_VARIANT_MRT_LIGHTING
 #include "./include/utils_lib.sh"
 #endif

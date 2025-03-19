@@ -273,6 +273,7 @@ typedef struct {
     l.ambient = 15;                                                                                \
     l.red = l.green = l.blue = 0;
 #define ZERO_LIGHT(l) l.ambient = l.red = l.green = l.blue = 0;
+#define DEFAULT_LIGHT_PACKED 480 // 15 * 32
 static VERTEX_LIGHT_STRUCT_T vertex_light_default = {15, 0, 0, 0};
 static VERTEX_LIGHT_STRUCT_T vertex_light_zero = {0, 0, 0, 0};
 
