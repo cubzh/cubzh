@@ -574,6 +574,8 @@ void HttpRequest::downloadFinished(HttpRequest_SharedPtr strongReq,
             strongReq->_response.setSuccess(success);
             strongReq->_response.setStatusCode(statusCode);
             strongReq->_response.appendBytes(bytes);
+            strongReq->_response.setDownloadComplete(true);
+            strongReq->setStatus(Status::DONE);
             strongReq->callCallback();
 
         } else {
