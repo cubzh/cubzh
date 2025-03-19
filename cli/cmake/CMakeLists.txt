@@ -48,7 +48,15 @@ set(CZH_CLI_DIR "${CZH_ROOT_DIR}/cli")
 # file(REAL_PATH "./deps/cxxopts/include" CZH_DEPS_CXXOPTS_INC BASE_DIRECTORY ${CZH_ROOT_DIR})
 set(CZH_DEPS_CXXOPTS_INC "${CZH_ROOT_DIR}/deps/cxxopts/include")
 
+# BGFX
+set(BGFX_DIR "${CZH_ROOT_DIR}/deps/bgfx/bgfx")
 
+# --------------------------------------------------
+# Includes
+# --------------------------------------------------
+
+include_directories(
+        ${BGFX_DIR}/3rdparty)
 
 # --------------------------------------------------
 # Deps : zlib
@@ -57,15 +65,13 @@ set(CZH_DEPS_CXXOPTS_INC "${CZH_ROOT_DIR}/deps/cxxopts/include")
 # file(REAL_PATH "./deps/libz/${CZH_SYSTEM}-${CZH_ARCH}" CZH_DEPS_LIBZ BASE_DIRECTORY ${CZH_ROOT_DIR})
 # file(REAL_PATH "./include" CZH_DEPS_LIBZ_INC BASE_DIRECTORY ${CZH_DEPS_LIBZ})
 # file(REAL_PATH "./lib" CZH_DEPS_LIBZ_LIB BASE_DIRECTORY ${CZH_DEPS_LIBZ})
-set(CZH_DEPS_LIBZ "${CZH_ROOT_DIR}/deps/libz/linux-debian-x64")
+set(CZH_DEPS_LIBZ "${CZH_ROOT_DIR}/deps/libz/linux-x86_64")
 set(CZH_DEPS_LIBZ_INC "${CZH_DEPS_LIBZ}/include")
 set(CZH_DEPS_LIBZ_LIB "${CZH_DEPS_LIBZ}/lib")
 message("CZH_DEPS_LIBZ_INC: " ${CZH_DEPS_LIBZ_INC})
 message("CZH_DEPS_LIBZ_LIB: " ${CZH_DEPS_LIBZ_LIB})
 add_library(cubzh_deps_libz STATIC IMPORTED)
 set_target_properties(cubzh_deps_libz PROPERTIES IMPORTED_LOCATION ${CZH_DEPS_LIBZ_LIB}/libz.a)
-# target_include_directories(cubzh_deps_libz INTERFACE ${CZH_DEPS_LIBZ_INC}) # needed ?
-
 
 include_directories(${CZH_DEPS_LIBZ_INC})
 link_directories(${CZH_DEPS_LIBZ_LIB})
@@ -81,7 +87,9 @@ file(GLOB CZH_CORE_SOURCES CONFIGURE_DEPENDS ${CZH_CORE_DIR}/*.c)
 
 # Define target
 add_library(cubzh_core STATIC ${CZH_CORE_HEADERS} ${CZH_CORE_SOURCES})
-target_include_directories(cubzh_core INTERFACE ${CZH_CORE_DIR} ${CZH_DEPS_LIBZ_INC})
+target_include_directories(cubzh_core INTERFACE
+        ${CZH_CORE_DIR} 
+        ${CZH_DEPS_LIBZ_INC})
 target_link_libraries(cubzh_core PRIVATE cubzh_deps_libz)
 
 
@@ -98,7 +106,7 @@ file(GLOB CZH_CLI_SOURCES CONFIGURE_DEPENDS ${CZH_CLI_DIR}/*.cpp)
 add_executable(cubzh_cli ${CZH_CLI_HEADERS} ${CZH_CLI_SOURCES})
 set_target_properties(cubzh_cli PROPERTIES
                       CXX_STANDARD_REQUIRED ON
-                      CXX_STANDARD 11)
+                      CXX_STANDARD 17)
 target_include_directories(cubzh_cli PRIVATE ${CZH_DEPS_CXXOPTS_INC} ${CZH_DEPS_LIBZ_INC})
 target_link_libraries(cubzh_cli PRIVATE cubzh_core)
 
