@@ -27,12 +27,11 @@ $output v_color0, v_texcoord0
 #endif
 
 #if MESH_VARIANT_MRT_LIGHTING == 0
-uniform vec4 u_lighting;
 uniform vec4 u_params;
-    #define u_metadata u_params.x
+    #define u_metadata1 u_params.x
     #define u_emissive u_params.y
     #define u_cutout u_params.z
-    #define u_unlit u_params.w
+    #define u_metadata2 u_params.w
 #endif
 
 #endif // IS_SHADOW_PASS
@@ -69,7 +68,11 @@ void main() {
 	vec3 wtangent = normalize(mul(u_model[0], vec4(unormToNorm3(a_tangent), 0.0)).xyz);
     vec3 wbitangent = cross(wnormal, wtangent);// * a_tangent.w;
 #else
-    vec4 color = mix(getNonVoxelVertexLitColor(a_color0, u_lighting.x, u_lighting.yzw, u_sunColor.xyz, clip.z), a_color0, u_unlit);
+    vec2 metadata2 = unpackMeshMetadata2(u_metadata2);
+    float unlit = metadata2.x;
+    vec4 vlighting = unpackVoxelLight(metadata2.y);
+
+    vec4 color = mix(getNonVoxelVertexLitColor(a_color0, vlighting.x, vlighting.yzw, u_sunColor.xyz, clip.z), a_color0, unlit);
 #endif // MESH_VARIANT_MRT_LIGHTING
 
     gl_Position = clip;
@@ -86,7 +89,7 @@ void main() {
     v_bitangentZ = wbitangent.z;
 #else
     v_cutout = u_cutout;
-    v_albedoFlag = unpackMeshMetadata_albedoFlag(u_metadata);
+    v_albedoFlag = unpackMeshMetadata1_albedoFlag(u_metadata1);
 #endif // MESH_VARIANT_MRT_LIGHTING
 
 #endif // IS_SHADOW_PASS

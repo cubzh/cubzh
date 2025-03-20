@@ -30,16 +30,21 @@ $output v_color0
 SAMPLER2D(s_palette, 0);
 #endif
 
-uniform vec4 u_lighting;
+uniform vec4 u_params;
+	#define u_metadata u_params.x
 
 #define a_colorIdx a_position.w
 #define a_metadata a_texcoord0.x
 
 void main() {
-	vec3 meta = unpackMetadata(a_metadata);
+	vec3 attmeta = unpackAttributesMetadata(a_metadata);
+	vec3 unimeta = unpackUniformMetadata(u_metadata);
 
-	int aoIdx = int(meta.x);
-	int face = int(meta.y);
+	int aoIdx = int(attmeta.x);
+	int face = int(attmeta.y);
+	float unlit = unimeta.x;
+	float baked = unimeta.y;
+	vec4 sample = unpackVoxelLight(unimeta.z);
 
 	vec4 model = vec4(a_position.xyz, 1.0);
 	vec4 clip = mul(u_modelViewProj, model);
@@ -72,10 +77,10 @@ void main() {
 #if VOXEL_VARIANT_UNLIT
 	vec4 voxelLight = VOXEL_LIGHT_DEFAULT_SRGB;
 #else
-	vec4 voxelLight = BLEND_SOFT_ADDITIVE(unpackVoxelLight(meta.z), u_lighting);
+	vec4 voxelLight = mix(sample, BLEND_SOFT_ADDITIVE(unpackVoxelLight(attmeta.z), sample), baked);
 #endif
 
-#if VOXEL_VARIANT_LIGHTING_UNIFORM == 0 && VOXEL_VARIANT_UNLIT == 0
+#if VOXEL_VARIANT_UNLIT == 0
 	voxelLight.x *= u_bakedIntensity;
 #endif
 

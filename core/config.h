@@ -269,12 +269,13 @@ typedef struct {
     uint8_t green : 4;
     uint8_t blue : 4;
 } VERTEX_LIGHT_STRUCT_T;
+#define DEFAULT_LIGHT_VALUE 15
 #define DEFAULT_LIGHT(l)                                                                           \
-    l.ambient = 15;                                                                                \
+    l.ambient = DEFAULT_LIGHT_VALUE;                                                                                \
     l.red = l.green = l.blue = 0;
 #define ZERO_LIGHT(l) l.ambient = l.red = l.green = l.blue = 0;
-#define DEFAULT_LIGHT_PACKED 480 // 15 * 32
-static VERTEX_LIGHT_STRUCT_T vertex_light_default = {15, 0, 0, 0};
+#define DEFAULT_LIGHT_PACKED 480 // DEFAULT_LIGHT_VALUE * 32
+static VERTEX_LIGHT_STRUCT_T vertex_light_default = {DEFAULT_LIGHT_VALUE, 0, 0, 0};
 static VERTEX_LIGHT_STRUCT_T vertex_light_zero = {0, 0, 0, 0};
 
 // one uint8_t is enough to store ambient occlusion value for each one

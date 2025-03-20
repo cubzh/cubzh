@@ -19,7 +19,7 @@
 	return res;
 } */
 
-void unpackFullMetadata(float f, out float metadata[6]) {
+void unpackFullAttributesMetadata(float f, out float metadata[6]) {
 	float unpack = f;
 	float b = floor((unpack + UNPACK_FUDGE) / 131072.0);
 	unpack -= b * 131072.0;
@@ -40,31 +40,24 @@ void unpackFullMetadata(float f, out float metadata[6]) {
 	metadata[5] = b;
 }
 
-vec3 unpackMetadata(float f) {
+vec3 unpackAttributesMetadata(float f) {
 	float unpack = f;
-	float srgb = floor((unpack + UNPACK_FUDGE) / 32.0);
-	unpack -= srgb * 32.0;
+	float vlighting = floor((unpack + UNPACK_FUDGE) / 32.0);
+	unpack -= vlighting * 32.0;
 	float face = floor((unpack + UNPACK_FUDGE) / 4.0);
 	float aoIdx = unpack - face * 4.0;
 	
-	return vec3(aoIdx, face, srgb);
+	return vec3(aoIdx, face, vlighting);
 }
 
-vec2 unpackQuadMetadata(float f) {
+vec3 unpackUniformMetadata(float f) {
 	float unpack = f;
-	float srgb = floor((unpack + UNPACK_FUDGE) / 2.0);
-	float unlit = unpack - srgb * 2.0;
+	float vlighting = floor((unpack + UNPACK_FUDGE) / 4.0);
+	unpack -= vlighting * 4.0;
+	float baked = floor((unpack + UNPACK_FUDGE) / 2.0);
+	float unlit = unpack - baked * 2.0;
 
-	return vec2(unlit, srgb);
-}
-
-vec4 unpackAO(float f) {
-	const vec4 shift = vec4(1.0, 4.0, 4.0 * 4.0, 4.0 * 4.0 * 4.0);
-	const vec4 mask = vec4(4.0, 4.0, 4.0, 0.0);
-	float fudged = f * 255.0 + UNPACK_FUDGE;
-	vec4 res = floor(fudged / shift);
-	res -= res.yzww * mask;
-	return res;
+	return vec3(unlit, baked, vlighting);
 }
 
 vec4 unpackVoxelLight(float f) {
