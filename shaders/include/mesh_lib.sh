@@ -8,7 +8,7 @@
 #define MESH_METADATA_METALLIC 4
 #define MESH_METADATA_ROUGHNESS 5
 
-void unpackMeshMetadata(float f, out float metadata[6]) {
+void unpackMeshMetadata1(float f, out float metadata[6]) {
 	float unpack = f;
 	float roughness = floor((unpack + UNPACK_FUDGE) / 4096.0);
 	unpack -= roughness * 4096.0;
@@ -29,9 +29,16 @@ void unpackMeshMetadata(float f, out float metadata[6]) {
 	metadata[MESH_METADATA_ROUGHNESS] = roughness / 255.0;
 }
 
-float unpackMeshMetadata_albedoFlag(float f) {
+float unpackMeshMetadata1_albedoFlag(float f) {
     float unpack = floor((f + UNPACK_FUDGE) / 2.0);
     return f - unpack * 2.0;
+}
+
+vec2 unpackMeshMetadata2(float f) {
+	float vlighting = floor((f + UNPACK_FUDGE) / 2.0);
+	float unlit = f - vlighting * 2.0;
+
+	return vec2(unlit, vlighting);
 }
 
 vec3 decodeNormal(vec3 normal, mat3 tbn) {

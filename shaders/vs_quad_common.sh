@@ -71,9 +71,9 @@ void main() {
 	float meta[7]; unpackQuadFullMetadata(a_position.w, meta);
 	float unlit = meta[0];
 	float cutout = meta[2];
-	vec4 srgb = vec4(meta[3], meta[4], meta[5], meta[6]);
+	vec4 vlighting = vec4(meta[3], meta[4], meta[5], meta[6]);
 
-	color = mix(getNonVoxelVertexLitColor(color, srgb.x * u_bakedIntensity, srgb.yzw, u_sunColor.xyz, clip.z), color, unlit);
+	color = mix(getNonVoxelVertexLitColor(color, vlighting.x * u_bakedIntensity, vlighting.yzw, u_sunColor.xyz, clip.z), color, unlit);
 #elif QUAD_VARIANT_MRT_TRANSPARENCY && QUAD_VARIANT_CUTOUT
 	float cutout = unpackQuadMetadata_Cutout(a_position.w);
 #endif

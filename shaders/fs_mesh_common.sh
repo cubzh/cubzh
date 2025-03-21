@@ -15,6 +15,9 @@ $input v_color0, v_texcoord0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #if MESH_VARIANT_MRT_LIGHTING
+#include "./include/game_uniforms.sh"
+#include "./include/global_lighting_uniforms.sh"
+#include "./include/voxels_lib.sh"
 #include "./include/utils_lib.sh"
 #include "./include/mesh_lib.sh"
 #endif
@@ -27,26 +30,28 @@ SAMPLER2D(s_fb4, 3);
 #endif
 
 #if MESH_VARIANT_MRT_LIGHTING
-uniform vec4 u_lighting;
 uniform vec4 u_params;
-    #define u_metadata u_params.x
+    #define u_metadata1 u_params.x
     #define u_emissive u_params.y
     #define u_cutout u_params.z
-    #define u_unlit u_params.w
+    #define u_metadata2 u_params.w
 #endif
 uniform vec4 u_color1;
 
 void main() {
 #if MESH_VARIANT_MRT_LIGHTING
-    float metadata[6]; unpackMeshMetadata(u_metadata, metadata);
+    float metadata1[6]; unpackMeshMetadata1(u_metadata1, metadata1);
+    vec2 metadata2 = unpackMeshMetadata2(u_metadata2);
+
     mat3 tbn = mtxFromCols(v_tangent, v_bitangent, v_normal);
 
-    vec4 albedo = mix(WHITE, texture2D(s_fb1, v_uv), metadata[MESH_METADATA_ALBEDOFLAG]);
-    vec3 normal = mix(v_normal, decodeNormal(texture2D(s_fb2, v_uv).xyz, tbn), metadata[MESH_METADATA_NORMALFLAG]);
-    vec2 metallicRoughness = mix(vec2(metadata[MESH_METADATA_METALLIC], metadata[MESH_METADATA_ROUGHNESS]), texture2D(s_fb3, v_uv).xy, metadata[MESH_METADATA_METALLICFLAG]);
-    vec3 emissive = mix(unpackFloatToRgb(u_emissive), texture2D(s_fb4, v_uv).xyz, metadata[MESH_METADATA_EMISSIVEFLAG]);
+    vec4 albedo = mix(WHITE, texture2D(s_fb1, v_uv), metadata1[MESH_METADATA_ALBEDOFLAG]);
+    vec3 normal = mix(v_normal, decodeNormal(texture2D(s_fb2, v_uv).xyz, tbn), metadata1[MESH_METADATA_NORMALFLAG]);
+    vec2 metallicRoughness = mix(vec2(metadata1[MESH_METADATA_METALLIC], metadata1[MESH_METADATA_ROUGHNESS]), texture2D(s_fb3, v_uv).xy, metadata1[MESH_METADATA_METALLICFLAG]);
+    vec3 emissive = mix(unpackFloatToRgb(u_emissive), texture2D(s_fb4, v_uv).xyz, metadata1[MESH_METADATA_EMISSIVEFLAG]);
 
-    float unlit = mix(LIGHTING_LIT_FLAG, LIGHTING_UNLIT_FLAG, u_unlit);
+    float unlit = mix(LIGHTING_LIT_FLAG, LIGHTING_UNLIT_FLAG, metadata2.x);
+    vec4 vlighting = unpackVoxelLight(metadata2.y);
 #else
     vec4 albedo = v_albedoFlag ? texture2D(s_fb1, v_uv) : BLACK;
 #endif
@@ -69,8 +74,8 @@ void main() {
 #if MESH_VARIANT_MRT_LIGHTING
     gl_FragData[0] = color;
     gl_FragData[1] = vec4(normToUnorm3(normal), unlit);
-    gl_FragData[2] = vec4(u_lighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, u_lighting.x);
-    gl_FragData[3] = vec4(u_lighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR + emissive, unlit);
+    gl_FragData[2] = vec4(vlighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, vlighting.x);
+    gl_FragData[3] = vec4(vlighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR + emissive, unlit);
 #if MESH_VARIANT_MRT_PBR && MESH_VARIANT_MRT_LINEAR_DEPTH
     gl_FragData[4] = vec4(metallicRoughness.x, metallicRoughness.y, 0.0, 0.0);
     gl_FragData[5] = vec4_splat(v_linearDepth);

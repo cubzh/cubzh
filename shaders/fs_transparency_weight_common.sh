@@ -39,7 +39,7 @@ $input v_color0, v_texcoord0, v_texcoord1
 #include "./include/utils_lib.sh"
 #if VOXEL_VARIANT_DRAWMODES
 #include "./include/drawmodes_lib.sh"
-#include "./include/voxels_uniforms_fs.sh"
+#include "./include/drawmodes_uniforms_fs.sh"
 #endif
 #if OIT_VARIANT_TEX
 #include "./include/quad_lib.sh"

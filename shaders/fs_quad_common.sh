@@ -14,7 +14,6 @@ $input v_color0
 #include "./include/quad_lib.sh"
 #if QUAD_VARIANT_MRT_LIGHTING
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
 #endif
@@ -42,7 +41,7 @@ void main() {
 	float unlit = mix(LIGHTING_LIT_FLAG, LIGHTING_UNLIT_FLAG, meta[0]);
 	float unpack9SliceNormal = meta[1];
 	float cutout = meta[2];
-	vec4 srgb = vec4(meta[3], meta[4], meta[5], meta[6]);
+	vec4 vlighting = vec4(meta[3], meta[4], meta[5], meta[6]);
 #endif
 
 #if QUAD_VARIANT_TEX
@@ -66,8 +65,8 @@ void main() {
 #if QUAD_VARIANT_MRT_LIGHTING
 	gl_FragData[0] = color;
 	gl_FragData[1] = vec4(normToUnorm3(v_normal), unlit);
-	gl_FragData[2] = vec4(srgb.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, srgb.x * u_bakedIntensity);
-	gl_FragData[3] = vec4(srgb.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, unlit);
+	gl_FragData[2] = vec4(vlighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, vlighting.x * u_bakedIntensity);
+	gl_FragData[3] = vec4(vlighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, unlit);
 #if QUAD_VARIANT_MRT_PBR && QUAD_VARIANT_MRT_LINEAR_DEPTH
     gl_FragData[4] = vec4_splat(0.0);
     gl_FragData[5] = vec4_splat(v_linearDepth);

@@ -17,10 +17,13 @@ $input v_color0
 #include "./include/config.sh"
 #if VOXEL_VARIANT_DRAWMODES
 #include "./include/drawmodes_lib.sh"
-#include "./include/voxels_uniforms_fs.sh"
+#include "./include/drawmodes_uniforms_fs.sh"
 #elif VOXEL_VARIANT_MRT_LIGHTING
 #include "./include/utils_lib.sh"
 #endif
+
+uniform vec4 u_params_fs;
+	#define u_unlit u_params_fs.x
 
 void main() {
 #if VOXEL_VARIANT_DRAWMODES
@@ -29,16 +32,12 @@ void main() {
 	vec4 color = v_color0;
 #endif
 #if VOXEL_VARIANT_MRT_LIGHTING
+	float unlit = mix(LIGHTING_LIT_FLAG, LIGHTING_UNLIT_FLAG, u_unlit);
+
 	gl_FragData[0] = color;
-#if VOXEL_VARIANT_UNLIT
-	gl_FragData[1] = vec4(0.0, 0.0, 0.0, LIGHTING_UNLIT_FLAG);
-	gl_FragData[2] = VOXEL_LIGHT_DEFAULT_RGBS;
-	gl_FragData[3] = vec4(0.0, 0.0, 0.0, LIGHTING_UNLIT_FLAG);
-#else
-	gl_FragData[1] = vec4(normToUnorm3(v_normal), LIGHTING_LIT_FLAG);
+	gl_FragData[1] = vec4(normToUnorm3(v_normal), unlit);
 	gl_FragData[2] = vec4(v_lighting.yzw * VOXEL_LIGHT_RGB_PRE_FACTOR, v_lighting.x);
-	gl_FragData[3] = vec4(v_lighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, LIGHTING_LIT_FLAG);
-#endif // VOXEL_VARIANT_UNLIT
+	gl_FragData[3] = vec4(v_lighting.yzw * VOXEL_LIGHT_RGB_POST_FACTOR, unlit);
 #if VOXEL_VARIANT_MRT_PBR && VOXEL_VARIANT_MRT_LINEAR_DEPTH
     gl_FragData[4] = vec4_splat(0.0);
     gl_FragData[5] = vec4_splat(v_linearDepth);

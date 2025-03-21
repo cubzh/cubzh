@@ -3,7 +3,6 @@ $input v_texcoord0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/dithering_lib.sh"
 #include "./include/voxels_lib.sh"

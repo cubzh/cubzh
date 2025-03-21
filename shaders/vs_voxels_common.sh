@@ -1,3 +1,5 @@
+#define IS_SHADOW_PASS (VOXEL_VARIANT_MRT_SHADOW_PACK || VOXEL_VARIANT_MRT_SHADOW_SAMPLE)
+
 $input a_position, a_texcoord0
 #if VOXEL_VARIANT_MRT_LIGHTING
 $output v_color0, v_color1, v_texcoord0, v_texcoord1
@@ -18,24 +20,31 @@ $output v_color0
 #include "./include/bgfx.sh"
 #include "./include/config.sh"
 #include "./include/game_uniforms.sh"
-#include "./include/voxels_uniforms.sh"
 #include "./include/global_lighting_uniforms.sh"
 #include "./include/voxels_lib.sh"
+#if VOXEL_VARIANT_DRAWMODES
+#include "./include/drawmodes_uniforms.sh"
+#endif
 
-#define IS_SHADOW_PASS (VOXEL_VARIANT_MRT_SHADOW_PACK || VOXEL_VARIANT_MRT_SHADOW_SAMPLE)
-
-#if !IS_SHADOW_PASS
+#if IS_SHADOW_PASS == false
 SAMPLER2D(s_palette, 0);
-#endif // !IS_SHADOW_PASS
+#endif
+
+uniform vec4 u_params;
+	#define u_metadata u_params.x
 
 #define a_colorIdx a_position.w
 #define a_metadata a_texcoord0.x
 
 void main() {
-	vec3 meta = unpackMetadata(a_metadata);
+	vec3 attmeta = unpackAttributesMetadata(a_metadata);
+	vec3 unimeta = unpackUniformMetadata(u_metadata);
 
-	int aoIdx = int(meta.x);
-	int face = int(meta.y);
+	int aoIdx = int(attmeta.x);
+	int face = int(attmeta.y);
+	float unlit = unimeta.x;
+	float baked = unimeta.y;
+	vec4 sample = unpackVoxelLight(unimeta.z);
 
 	vec4 model = vec4(a_position.xyz, 1.0);
 	vec4 clip = mul(u_modelViewProj, model);
@@ -51,9 +60,7 @@ void main() {
 #else // IS_SHADOW_PASS
 
 #if VOXEL_VARIANT_MRT_LIGHTING
-#if VOXEL_VARIANT_UNLIT == 0
 	vec3 wnormal = normalize(mul(u_model[0], vec4(getVertexNormal(face), 0.0)).xyz);
-#endif // VOXEL_VARIANT_UNLIT == 0
 #if VOXEL_VARIANT_MRT_LINEAR_DEPTH
 	vec4 view = mul(u_modelView, model);
 #endif // VOXEL_VARIANT_MRT_LINEAR_DEPTH
@@ -65,19 +72,8 @@ void main() {
 	float aoValue = 0.0;
 #endif // ENABLE_AO
 
-#if VOXEL_VARIANT_UNLIT
-	vec4 voxelLight = VOXEL_LIGHT_DEFAULT_SRGB;
-#elif VOXEL_VARIANT_LIGHTING_ATTRIBUTES
-	vec4 voxelLight = unpackVoxelLight(meta.z);
-#elif VOXEL_VARIANT_LIGHTING_UNIFORM
-	vec4 voxelLight = u_lighting;
-#else
-	vec4 voxelLight = VOXEL_LIGHT_DEFAULT_SRGB;
-#endif
-
-#if VOXEL_VARIANT_LIGHTING_UNIFORM == 0 && VOXEL_VARIANT_UNLIT == 0
-	voxelLight.x *= u_bakedIntensity;
-#endif
+	vec4 voxelLight = mix(mix(sample, BLEND_SOFT_ADDITIVE(unpackVoxelLight(attmeta.z), sample), baked), VOXEL_LIGHT_DEFAULT_SRGB, unlit);
+	voxelLight.x = saturate(voxelLight.x * u_bakedIntensity);
 
 	vec2 paletteUV = getPaletteUV(a_colorIdx);
 	vec4 color = texture2DLod(s_palette, paletteUV, 0.0);
@@ -99,11 +95,7 @@ void main() {
 	color.xyz += u_addRGB;
 #endif
 
-#if VOXEL_VARIANT_UNLIT
-	vec3 skybox = vec3_splat(1.0);
-#else
-	vec3 skybox = u_sunColor.xyz;
-#endif
+	vec3 skybox = mix(u_sunColor.xyz, vec3_splat(1.0), unlit);
 
 #if DEBUG_VERTEX_LIGHTING > 0
 	vec4 vcolor = getVertexDebugColor(voxelLight, skybox, aoValue, color, comp.xyz, face);
@@ -121,11 +113,7 @@ void main() {
 	v_clipZ = clip.z;
 #endif
 #if VOXEL_VARIANT_MRT_LIGHTING
-#if VOXEL_VARIANT_UNLIT
-	v_normal = vec3_splat(0.0);
-#else
 	v_normal = wnormal;
-#endif // VOXEL_VARIANT_UNLIT
 	v_lighting = voxelLight;
 #if VOXEL_VARIANT_MRT_LINEAR_DEPTH
 	v_linearDepth = view.z;

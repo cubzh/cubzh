@@ -1,5 +1,5 @@
-#ifndef __GRID_LIB_SH__
-#define __GRID_LIB_SH__
+#ifndef __DRAWMODES_LIB_SH__
+#define __DRAWMODES_LIB_SH__
 
 #include "./utils_lib.sh"
 
@@ -24,4 +24,4 @@ vec4 getGridColor(vec3 model, vec4 baseColor, vec3 gridColor, float scaleMag, fl
 	);
 }
 
-#endif // __GRID_LIB_SH__
+#endif // __DRAWMODES_LIB_SH__

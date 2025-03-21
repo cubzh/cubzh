@@ -1153,7 +1153,7 @@ void vertex_buffer_mem_area_writer_write(VertexBufferMemAreaWriter *vbmaw,
         packed_srgb4 = vlight4.ambient * 32 + vlight4.red * 512 + vlight4.green * 8192 +
                        vlight4.blue * 131072;
     } else {
-        packed_srgb1 = packed_srgb2 = packed_srgb3 = packed_srgb4 = 0.0f;
+        packed_srgb1 = packed_srgb2 = packed_srgb3 = packed_srgb4 = DEFAULT_LIGHT_PACKED;
     }
     const float v1_metadata = (float)(ao.ao1 + packed_faceIndex + packed_srgb1);
     const float v2_metadata = (float)(ao.ao2 + packed_faceIndex + packed_srgb2);
