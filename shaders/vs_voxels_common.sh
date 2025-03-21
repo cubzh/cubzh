@@ -60,9 +60,7 @@ void main() {
 #else // IS_SHADOW_PASS
 
 #if VOXEL_VARIANT_MRT_LIGHTING
-#if VOXEL_VARIANT_UNLIT == 0
 	vec3 wnormal = normalize(mul(u_model[0], vec4(getVertexNormal(face), 0.0)).xyz);
-#endif // VOXEL_VARIANT_UNLIT == 0
 #if VOXEL_VARIANT_MRT_LINEAR_DEPTH
 	vec4 view = mul(u_modelView, model);
 #endif // VOXEL_VARIANT_MRT_LINEAR_DEPTH
@@ -74,15 +72,8 @@ void main() {
 	float aoValue = 0.0;
 #endif // ENABLE_AO
 
-#if VOXEL_VARIANT_UNLIT
-	vec4 voxelLight = VOXEL_LIGHT_DEFAULT_SRGB;
-#else
-	vec4 voxelLight = mix(sample, BLEND_SOFT_ADDITIVE(unpackVoxelLight(attmeta.z), sample), baked);
-#endif
-
-#if VOXEL_VARIANT_UNLIT == 0
-	voxelLight.x *= u_bakedIntensity;
-#endif
+	vec4 voxelLight = mix(mix(sample, BLEND_SOFT_ADDITIVE(unpackVoxelLight(attmeta.z), sample), baked), VOXEL_LIGHT_DEFAULT_SRGB, unlit);
+	voxelLight.x = saturate(voxelLight.x * u_bakedIntensity);
 
 	vec2 paletteUV = getPaletteUV(a_colorIdx);
 	vec4 color = texture2DLod(s_palette, paletteUV, 0.0);
@@ -104,11 +95,7 @@ void main() {
 	color.xyz += u_addRGB;
 #endif
 
-#if VOXEL_VARIANT_UNLIT
-	vec3 skybox = vec3_splat(1.0);
-#else
-	vec3 skybox = u_sunColor.xyz;
-#endif
+	vec3 skybox = mix(u_sunColor.xyz, vec3_splat(1.0), unlit);
 
 #if DEBUG_VERTEX_LIGHTING > 0
 	vec4 vcolor = getVertexDebugColor(voxelLight, skybox, aoValue, color, comp.xyz, face);
@@ -126,11 +113,7 @@ void main() {
 	v_clipZ = clip.z;
 #endif
 #if VOXEL_VARIANT_MRT_LIGHTING
-#if VOXEL_VARIANT_UNLIT
-	v_normal = vec3_splat(0.0);
-#else
 	v_normal = wnormal;
-#endif // VOXEL_VARIANT_UNLIT
 	v_lighting = voxelLight;
 #if VOXEL_VARIANT_MRT_LINEAR_DEPTH
 	v_linearDepth = view.z;

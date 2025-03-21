@@ -1,9 +1,8 @@
 $input a_position, a_color0, a_texcoord0
-#if FONT_VARIANT_MRT_TRANSPARENCY
 $output v_color0, v_texcoord0, v_texcoord1
+#if FONT_VARIANT_MRT_TRANSPARENCY
 	#define v_clipZ v_texcoord1.x
 #else
-$output v_color0, v_texcoord0, v_texcoord1
 	#define v_linearDepth v_texcoord1.x
 	#define v_clipZ v_texcoord1.y
 #endif

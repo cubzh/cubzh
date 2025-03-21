@@ -1,9 +1,6 @@
 /*
- * Voxels fragment shader fallback: draw modes
+ * Voxels fragment shader variant: draw modes
  */
-
-// Lit
-#define VOXEL_VARIANT_UNLIT 0
 
 // No multiple render target
 #define VOXEL_VARIANT_MRT_LIGHTING 0

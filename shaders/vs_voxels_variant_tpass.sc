@@ -2,9 +2,6 @@
  * Voxels vertex shader variant: transparency pass
  */
 
-// Lit
-#define VOXEL_VARIANT_UNLIT 0
-
 // Multiple render target transparency
 #define VOXEL_VARIANT_MRT_TRANSPARENCY 1
 #define VOXEL_VARIANT_MRT_LIGHTING 0
