@@ -4,6 +4,6 @@
     "Version": "0.1.18",
     "Commit": "",
     "Deps": {
-        "libluau": "0.664"
+        "libluau": "0.665"
     }
 }
