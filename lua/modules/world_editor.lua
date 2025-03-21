@@ -593,6 +593,10 @@ local statesSettings = {
 			worldEditor.nameInput.Text = obj.Name
 			worldEditor.nameInput.onTextChange = function(o)
 				selectedObject.Name = o.Text
+				worldEditorCommon.updateObject({
+					uuid = obj.uuid,
+					name = o.Text,
+				})
 			end
 			objectInfoFrame:bump()
 
@@ -639,6 +643,9 @@ local statesSettings = {
 			tryPickObjectUp(pe)
 		end,
 		onStateEnd = function()
+			worldEditor.nameInput.onTextChange = nil
+			worldEditor.nameInput.Text = ""
+
 			if transformGizmo then
 				transformGizmo:remove()
 				transformGizmo = nil
